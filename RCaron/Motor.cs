@@ -39,7 +39,7 @@ public class Motor
             {
                 case LineType.VariableAssignment:
                     var variableName = line.Tokens[0].ToString(Raw)[1..];
-                    var obj = SimpleEvaluateExpression(line.Tokens[2..]);
+                    var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
                     Variables[variableName] = obj;
                     Console.Debug($"variable '{variableName}' set to '{obj}'");
                     break;
@@ -71,14 +71,14 @@ public class Motor
                     switch (keywordString)
                     {
                         case "println":
-                            System.Console.WriteLine(SimpleEvaluateExpression(args));
+                            System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
                             continue;
                     }
                     if(EnableDebugging)
                         switch (keywordString)
                         {
                             case "dbg_println":
-                                Console.Debug(SimpleEvaluateExpression(args));
+                                Console.Debug(SimpleEvaluateExpressionHigh(args));
                                 continue;
                         }
                     Console.Warn($"keyword '{keywordString}' is invalid");
@@ -88,7 +88,7 @@ public class Motor
         }
     }
 
-    public object SimpleEvaluateExpression(PosToken token)
+    public object SimpleEvaluateExpressionSingle(PosToken token)
     {
         switch (token.Type)
         {
@@ -105,40 +105,54 @@ public class Motor
                 return Decimal.Parse(token.ToString(Raw));
             case TokenType.String:
                 return token.ToString(Raw)[1..^1];
+            case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
+                return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
         }
 
         throw new Exception("yo wtf");
     }
 
-    // todo: boxing and other retarded allocations
-    public object SimpleEvaluateExpression(PosToken[] tokens)
+    public object SimpleEvaluateExpressionValue(PosToken[] tokens)
     {
-        if (tokens.Length == 1)
-            return SimpleEvaluateExpression(tokens[0]);
-        if (tokens.Length > 2)
+        // repeat action something math
+        var index = 0;
+        object value = null;
+        while (index < tokens.Length-1)
         {
-            // repeat action something
-            var index = 0;
-            object value = null;
-            while (index < tokens.Length-1)
+            var first = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
+            var op = tokens[index+1].ToString(Raw);
+            var second = SimpleEvaluateExpressionSingle(tokens[index+2]);
+            switch (op)
             {
-                var first = index == 0 ? SimpleEvaluateExpression(tokens[index]) : value;
-                var op = tokens[index+1].ToString(Raw);
-                var second = SimpleEvaluateExpression(tokens[index+2]);
-                switch (op)
-                {
-                    case "+":
-                        value = Horrors.Sum(first, second);
-                        break;
-                    case "-":
-                        value= Horrors.Subtract(first, second);
-                        break;
-                }
-
-                index+=2;
+                case Operations.SumOp:
+                    value = Horrors.Sum(first, second);
+                    break;
+                case Operations.SubtractOp:
+                    value = Horrors.Subtract(first, second);
+                    break;
+                case Operations.MultiplyOp:
+                    value = Horrors.Multiply(first, second);
+                    break;
             }
 
-            return value;
+            index+=2;
+        }
+
+        return value;
+    }
+
+    // todo: boxing and other retarded allocations
+    public object SimpleEvaluateExpressionHigh(PosToken[] tokens)
+    {
+        if (tokens.Length == 1)
+            return SimpleEvaluateExpressionSingle(tokens[0]);
+        if (tokens.Length > 2)
+        {
+            if (tokens.Any(t => t is PosToken { Type: TokenType.Operation }))
+            {
+                
+            }
+            return SimpleEvaluateExpressionValue(tokens);
         }
 
         return new Exception("what he fuck");
@@ -151,9 +165,9 @@ public class Motor
             if (p > 0)
                 return false;
             // future: maybe get the actual end of a multi token expression by having "ending" operations?
-            var expr1 = SimpleEvaluateExpression(tokens[p]);
+            var expr1 = SimpleEvaluateExpressionSingle(tokens[p]);
             var op = tokens[p + 1].ToString(Raw);
-            var expr2 = SimpleEvaluateExpression(tokens[p + 2]);
+            var expr2 = SimpleEvaluateExpressionSingle(tokens[p + 2]);
             switch (op)
             {
                 case Operations.IsEqualOp:

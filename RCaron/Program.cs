@@ -15,29 +15,36 @@ Log.Configure.EnableVirtualTerminalProcessing();
 Console.WriteLine("Hello, World!");
 var stopwatch = Stopwatch.StartNew();
 
-var text = @"$hello0 = 'text';
-$hello1 = 'text';
-$hello2 = 'text';
-$hello3 = 'text';
-println 123;
-println 123 + 123;
-println 0.123;
-if ($hello3 == 'text') {
-    $hello3 = 'fun';
-    if ($hello3 == 'fun') {
-        $hello3 = 'funny';
-    }
-}
-if ($hello3 != 'funny') {
-    $hello3 = 'wtf';
-}
-if ($hello3 != 'wtf') {
-    $hello3 = 'yeehaw';
-}
-println 'welcome to hell';
-println $hello3;
-dbg_println $hello3;
-";
+// var text = @"$hello0 = 'text';
+// $hello1 = 'text';
+// $hello2 = 'text';
+// $hello3 = 'text';
+// println 123;
+// println 123 + 123;
+// println 0.123;
+// if ($hello3 == 'text') {
+//     $hello3 = 'fun';
+//     if ($hello3 == 'fun') {
+//         $hello3 = 'funny';
+//     }
+// }
+// if ($hello3 != 'funny') {
+//     $hello3 = 'wtf';
+// }
+// if ($hello3 != 'wtf') {
+//     $hello3 = 'yeehaw';
+// }
+// println 'welcome to hell';
+// println $hello3;
+// dbg_println $hello3;
+// ";
+// = (9 + 2) * 2 = 11 * 2 = 22 
+// var text = @"$hello0 = ((3 * 3) + 2) * 2;
+// println $hello0;
+// $hello0 = ((3 * 3) + 2) * 2;
+// println $hello0;
+// ";
+var text = @"println 2 * (3 + 2);";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
@@ -48,6 +55,13 @@ var blockDepth = -1;
 var blockNumber = -1;
 while (token != null)
 {
+    if (token is PosToken { Type: TokenType.Whitespace })
+    {
+        Console.Write(token.ToString(text));
+        token = reader.Read();
+        continue;
+    }
+
     if (token is PosToken posToken)
     {
         switch (posToken)
@@ -64,9 +78,49 @@ while (token != null)
                     ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
                 blockDepth--;
                 break;
+            // case ValuePosToken valuePosToken:
+            //     valuePosToken.Depth = blockDepth;
+            //     valuePosToken.Number = blockNumber;
+            //     // // todo: probably won't need ParentNumber?
+            //     // valuePosToken.ParentNumber =
+            //     //     ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
+            //     break;
         }
 
+        (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
+        {
+            var i = tokens.Count - 1;
+            while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken)
+                i--;
+            return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
+        }
+
+        if (posToken is not ValuePosToken && tokens.LastOrDefault() is ValuePosToken)
+        {
+            var h = BackwardsCollectValuePosToken();
+            if (h.tokens.Length != 1 && h.tokens.Length != 0)
+            {
+                // AAAAAA
+                // remove those replace with fucking imposter thing
+                var rem = h.index - 1;
+                var g = 0;
+                if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }))
+                    // rem += 1;
+                    rem += 1 ;
+                if(rem == 1)
+                    goto beforeAdd;
+                // -1 is for the ( before
+                tokens.RemoveFrom(rem);
+                // tokens.RemoveRange(h.index -rem, (rem));
+                tokens.Add(new ValueGroupPosToken(TokenType.DumbShit, (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                if(posToken is {Type: TokenType.SimpleBlockEnd})
+                    goto afterAdd;
+            }
+        }
+
+        beforeAdd: ;
         tokens.Add(posToken);
+        afterAdd: ;
         Console.ForegroundColor = posToken.Type switch
         {
             TokenType.Operation => ConsoleColor.Black,
@@ -83,7 +137,9 @@ while (token != null)
             Console.ForegroundColor = ConsoleColor.DarkGray;
             Console.Write($"({bpt.Depth}, {bpt.Number})");
         }
-        // Console.WriteLine($"{posToken.Type}: {posToken.ToString(text)}");
+
+        // if (posToken is not { Type: TokenType.Whitespace })
+        //     Console.WriteLine($"{posToken.Type}: {posToken.ToString(text)}");
     }
 
     token = reader.Read();
@@ -160,7 +216,9 @@ var motor = new Motor(lines.ToArray())
 {
     Raw = text
 };
+// var runtime = Stopwatch.StartNew();
 motor.Run();
+// Console.WriteLine(runtime.ElapsedMilliseconds);
 while (true)
 {
     text = Console.ReadLine() + ";";

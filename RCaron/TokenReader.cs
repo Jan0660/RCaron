@@ -36,7 +36,7 @@ public class TokenReader
             if (index == 0)
                 return null;
             position += index;
-            return new PosToken(TokenType.VariableIdentifier, (initialPosition, position));
+            return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
         }
         // string
         else if (txt[position] == '\'')
@@ -46,7 +46,7 @@ public class TokenReader
             if (index == 0)
                 return null;
             position += index;
-            return new PosToken(TokenType.String, (initialPosition, position));
+            return new ValuePosToken(TokenType.String, (initialPosition, position));
         }
         // whitespace
         else if (char.IsWhiteSpace(txt[position]))
@@ -87,12 +87,14 @@ public class TokenReader
         {
             var (index, isDecimal) = CollectAnyNumber(txt[position..]);
             position += index;
-            return new PosToken(isDecimal ? TokenType.DecimalNumber : TokenType.Number, (initialPosition, position));
+            return new ValuePosToken(isDecimal ? TokenType.DecimalNumber : TokenType.Number,
+                (initialPosition, position));
         }
         // operation
         else
         {
             var index = CollectOperation(txt[position..]);
+            // collect a keyword e.g. "println"
             if (index == 0)
             {
                 position = txt[position..].IndexOf(' ') + position;
@@ -100,6 +102,12 @@ public class TokenReader
             }
 
             position += index;
+            // match "value" operations
+            var op = txt[initialPosition..position];
+            if (op.SequenceEqual(Operations.SumOp) || op.SequenceEqual(Operations.SubtractOp) ||
+                op.SequenceEqual(Operations.MultiplyOp))
+                return new ValuePosToken(TokenType.Operation, (initialPosition, position));
+
             return new PosToken(TokenType.Operation, (initialPosition, position));
         }
 
@@ -167,6 +175,8 @@ public class TokenReader
         if (IsMatch(in span, Operations.SumOp))
             return 1;
         if (IsMatch(in span, Operations.SubtractOp))
+            return 1;
+        if (IsMatch(in span, Operations.MultiplyOp))
             return 1;
 
         return 0;

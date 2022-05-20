@@ -1,3 +1,5 @@
+using System.Diagnostics;
+
 namespace RCaron;
 
 public enum TokenType : byte
@@ -13,8 +15,11 @@ public enum TokenType : byte
     BlockEnd,
     SimpleBlockStart,
     SimpleBlockEnd,
-    DecimalNumber
+    DecimalNumber,
+    DumbShit,
 }
+
+[DebuggerDisplay("Type = {Type}")]
 public class PosToken
 {
     public (int Start, int End) Position { get; }
@@ -41,5 +46,25 @@ public class BlockPosToken : PosToken
 
     public BlockPosToken(TokenType type, (int Start, int End) position) : base(type, position)
     {
+    }
+}
+
+public class ValuePosToken : PosToken
+{
+    // public int Depth { get; set; } = -1;
+    // // public int ParentNumber { get; set; } = -1;
+    // public int Number { get; set; } = -1;
+
+    public ValuePosToken(TokenType type, (int Start, int End) position) : base(type, position)
+    {
+    }
+}
+
+public class ValueGroupPosToken : ValuePosToken
+{
+    public ValuePosToken[] ValueTokens { get; }
+    public ValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type, position)
+    {
+        ValueTokens = tokens;
     }
 }
