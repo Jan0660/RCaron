@@ -20,6 +20,7 @@ $hello1 = 'text';
 $hello2 = 'text';
 $hello3 = 'text';
 println 123;
+println 123 + 123;
 println 0.123;
 if ($hello3 == 'text') {
     $hello3 = 'fun';

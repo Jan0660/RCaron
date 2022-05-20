@@ -4,7 +4,7 @@ namespace RCaron;
 
 public class Motor
 {
-    public string? Raw { get; set; }
+    public string Raw { get; set; }
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
     public Stack<(int LineIndex, int BlockDepth, int BlockNumber)> BlockStack { get; set; } = new();
@@ -115,6 +115,31 @@ public class Motor
     {
         if (tokens.Length == 1)
             return SimpleEvaluateExpression(tokens[0]);
+        if (tokens.Length > 2)
+        {
+            // repeat action something
+            var index = 0;
+            object value = null;
+            while (index < tokens.Length-1)
+            {
+                var first = index == 0 ? SimpleEvaluateExpression(tokens[index]) : value;
+                var op = tokens[index+1].ToString(Raw);
+                var second = SimpleEvaluateExpression(tokens[index+2]);
+                switch (op)
+                {
+                    case "+":
+                        value = Horrors.Sum(first, second);
+                        break;
+                    case "-":
+                        value= Horrors.Subtract(first, second);
+                        break;
+                }
+
+                index+=2;
+            }
+
+            return value;
+        }
 
         return new Exception("what he fuck");
     }

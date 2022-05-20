@@ -164,6 +164,10 @@ public class TokenReader
             return 2;
         if (IsMatch(in span, Operations.AssignmentOp))
             return 1;
+        if (IsMatch(in span, Operations.SumOp))
+            return 1;
+        if (IsMatch(in span, Operations.SubtractOp))
+            return 1;
 
         return 0;
     }
