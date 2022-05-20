@@ -2,6 +2,12 @@ using Console = Log73.Console;
 
 namespace RCaron;
 
+public class MotorOptions
+{
+    public bool EnableDebugging { get; set; } = false;
+    public bool EnableDumb { get; set; } = false;
+}
+
 public class Motor
 {
     public string Raw { get; set; }
@@ -9,8 +15,7 @@ public class Motor
     public Dictionary<string, object> Variables { get; set; } = new();
     public Stack<(int LineIndex, int BlockDepth, int BlockNumber)> BlockStack { get; set; } = new();
     public Conditional LastConditional { get; set; }
-    public bool EnableDebugging { get; set; } = false;
-
+    public MotorOptions Options { get; }
     public class Conditional
     {
         public Conditional(int lineIndex, bool isOnce, bool isTrue)
@@ -25,9 +30,11 @@ public class Motor
         public bool IsTrue { get; set; }
     }
 
-    public Motor(Line[] lines)
+    public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
     {
-        Lines = lines;
+        Lines = runnerContext.Lines;
+        Raw = runnerContext.Code;
+        Options = options ?? new();
     }
 
     public void Run()
@@ -74,11 +81,18 @@ public class Motor
                             System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
                             continue;
                     }
-                    if(EnableDebugging)
+                    if(Options.EnableDebugging)
                         switch (keywordString)
                         {
                             case "dbg_println":
                                 Console.Debug(SimpleEvaluateExpressionHigh(args));
+                                continue;
+                        }
+                    if(Options.EnableDumb)
+                        switch (keywordString)
+                        {
+                            case "goto_line":
+                                i = (int)(long)SimpleEvaluateExpressionHigh(args);
                                 continue;
                         }
                     Console.Warn($"keyword '{keywordString}' is invalid");
@@ -141,7 +155,6 @@ public class Motor
         return value;
     }
 
-    // todo: boxing and other retarded allocations
     public object SimpleEvaluateExpressionHigh(PosToken[] tokens)
     {
         if (tokens.Length == 1)
@@ -179,23 +192,4 @@ public class Motor
 
         return false;
     }
-
-    // todo: boxing and other retarded allocations
-    // public object EvaluateToken(PosToken token)
-    // {
-    //     switch (token.Type)
-    //     {
-    //         case TokenType.VariableIdentifier:
-    //             var name = token.ToString(Raw)[1..];
-    //             if (Variables.ContainsKey(name))
-    //                 return Variables[name];
-    //             Console.Error.WriteLine("Variable '{0}' not found", name);
-    //             Environment.Exit(-1);
-    //             break;
-    //         case TokenType.String:
-    //             return token.ToString(Raw)[1..^1];
-    //     }
-    //
-    //     return null;
-    // }
 }

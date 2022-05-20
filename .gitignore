@@ -3,3 +3,4 @@ obj/
 .idea/
 .vscode/
 BenchmarkDotNet.Artifacts/
+*.DotSettings.user

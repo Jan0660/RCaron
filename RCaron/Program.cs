@@ -9,7 +9,7 @@ using RCaron.Benchmarks;
 using Log = Log73.Console;
 using Console = System.Console;
 
-Log.Options.LogLevel = LogLevel.Debug;
+// Log.Options.LogLevel = LogLevel.Debug;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
@@ -48,11 +48,21 @@ var stopwatch = Stopwatch.StartNew();
 // $hello0 = ((3 * 3) + 2) * 2;
 // println $hello0;
 // ";
-var text = @"println 2 * (3 + 2);";
+// var text = @"println 2 * (3 + 2);";
+var opt = new MotorOptions()
+{
+    EnableDumb = true
+};
+var text = @"$a = 0; $b = 1; $c = 0;
+$c = $a + $b;
+println $c;
+$a = $b;
+$b = $c;
+goto_line 2;";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
-RCaronRunner.Run(text);
+RCaronRunner.Run(text, opt);
 RCaronRunner.Run("$h = 2 * (2 + 3);");
 // while (true)
 // {

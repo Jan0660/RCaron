@@ -1,10 +1,22 @@
-﻿namespace RCaron;
+﻿using CommandLine;
+
+namespace RCaron;
 
 public static class RCaronRunner
 {
     public static bool GlobalEnableLog = false;
 
-    public static void Run(string text)
+    public static Motor Run(string text, MotorOptions? motorOptions = null)
+    {
+        var ctx = Parse(text);
+
+        var motor = new Motor(ctx, motorOptions);
+        // var runtime = Stopwatch.StartNew();
+        motor.Run();
+        return motor;
+    }
+
+    public static RCaronRunnerContext Parse(string text)
     {
         var tokens = new List<PosToken>();
         var reader = new TokenReader(text);
@@ -66,8 +78,8 @@ public static class RCaronRunner
                         if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }))
                             // rem += 1;
                             rem += 1;
-                        if (tokens[rem-1] is not ValuePosToken)
-                        // if (rem == 1)
+                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
+                            // if (rem == 1)
                             goto beforeAdd;
                         // -1 is for the ( before
                         tokens.RemoveFrom(rem);
@@ -185,11 +197,16 @@ public static class RCaronRunner
             }
         }
 
-        var motor = new Motor(lines.ToArray())
+        return new RCaronRunnerContext()
         {
-            Raw = text
+            Code = text,
+            Lines = lines.ToArray()
         };
-// var runtime = Stopwatch.StartNew();
-        motor.Run();
     }
+}
+
+public class RCaronRunnerContext
+{
+    public string Code { get; set; }
+    public Line[] Lines { get; set; }
 }
