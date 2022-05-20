@@ -87,6 +87,9 @@ public class Motor
                             case "dbg_println":
                                 Console.Debug(SimpleEvaluateExpressionHigh(args));
                                 continue;
+                            case "dbg_assert_is_one":
+                                Variables[$"$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
+                                continue;
                         }
                     if(Options.EnableDumb)
                         switch (keywordString)
@@ -95,9 +98,8 @@ public class Motor
                                 i = (int)(long)SimpleEvaluateExpressionHigh(args);
                                 continue;
                         }
-                    Console.Warn($"keyword '{keywordString}' is invalid");
 
-                    break;
+                    throw new RCaronException($"keyword '{keywordString}' is invalid");
             }
         }
     }
