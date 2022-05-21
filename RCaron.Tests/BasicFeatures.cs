@@ -41,4 +41,14 @@ public class BasicFeatures
         new Motor(p, new MotorOptions { EnableDumb = true }).Run();
         Assert.Throws<RCaronException>(() => new Motor(p).Run());
     }
+
+    [Fact]
+    public void LoopAndBreak()
+    {
+        var m = RCaronRunner.Run(@"$h = 0; loop {
+$h = $h + 1;
+if ($h > 9) { break; }
+}");
+        m.VariableEquals("h", (long)10);
+    }
 }

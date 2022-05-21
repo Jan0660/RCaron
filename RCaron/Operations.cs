@@ -6,7 +6,7 @@ public static class Operations
     public const string IsEqualOp = "==";
 
     public const string IsNotEqualOp = "!=";
-    // public const string IsGreaterOp = ">";
+    public const string IsGreaterOp = ">";
     // public const string IsGreaterOrEqualOp = ">=";
     // public const string IsLessOp = "<";
     // public const string IsLessOrEqualOp = "<=";

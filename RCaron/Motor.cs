@@ -32,6 +32,7 @@ public class Motor
         }
 
         public int LineIndex { get; set; }
+        // is once run
         public bool IsOnce { get; set; }
         public bool IsTrue { get; set; }
         public bool IsBreakWorthy { get; set; }
@@ -49,6 +50,8 @@ public class Motor
     {
         for (var i = 0; i < Lines.Length; i++)
         {
+            if (i >= Lines.Length)
+                break;
             var line = Lines[i];
             switch (line.Type)
             {
@@ -66,7 +69,11 @@ public class Motor
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
-                        if (LastConditional is { IsTrue: true, IsOnce: true })
+                        if (LastConditional is { IsTrue: true, IsOnce: false })
+                        {
+                            BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
+                        }
+                        else if (LastConditional is { IsTrue: true, IsOnce: true })
                         {
                             BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
                         }
@@ -82,17 +89,21 @@ public class Motor
                     {
                         var curBlock = BlockStack.Peek();
                         if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
-                            i = curBlock.LineIndex;
+                            // i = curBlock.LineIndex;
+                            // i++;
+                            continue;
                         else if (curBlock.Conditional is { IsOnce: false })
                         {
-                            if (SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!))
+                            if (curBlock.Conditional.EvaluateTokens == null)
+                                i = curBlock.LineIndex;
+                            else if (SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!))
                                 i = curBlock.LineIndex;
                         }
                     }
 
                     break;
                 case LineType.LoopLoop:
-                    LastConditional = new Conditional(lineIndex: i, isOnce: true,
+                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
                         isTrue: true, isBreakWorthy: true, null);
                     break;
                 case LineType.KeywordPlainCall:
@@ -111,7 +122,7 @@ public class Motor
                             // i = g.LineIndex;
                             i = Array.FindIndex(Lines,
                                 l => l is { Type: LineType.BlockStuff }
-                                     && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd });
+                                     && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd }) + 1;
                             // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
                             // i = Array.FindIndex(Lines,
                             //     l => l is
@@ -228,6 +239,8 @@ public class Motor
                     return expr1.Equals(expr2);
                 case Operations.IsNotEqualOp:
                     return !expr1.Equals(expr2);
+                case Operations.IsGreaterOp:
+                    return Horrors.IsGreater(expr1, expr2);
             }
         }
 

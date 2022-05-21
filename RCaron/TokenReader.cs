@@ -32,7 +32,7 @@ public class TokenReader
         if (txt[position] == '$')
         {
             Skip(1);
-            var index = CollectAlphaNumeric(txt[position..]);
+            var index = CollectAlphaNumericAndSome(txt[position..]);
             if (index == 0)
                 return null;
             position += index;
@@ -97,10 +97,12 @@ public class TokenReader
             // collect a keyword e.g. "println"
             if (index == 0)
             {
-                var hbgfd = txt[position..].IndexOf(' ');
-                if (hbgfd == -1)
-                    hbgfd = txt[position..].IndexOf(';');
-                position = hbgfd + position;
+                // var hbgfd = txt[position..].IndexOf(' ');
+                // if (hbgfd == -1)
+                //     hbgfd = txt[position..].IndexOf(';') - 1;
+                // position = hbgfd + position;
+                index = CollectAlphaNumericAndSome(txt[position..]);
+                position += index;
                 return new PosToken(TokenType.Keyword, (initialPosition, position));
             }
 
@@ -141,6 +143,15 @@ public class TokenReader
         return index;
     }
 
+    public int CollectAlphaNumericAndSome(in ReadOnlySpan<char> span)
+    {
+        var index = 0;
+        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
+               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_'))
+            index++;
+        return index;
+    }
+
     public int CollectString(in ReadOnlySpan<char> span)
     {
         // get index of unescaped ending '
@@ -173,6 +184,8 @@ public class TokenReader
             return 2;
         if (IsMatch(in span, Operations.IsNotEqualOp))
             return 2;
+        if (IsMatch(in span, Operations.IsGreaterOp))
+            return 1;
         if (IsMatch(in span, Operations.AssignmentOp))
             return 1;
         if (IsMatch(in span, Operations.SumOp))
