@@ -6,6 +6,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Tests", "RCaron.Test
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Testing", "RCaron.Testing\RCaron.Testing.csproj", "{8D0B22AF-250D-4151-8857-88D3DBC3E915}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Cli", "RCaron.Cli\RCaron.Cli.csproj", "{6E03EE38-69BA-41C7-8EB5-566F797B6183}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -24,5 +26,9 @@ Global
 		{8D0B22AF-250D-4151-8857-88D3DBC3E915}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{8D0B22AF-250D-4151-8857-88D3DBC3E915}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{8D0B22AF-250D-4151-8857-88D3DBC3E915}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6E03EE38-69BA-41C7-8EB5-566F797B6183}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6E03EE38-69BA-41C7-8EB5-566F797B6183}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6E03EE38-69BA-41C7-8EB5-566F797B6183}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6E03EE38-69BA-41C7-8EB5-566F797B6183}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

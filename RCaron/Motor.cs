@@ -47,9 +47,14 @@ public class Motor
 
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
     {
+        UseContext(runnerContext);
+        Options = options ?? new();
+    }
+
+    public void UseContext(RCaronRunnerContext runnerContext)
+    {
         Lines = runnerContext.Lines;
         Raw = runnerContext.Code;
-        Options = options ?? new();
     }
 
     public void Run()
