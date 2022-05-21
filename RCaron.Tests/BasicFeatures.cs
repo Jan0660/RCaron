@@ -105,11 +105,10 @@ dowhile ($h > 1) {
     [Fact]
     public void Functions()
     {
-        // todo: make better logic for lone keywords
         var m = RCaronRunner.Run(@"func sus{
     $h = 1;
 }
-sus 1;");
+sus;");
         m.VariableEquals("h", (long)1);
     }
 }
