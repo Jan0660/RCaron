@@ -60,7 +60,7 @@ var opt = new MotorOptions()
 // $b = $c;
 // goto_line 2;";
 var text = @"loop {
-println 'balls';
+println 'balls'; println 'balls'; println 'balls'; break;
 }";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
@@ -75,11 +75,11 @@ RCaronRunner.Run("$h = 2 * (2 + 3);");
 //     Console.Out.Flush();
 // }
 // Console.WriteLine(runtime.ElapsedMilliseconds);
-while (true)
-{
-    text = Console.ReadLine() + ";";
-    goto bruh;
-}
+// while (true)
+// {
+//     text = Console.ReadLine() + ";";
+//     goto bruh;
+// }
 
 
 namespace RCaron

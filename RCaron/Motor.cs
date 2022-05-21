@@ -13,22 +13,29 @@ public class Motor
     public string Raw { get; set; }
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
-    public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)> BlockStack { get; set; } = new();
+
+    public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
+        BlockStack { get; set; } = new();
+
     public Conditional LastConditional { get; set; }
     public MotorOptions Options { get; }
+
     public class Conditional
     {
-        public Conditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy)
+        public Conditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[]? evalTokens)
         {
             LineIndex = lineIndex;
             IsOnce = isOnce;
             IsTrue = isTrue;
+            IsBreakWorthy = isBreakWorthy;
+            EvaluateTokens = evalTokens;
         }
 
         public int LineIndex { get; set; }
         public bool IsOnce { get; set; }
         public bool IsTrue { get; set; }
         public bool IsBreakWorthy { get; set; }
+        public PosToken[]? EvaluateTokens { get; set; }
     }
 
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
@@ -52,8 +59,9 @@ public class Motor
                     Console.Debug($"variable '{variableName}' set to '{obj}'");
                     break;
                 case LineType.IfStatement:
+                    var tokens = line.Tokens[2..^1];
                     LastConditional = new Conditional(lineIndex: i, isOnce: true,
-                        isTrue: SimpleEvaluateBool(line.Tokens[2..^1]), isBreakWorthy: false);
+                        isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: false, evalTokens: null);
                     break;
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
@@ -75,12 +83,17 @@ public class Motor
                         var curBlock = BlockStack.Peek();
                         if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
                             i = curBlock.LineIndex;
+                        else if (curBlock.Conditional is { IsOnce: false })
+                        {
+                            if (SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!))
+                                i = curBlock.LineIndex;
+                        }
                     }
 
                     break;
                 case LineType.LoopLoop:
                     LastConditional = new Conditional(lineIndex: i, isOnce: true,
-                        isTrue: true, isBreakWorthy: true);
+                        isTrue: true, isBreakWorthy: true, null);
                     break;
                 case LineType.KeywordPlainCall:
                     var keyword = line.Tokens[0];
@@ -93,12 +106,25 @@ public class Motor
                             continue;
                         case "break":
                             var g = BlockStack.Pop();
-                            while(!g.IsBreakWorthy)
+                            while (!g.IsBreakWorthy)
                                 g = BlockStack.Pop();
-                            i = g.LineIndex;
+                            // i = g.LineIndex;
+                            i = Array.FindIndex(Lines,
+                                l => l is { Type: LineType.BlockStuff }
+                                     && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd });
+                            // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
+                            // i = Array.FindIndex(Lines,
+                            //     l => l is
+                            //     {
+                            //         Type: LineType.BlockStuff, Tokens:  [BlockPosToken
+                            //         {
+                            //             Type: TokenType.BlockEnd
+                            //         },
+                            //         ..]});
                             continue;
                     }
-                    if(Options.EnableDebugging)
+
+                    if (Options.EnableDebugging)
                         switch (keywordString)
                         {
                             case "dbg_println":
@@ -108,7 +134,8 @@ public class Motor
                                 Variables[$"$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
                                 continue;
                         }
-                    if(Options.EnableDumb)
+
+                    if (Options.EnableDumb)
                         switch (keywordString)
                         {
                             case "goto_line":
@@ -150,11 +177,11 @@ public class Motor
         // repeat action something math
         var index = 0;
         object value = null;
-        while (index < tokens.Length-1)
+        while (index < tokens.Length - 1)
         {
             var first = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
-            var op = tokens[index+1].ToString(Raw);
-            var second = SimpleEvaluateExpressionSingle(tokens[index+2]);
+            var op = tokens[index + 1].ToString(Raw);
+            var second = SimpleEvaluateExpressionSingle(tokens[index + 2]);
             switch (op)
             {
                 case Operations.SumOp:
@@ -168,7 +195,7 @@ public class Motor
                     break;
             }
 
-            index+=2;
+            index += 2;
         }
 
         return value;

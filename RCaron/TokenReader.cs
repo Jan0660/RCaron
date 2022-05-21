@@ -97,7 +97,10 @@ public class TokenReader
             // collect a keyword e.g. "println"
             if (index == 0)
             {
-                position = txt[position..].IndexOf(' ') + position;
+                var hbgfd = txt[position..].IndexOf(' ');
+                if (hbgfd == -1)
+                    hbgfd = txt[position..].IndexOf(';');
+                position = hbgfd + position;
                 return new PosToken(TokenType.Keyword, (initialPosition, position));
             }
 
