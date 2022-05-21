@@ -189,8 +189,9 @@ public static class RCaronRunner
                         lineNumber++;
                 }
 
-                Console.Error.WriteLine("Invalid line at line {0}", lineNumber);
-                Environment.Exit(-1);
+                throw new RCaronException($"Invalid line at line {lineNumber}", RCaronExceptionTime.Parsetime);
+                // Console.Error.WriteLine("Invalid line at line {0}", lineNumber);
+                // Environment.Exit(-1);
             }
         }
 

@@ -51,4 +51,19 @@ if ($h > 9) { break; }
 }");
         m.VariableEquals("h", (long)10);
     }
+
+    [Fact]
+    public void InvalidLine()
+    {
+        var exp = Assert.Throws<RCaronException>(() => RCaronRunner.Parse("$h println 'huh';"));
+        Assert.Equal(RCaronExceptionTime.Parsetime, exp.Time);
+    }
+
+    [Fact]
+    public void EnableLogRun()
+    {
+        RCaronRunner.GlobalEnableLog = true;
+        RCaronRunner.Run("println 'woo';");
+        RCaronRunner.GlobalEnableLog = false;
+    }
 }
