@@ -17,6 +17,7 @@ public enum TokenType : byte
     SimpleBlockEnd,
     DecimalNumber,
     DumbShit,
+    KeywordCall,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -59,8 +60,26 @@ public class ValuePosToken : PosToken
 public class ValueGroupPosToken : ValuePosToken
 {
     public ValuePosToken[] ValueTokens { get; }
-    public ValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type, position)
+
+    public ValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type,
+        position)
     {
         ValueTokens = tokens;
     }
+}
+
+public class CallLikePosToken : ValuePosToken
+{
+    public PosToken[][] Arguments { get; set; }
+    public int NameEndIndex { get; }
+
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex) :
+        base(type, position)
+    {
+        Arguments = arguments;
+        NameEndIndex = nameEndIndex;
+    }
+
+    public string GetName(string text)
+        => text[Position.Start..NameEndIndex];
 }

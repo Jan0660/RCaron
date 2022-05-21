@@ -112,4 +112,11 @@ $h println 'huh';"));
 sus;");
         m.VariableEquals("h", (long)1);
     }
+
+    [Fact]
+    public void ToStringKeywordCall()
+    {
+        var m = RCaronRunner.Run(@"$h = 0; $g = string($h);");
+        m.VariableEquals("g", "0");
+    }
 }

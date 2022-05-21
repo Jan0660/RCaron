@@ -72,25 +72,22 @@ public class Motor
                     Variables[variableName] = obj;
                     Console.Debug($"variable '{variableName}' set to '{obj}'");
                     break;
-                case LineType.IfStatement:
+                case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
                 {
-                    var tokens = line.Tokens[2..^1];
                     LastConditional = new Conditional(lineIndex: i, isOnce: true,
-                        isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: false, evalTokens: null);
+                        isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: false, evalTokens: null);
                     break;
                 }
-                case LineType.WhileLoop:
+                case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
                 {
-                    var tokens = line.Tokens[2..^1];
                     LastConditional = new Conditional(lineIndex: i, isOnce: false,
-                        isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: true, evalTokens: tokens);
+                        isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
                     break;
                 }
-                case LineType.DoWhileLoop:
+                case LineType.DoWhileLoop when line.Tokens[0] is CallLikePosToken callToken:
                 {
-                    var tokens = line.Tokens[2..^1];
                     LastConditional = new Conditional(lineIndex: i, isOnce: false,
-                        isTrue: true, isBreakWorthy: true, evalTokens: tokens);
+                        isTrue: true, isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
                     break;
                 }
                 case LineType.BlockStuff:
@@ -199,6 +196,17 @@ public class Motor
         }
     }
 
+    public object? MethodCall(string name, object[] arguments)
+    {
+        switch (name)
+        {
+            case "string":
+                return arguments[0].ToString()!;
+        }
+
+        throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);
+    }
+
     public object SimpleEvaluateExpressionSingle(PosToken token)
     {
         switch (token.Type)
@@ -231,6 +239,11 @@ public class Motor
                 return str.ToString();
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
+            case TokenType.KeywordCall when token is CallLikePosToken callToken:
+                var args = new object[callToken.Arguments.Length];
+                for (var i = 0; i < callToken.Arguments.Length; i++)
+                    args[i] = SimpleEvaluateExpressionHigh(callToken.Arguments[i]);
+                return MethodCall(callToken.GetName(Raw), args);
         }
 
         throw new Exception("yo wtf");

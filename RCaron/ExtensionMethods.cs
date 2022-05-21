@@ -7,4 +7,9 @@ static class ListEx
     {
         lst.RemoveRange(from, lst.Count - from);
     }
+    internal static List<T> GetRange<T>(this List<T> list, Range range)
+    {
+        var (start, length) = range.GetOffsetAndLength(list.Count);
+        return list.GetRange(start, length);
+    }
 }

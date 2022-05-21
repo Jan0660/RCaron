@@ -40,16 +40,13 @@ var opt = new MotorOptions()
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
 var text = @"$h = 0;
-while ($h > 0){
-    $h = $h - 1;
-    println $h;
-}";
+println string($h);
+";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
 RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
 RCaronRunner.Run(text, opt);
-RCaronRunner.Run("$h = 2 * (2 + 3);");
 // while (true)
 // {
 //     stopwatch = Stopwatch.StartNew();

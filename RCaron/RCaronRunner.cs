@@ -78,6 +78,25 @@ public static class RCaronRunner
                     }
                 }
 
+                if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } blockToken)
+                {
+                    var startIndex = tokens.FindIndex(
+                        t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
+                             bpt.Number == blockToken.Number);
+                    if (tokens[startIndex - 1] is { Type: TokenType.Keyword })
+                    {
+                        // todo: handle multple args -- do comma token or smth
+                        var h = new CallLikePosToken(TokenType.KeywordCall,
+                            (tokens[startIndex - 1].Position.Start, posToken.Position.End), new[]
+                            {
+                                tokens.GetRange((startIndex + 1)..).ToArray()
+                            }, tokens[startIndex - 1].Position.End);
+                        tokens.RemoveFrom(startIndex - 1);
+                        tokens.Add(h);
+                        goto afterAdd;
+                    }
+                }
+
                 beforeAdd: ;
                 tokens.Add(posToken);
                 afterAdd: ;
@@ -115,12 +134,13 @@ public static class RCaronRunner
             Console.Out.Flush();
         }
 
-        tokens.RemoveAll(t => t.Type == TokenType.Whitespace);
+        // tokens.RemoveAll(t => t.Type == TokenType.Whitespace);
 
 // find lines
         var lines = new List<Line>();
         for (var i = 0; i < tokens.Count; i++)
         {
+            var callToken = tokens[i] as CallLikePosToken;
             // variable assignment
             if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
                 tokens[i + 1].ToString(text) == "=")
@@ -132,13 +152,13 @@ public static class RCaronRunner
                 i = endingIndex;
             }
             // if statement
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "if")
+            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "if")
             {
-                var endingSimpleBlockIndex =
-                    tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
+                // var endingSimpleBlockIndex =
+                //     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
                 lines.Add(
-                    new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.IfStatement));
-                i = endingSimpleBlockIndex;
+                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.IfStatement));
+                // i = endingSimpleBlockIndex;
             }
             // loop loop
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
@@ -147,22 +167,16 @@ public static class RCaronRunner
                     new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop));
             }
             // while loop
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "while")
+            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "while")
             {
-                var endingSimpleBlockIndex =
-                    tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
                 lines.Add(
-                    new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.WhileLoop));
-                i = endingSimpleBlockIndex;
+                    new Line(tokens.GetRange((i),  1).ToArray(), LineType.WhileLoop));
             }
             // do while loop
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "dowhile")
+            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "dowhile")
             {
-                var endingSimpleBlockIndex =
-                    tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
                 lines.Add(
-                    new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.DoWhileLoop));
-                i = endingSimpleBlockIndex;
+                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.DoWhileLoop));
             }
             // function
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "func")
