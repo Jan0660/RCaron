@@ -10,7 +10,6 @@ public static class Operations
     // public const string IsGreaterOrEqualOp = ">=";
     // public const string IsLessOp = "<";
     // public const string IsLessOrEqualOp = "<=";
-    // todo: maybe put Val into names of value operations e.g. "SumValOp"
     public const string SumOp = "+";
     public const string SubtractOp = "-";
     public const string MultiplyOp = "*";
