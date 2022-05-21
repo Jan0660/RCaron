@@ -19,4 +19,5 @@ public enum LineType : byte
     BlockStuff,
     KeywordPlainCall,
     LoopLoop,
+    WhileLoop,
 }

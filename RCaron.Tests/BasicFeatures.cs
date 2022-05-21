@@ -43,13 +43,23 @@ public class BasicFeatures
     }
 
     [Fact]
-    public void LoopAndBreak()
+    public void LoopLoopAndBreak()
     {
         var m = RCaronRunner.Run(@"$h = 0; loop {
 $h = $h + 1;
 if ($h > 9) { break; }
 }");
         m.VariableEquals("h", (long)10);
+    }
+
+    [Fact]
+    public void WhileLoop()
+    {
+        var m = RCaronRunner.Run(@"$h = 0;
+while ($h > 0) {
+    $h = $h - 1;
+}");
+        m.VariableEquals("h", (long)0);
     }
 
     [Fact]

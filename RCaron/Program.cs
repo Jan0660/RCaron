@@ -36,8 +36,13 @@ var opt = new MotorOptions()
 // $a = $b;
 // $b = $c;
 // goto_line 2;";
-var text = @"loop {
-println 'balls'; println 'balls'; println 'balls'; break;
+// var text = @"loop {
+// println 'balls'; println 'balls'; println 'balls'; break;
+// }";
+var text = @"$h = 0;
+while ($h > 0){
+    $h = $h - 1;
+    println $h;
 }";
 Console.WriteLine(text);
 Console.WriteLine("===============================");

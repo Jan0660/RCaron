@@ -62,10 +62,19 @@ public class Motor
                     Console.Debug($"variable '{variableName}' set to '{obj}'");
                     break;
                 case LineType.IfStatement:
+                {
                     var tokens = line.Tokens[2..^1];
                     LastConditional = new Conditional(lineIndex: i, isOnce: true,
                         isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: false, evalTokens: null);
                     break;
+                }
+                case LineType.WhileLoop:
+                {
+                    var tokens = line.Tokens[2..^1];
+                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
+                        isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: true, evalTokens: tokens);
+                    break;
+                }
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
