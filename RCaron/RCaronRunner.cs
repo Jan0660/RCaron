@@ -147,14 +147,20 @@ public static class RCaronRunner
             // if statement
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "if")
             {
-                // var startingSimpleBlock = tokens[i + 1];
                 var endingSimpleBlockIndex =
                     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
-                // var endingSimpleBlock = tokens[endingSimpleBlockIndex];
                 lines.Add(
                     new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.IfStatement));
                 i = endingSimpleBlockIndex;
-                // Console.WriteLine(text[startingSimpleBlock.Position.Start..endingSimpleBlock.Position.End]);
+            }
+            // loop loop
+            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
+            {
+                // var endingSimpleBlockIndex =
+                //     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
+                lines.Add(
+                    new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop));
+                // i = endingSimpleBlockIndex;
             }
             else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
             {
@@ -163,6 +169,9 @@ public static class RCaronRunner
             // keyword plain call
             else if (tokens[i].Type == TokenType.Keyword)
             {
+                // check if keyword is lone keyword
+                if (tokens[i].ToString(text) == "loop")
+                    continue;
                 var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
                 lines.Add(new Line(
                     tokens.Take(i..(endingIndex)).ToArray(),

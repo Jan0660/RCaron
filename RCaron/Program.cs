@@ -53,12 +53,15 @@ var opt = new MotorOptions()
 {
     EnableDumb = true
 };
-var text = @"$a = 0; $b = 1; $c = 0;
-$c = $a + $b;
-println $c;
-$a = $b;
-$b = $c;
-goto_line 2;";
+// var text = @"$a = 0; $b = 1; $c = 0;
+// $c = $a + $b;
+// println $c;
+// $a = $b;
+// $b = $c;
+// goto_line 2;";
+var text = @"loop {
+println 'balls';
+}";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;

@@ -13,12 +13,12 @@ public class Motor
     public string Raw { get; set; }
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
-    public Stack<(int LineIndex, int BlockDepth, int BlockNumber)> BlockStack { get; set; } = new();
+    public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)> BlockStack { get; set; } = new();
     public Conditional LastConditional { get; set; }
     public MotorOptions Options { get; }
     public class Conditional
     {
-        public Conditional(int lineIndex, bool isOnce, bool isTrue)
+        public Conditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy)
         {
             LineIndex = lineIndex;
             IsOnce = isOnce;
@@ -28,6 +28,7 @@ public class Motor
         public int LineIndex { get; set; }
         public bool IsOnce { get; set; }
         public bool IsTrue { get; set; }
+        public bool IsBreakWorthy { get; set; }
     }
 
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
@@ -52,14 +53,14 @@ public class Motor
                     break;
                 case LineType.IfStatement:
                     LastConditional = new Conditional(lineIndex: i, isOnce: true,
-                        isTrue: SimpleEvaluateBool(line.Tokens[2..^1]));
+                        isTrue: SimpleEvaluateBool(line.Tokens[2..^1]), isBreakWorthy: false);
                     break;
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
                         if (LastConditional is { IsTrue: true, IsOnce: true })
                         {
-                            BlockStack.Push((i, bpt.Depth, bpt.Number));
+                            BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
                         }
                         else
                         {
@@ -69,7 +70,17 @@ public class Motor
                             continue;
                         }
                     }
+                    else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpte)
+                    {
+                        var curBlock = BlockStack.Peek();
+                        if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
+                            i = curBlock.LineIndex;
+                    }
 
+                    break;
+                case LineType.LoopLoop:
+                    LastConditional = new Conditional(lineIndex: i, isOnce: true,
+                        isTrue: true, isBreakWorthy: true);
                     break;
                 case LineType.KeywordPlainCall:
                     var keyword = line.Tokens[0];
@@ -79,6 +90,12 @@ public class Motor
                     {
                         case "println":
                             System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
+                            continue;
+                        case "break":
+                            var g = BlockStack.Pop();
+                            while(!g.IsBreakWorthy)
+                                g = BlockStack.Pop();
+                            i = g.LineIndex;
                             continue;
                     }
                     if(Options.EnableDebugging)
@@ -163,10 +180,6 @@ public class Motor
             return SimpleEvaluateExpressionSingle(tokens[0]);
         if (tokens.Length > 2)
         {
-            if (tokens.Any(t => t is PosToken { Type: TokenType.Operation }))
-            {
-                
-            }
             return SimpleEvaluateExpressionValue(tokens);
         }
 
@@ -179,7 +192,6 @@ public class Motor
         {
             if (p > 0)
                 return false;
-            // future: maybe get the actual end of a multi token expression by having "ending" operations?
             var expr1 = SimpleEvaluateExpressionSingle(tokens[p]);
             var op = tokens[p + 1].ToString(Raw);
             var expr2 = SimpleEvaluateExpressionSingle(tokens[p + 2]);

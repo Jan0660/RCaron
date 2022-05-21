@@ -18,4 +18,5 @@ public enum LineType : byte
     IfStatement,
     BlockStuff,
     KeywordPlainCall,
+    LoopLoop,
 }
