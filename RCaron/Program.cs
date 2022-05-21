@@ -19,29 +19,6 @@ Log.Configure.EnableVirtualTerminalProcessing();
 Console.WriteLine("Hello, World!");
 var stopwatch = Stopwatch.StartNew();
 
-// var text = @"$hello0 = 'text';
-// $hello1 = 'text';
-// $hello2 = 'text';
-// $hello3 = 'text';
-// println 123;
-// println 123 + 123;
-// println 0.123;
-// if ($hello3 == 'text') {
-//     $hello3 = 'fun';
-//     if ($hello3 == 'fun') {
-//         $hello3 = 'funny';
-//     }
-// }
-// if ($hello3 != 'funny') {
-//     $hello3 = 'wtf';
-// }
-// if ($hello3 != 'wtf') {
-//     $hello3 = 'yeehaw';
-// }
-// println 'welcome to hell';
-// println $hello3;
-// dbg_println $hello3;
-// ";
 // = (9 + 2) * 2 = 11 * 2 = 22 
 // var text = @"$hello0 = ((3 * 3) + 2) * 2;
 // println $hello0;
@@ -65,6 +42,7 @@ println 'balls'; println 'balls'; println 'balls'; break;
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
+RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
 RCaronRunner.Run(text, opt);
 RCaronRunner.Run("$h = 2 * (2 + 3);");
 // while (true)
@@ -82,13 +60,13 @@ RCaronRunner.Run("$h = 2 * (2 + 3);");
 // }
 
 
-namespace RCaron
-{
-    public enum EnumBlockType : byte
-    {
-        Normal,
-    }
-}
+// namespace RCaron
+// {
+//     public enum EnumBlockType : byte
+//     {
+//         Normal,
+//     }
+// }
 
 // ref struct FunnySpanReader
 // {

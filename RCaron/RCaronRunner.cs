@@ -4,7 +4,7 @@ namespace RCaron;
 
 public static class RCaronRunner
 {
-    public static bool GlobalEnableLog = false;
+    public static RCaronRunnerLog GlobalLog = RCaronRunnerLog.None;
 
     public static Motor Run(string text, MotorOptions? motorOptions = null)
     {
@@ -27,7 +27,7 @@ public static class RCaronRunner
         {
             if (token is PosToken { Type: TokenType.Whitespace })
             {
-                if (GlobalEnableLog)
+                if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                     Console.Write(token.ToString(text));
                 token = reader.Read();
                 continue;
@@ -94,7 +94,7 @@ public static class RCaronRunner
                 beforeAdd: ;
                 tokens.Add(posToken);
                 afterAdd: ;
-                if (GlobalEnableLog)
+                if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                 {
                     Console.ForegroundColor = posToken.Type switch
                     {
@@ -107,7 +107,7 @@ public static class RCaronRunner
                         _ => ConsoleColor.Black,
                     };
                     Console.Write(posToken.ToString(text));
-                    if (posToken is BlockPosToken bpt)
+                    if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColorsBrackets) && posToken is BlockPosToken bpt)
                     {
                         Console.ForegroundColor = ConsoleColor.DarkGray;
                         Console.Write($"({bpt.Depth}, {bpt.Number})");
@@ -121,7 +121,7 @@ public static class RCaronRunner
             token = reader.Read();
         }
 
-        if (GlobalEnableLog)
+        if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
         {
             Console.WriteLine();
             Console.ResetColor();
@@ -195,7 +195,7 @@ public static class RCaronRunner
             }
         }
 
-        if (GlobalEnableLog)
+        if (GlobalLog.HasFlag(RCaronRunnerLog.Lines))
         {
             Console.WriteLine();
             Console.ResetColor();
@@ -219,4 +219,13 @@ public class RCaronRunnerContext
 {
     public string Code { get; set; }
     public Line[] Lines { get; set; }
+}
+
+[Flags]
+public enum RCaronRunnerLog
+{
+    None = 0,
+    FunnyColors = 1 << 0,
+    FunnyColorsBrackets = 1 << 1,
+    Lines = 1 << 2,
 }

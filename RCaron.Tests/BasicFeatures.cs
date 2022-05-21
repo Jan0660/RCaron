@@ -62,8 +62,8 @@ if ($h > 9) { break; }
     [Fact]
     public void EnableLogRun()
     {
-        RCaronRunner.GlobalEnableLog = true;
+        RCaronRunner.GlobalLog = (RCaronRunnerLog)0b111111;
         RCaronRunner.Run("println 'woo';");
-        RCaronRunner.GlobalEnableLog = false;
+        RCaronRunner.GlobalLog = 0;
     }
 }
