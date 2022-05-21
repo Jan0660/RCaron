@@ -119,4 +119,11 @@ sus;");
         var m = RCaronRunner.Run(@"$h = 0; $g = string($h);");
         m.VariableEquals("g", "0");
     }
+
+    [Fact]
+    public void KeywordCall()
+    {
+        var m = RCaronRunner.Run(@"$h = sum(sum(1 + 2, 2 * 2 - 4), 1 + 3 + sum(1 + 1, 2 - 1 - 1));");
+        m.VariableEquals("h", (long)9);
+    }
 }

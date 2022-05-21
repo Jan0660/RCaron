@@ -49,35 +49,6 @@ public static class RCaronRunner
                         break;
                 }
 
-                (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
-                {
-                    var i = tokens.Count - 1;
-                    while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken)
-                        i--;
-                    return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
-                }
-
-                if (posToken is not ValuePosToken && tokens.LastOrDefault() is ValuePosToken)
-                {
-                    var h = BackwardsCollectValuePosToken();
-                    if (h.tokens.Length != 1 && h.tokens.Length != 0)
-                    {
-                        // AAAAAA
-                        // remove those replace with fucking imposter thing
-                        var rem = h.index - 1;
-                        var g = 0;
-                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) || posToken is not BlockPosToken{Type: TokenType.SimpleBlockEnd})
-                            rem += 1;
-                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
-                            goto beforeAdd;
-                        tokens.RemoveFrom(rem);
-                        tokens.Add(new ValueGroupPosToken(TokenType.DumbShit,
-                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
-                        if (posToken is { Type: TokenType.SimpleBlockEnd })
-                            goto afterAdd;
-                    }
-                }
-
                 if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } blockToken)
                 {
                     var startIndex = tokens.FindIndex(
@@ -107,6 +78,35 @@ public static class RCaronRunner
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
                         goto afterAdd;
+                    }
+                }
+
+                (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
+                {
+                    var i = tokens.Count - 1;
+                    while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken)
+                        i--;
+                    return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
+                }
+
+                if (posToken is not ValuePosToken && tokens.LastOrDefault() is ValuePosToken)
+                {
+                    var h = BackwardsCollectValuePosToken();
+                    if (h.tokens.Length != 1 && h.tokens.Length != 0)
+                    {
+                        // AAAAAA
+                        // remove those replace with fucking imposter thing
+                        var rem = h.index - 1;
+                        var g = 0;
+                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) || posToken is not BlockPosToken{Type: TokenType.SimpleBlockEnd})
+                            rem += 1;
+                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
+                            goto beforeAdd;
+                        tokens.RemoveFrom(rem);
+                        tokens.Add(new ValueGroupPosToken(TokenType.DumbShit,
+                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                        if (posToken is { Type: TokenType.SimpleBlockEnd })
+                            goto afterAdd;
                     }
                 }
 
