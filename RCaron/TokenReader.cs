@@ -105,7 +105,8 @@ public class TokenReader
             // match "value" operations
             var op = txt[initialPosition..position];
             if (op.SequenceEqual(Operations.SumOp) || op.SequenceEqual(Operations.SubtractOp) ||
-                op.SequenceEqual(Operations.MultiplyOp))
+                op.SequenceEqual(Operations.MultiplyOp) || op.SequenceEqual(Operations.DivideOp) ||
+                op.SequenceEqual(Operations.ModuloOp))
                 return new ValuePosToken(TokenType.Operation, (initialPosition, position));
 
             return new PosToken(TokenType.Operation, (initialPosition, position));
