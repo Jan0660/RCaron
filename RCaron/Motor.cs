@@ -15,11 +15,15 @@ public class Motor
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
 
-    public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
+    public record StackThing(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional, bool IsReturnWorthy, int PreviousLineIndex);
+
+    public Stack<StackThing>
+    // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
         BlockStack { get; set; } = new();
 
     public Conditional LastConditional { get; set; }
     public MotorOptions Options { get; }
+    public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
 
     public class Conditional
     {
@@ -88,7 +92,7 @@ public class Motor
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
                         if (LastConditional is { IsTrue: true })
-                            BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
+                            BlockStack.Push(new StackThing(i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional, false, i));
                         else
                         {
                             i = Array.FindIndex(Lines,
@@ -114,12 +118,20 @@ public class Motor
                                     i = curBlock.LineIndex;
                             }
                         }
+                        else if (curBlock.Conditional == null)
+                            i = curBlock.PreviousLineIndex;
                     }
 
                     break;
                 case LineType.LoopLoop:
                     LastConditional = new Conditional(lineIndex: i, isOnce: false,
                         isTrue: true, isBreakWorthy: true, null);
+                    break;
+                case LineType.Function:
+                    var start = (BlockPosToken)Lines[i + 1].Tokens[0];
+                    var end = Array.IndexOf(Lines, (Line l) =>
+                        l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
+                    Functions[line.Tokens[1].ToString(Raw)] = (i+1, end);
                     break;
                 case LineType.KeywordPlainCall:
                     var keyword = line.Tokens[0];
@@ -168,6 +180,14 @@ public class Motor
                                 i = (int)(long)SimpleEvaluateExpressionHigh(args);
                                 continue;
                         }
+
+                    if (Functions.TryGetValue(keywordString, out var func))
+                    {
+                        var st = (BlockPosToken)Lines[func.startLineIndex].Tokens[0];
+                        BlockStack.Push(new StackThing(func.startLineIndex, st.Depth, st.Number, false, null, true, i+1));
+                        i = func.startLineIndex;
+                        continue;
+                    }
 
                     throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
             }

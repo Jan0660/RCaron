@@ -164,6 +164,12 @@ public static class RCaronRunner
                     new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.DoWhileLoop));
                 i = endingSimpleBlockIndex;
             }
+            // function
+            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "func")
+            {
+                lines.Add(new Line(tokens.GetRange((i), 2).ToArray(), LineType.Function));
+                i += 1;
+            }
             else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
             {
                 lines.Add(new Line(new[] { tokens[i] }, LineType.BlockStuff));

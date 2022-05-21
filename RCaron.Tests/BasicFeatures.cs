@@ -101,4 +101,15 @@ dowhile ($h > 1) {
         m.VariableEquals("long", (long)123);
         m.VariableEquals("decimal", 123.123M);
     }
+
+    [Fact]
+    public void Functions()
+    {
+        // todo: make better logic for lone keywords
+        var m = RCaronRunner.Run(@"func sus{
+    $h = 1;
+}
+sus 1;");
+        m.VariableEquals("h", (long)1);
+    }
 }

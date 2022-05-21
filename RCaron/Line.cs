@@ -21,4 +21,5 @@ public enum LineType : byte
     LoopLoop,
     WhileLoop,
     DoWhileLoop,
+    Function,
 }
