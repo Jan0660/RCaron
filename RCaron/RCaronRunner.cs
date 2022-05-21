@@ -66,7 +66,7 @@ public static class RCaronRunner
                         // remove those replace with fucking imposter thing
                         var rem = h.index - 1;
                         var g = 0;
-                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }))
+                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) || posToken is not BlockPosToken{Type: TokenType.SimpleBlockEnd})
                             rem += 1;
                         if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
                             goto beforeAdd;
@@ -85,12 +85,25 @@ public static class RCaronRunner
                              bpt.Number == blockToken.Number);
                     if (tokens[startIndex - 1] is { Type: TokenType.Keyword })
                     {
-                        // todo: handle multple args -- do comma token or smth
+                        // todo: dear lord
+                        var tks = tokens.GetRange((startIndex + 1)..);
+                        var c = tks.Count(t => t.Type == TokenType.Comma) + 1;
+                        var args = new PosToken[c][];
+                        for (byte i = 0; i < c; i++)
+                        {
+                            var ind = tks.FindIndex(t => t.Type == TokenType.Comma);
+                            args[i] = tks.GetRange(..(ind != -1 ? new Index(ind) : Index.End)).ToArray();
+                            if (ind != -1)
+                                tks = tks.GetRange((ind + 1)..);
+                        }
+
                         var h = new CallLikePosToken(TokenType.KeywordCall,
-                            (tokens[startIndex - 1].Position.Start, posToken.Position.End), new[]
-                            {
-                                tokens.GetRange((startIndex + 1)..).ToArray()
-                            }, tokens[startIndex - 1].Position.End);
+                            (tokens[startIndex - 1].Position.Start, posToken.Position.End), args,
+                            // new[]
+                            // {
+                            //     tokens.GetRange((startIndex + 1)..).ToArray()
+                            // }
+                            tokens[startIndex - 1].Position.End);
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
                         goto afterAdd;
@@ -152,7 +165,7 @@ public static class RCaronRunner
                 i = endingIndex;
             }
             // if statement
-            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "if")
+            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "if")
             {
                 // var endingSimpleBlockIndex =
                 //     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
@@ -167,13 +180,13 @@ public static class RCaronRunner
                     new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop));
             }
             // while loop
-            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "while")
+            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "while")
             {
                 lines.Add(
-                    new Line(tokens.GetRange((i),  1).ToArray(), LineType.WhileLoop));
+                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.WhileLoop));
             }
             // do while loop
-            else if (callToken is {Type: TokenType.KeywordCall} && callToken.GetName(text) == "dowhile")
+            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "dowhile")
             {
                 lines.Add(
                     new Line(tokens.GetRange((i), 1).ToArray(), LineType.DoWhileLoop));
@@ -199,6 +212,11 @@ public static class RCaronRunner
                     tokens.Take(i..(endingIndex)).ToArray(),
                     LineType.KeywordPlainCall));
                 i = endingIndex;
+            }
+            else if (callToken is not null)
+            {
+                lines.Add(new Line(tokens.GetRange(i..).ToArray(), LineType.KeywordCall));
+                i++;
             }
             // invalid line
             else

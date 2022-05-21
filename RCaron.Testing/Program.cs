@@ -40,7 +40,7 @@ var opt = new MotorOptions()
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
 var text = @"$h = 0;
-println string($h);
+printfunny(sum(1+2, 2));
 ";
 Console.WriteLine(text);
 Console.WriteLine("===============================");

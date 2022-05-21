@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using Console = Log73.Console;
 
@@ -135,7 +136,17 @@ public class Motor
                         l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
                     Functions[line.Tokens[1].ToString(Raw)] = (i+1, end);
                     break;
+                case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
+                {
+                    // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
+                    var args = new object[callToken.Arguments.Length];
+                    for (var ind = 0; ind < callToken.Arguments.Length; ind++)
+                        args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
+                    MethodCall(callToken.GetName(Raw), args);
+                    break;
+                }
                 case LineType.KeywordPlainCall:
+                {
                     var keyword = line.Tokens[0];
                     var keywordString = keyword.ToString(Raw);
                     var args = line.Tokens[1..];
@@ -192,6 +203,11 @@ public class Motor
                     }
 
                     throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
+                }
+                default:
+                    // wtf
+                    Debugger.Break();
+                    break;
             }
         }
     }
@@ -202,6 +218,11 @@ public class Motor
         {
             case "string":
                 return arguments[0].ToString()!;
+            case "sum":
+                return Horrors.Sum(arguments[0], arguments[1]);
+            case "printfunny":
+                Console.WriteLine(arguments[0]);
+                return null;
         }
 
         throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);

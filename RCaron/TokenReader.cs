@@ -55,6 +55,12 @@ public class TokenReader
                 ++position;
             return new PosToken(TokenType.Whitespace, (initialPosition, position));
         }
+        // comma
+        else if (txt[position] == ',')
+        {
+            position++;
+            return new PosToken(TokenType.Comma, (initialPosition, position));
+        }
         // line ending - semicolon
         else if (txt[position] == ';')
         {
