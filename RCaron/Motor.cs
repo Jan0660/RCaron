@@ -1,3 +1,4 @@
+using System.Text;
 using Console = Log73.Console;
 
 namespace RCaron;
@@ -32,6 +33,7 @@ public class Motor
         }
 
         public int LineIndex { get; set; }
+
         // is once run
         public bool IsOnce { get; set; }
         public bool IsTrue { get; set; }
@@ -94,7 +96,7 @@ public class Motor
                             continue;
                         }
                     }
-                    else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpte)
+                    else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd })
                     {
                         var curBlock = BlockStack.Peek();
                         if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
@@ -109,7 +111,6 @@ public class Motor
                                 i = curBlock.LineIndex;
                         }
                     }
-
                     break;
                 case LineType.LoopLoop:
                     LastConditional = new Conditional(lineIndex: i, isOnce: false,
@@ -163,7 +164,7 @@ public class Motor
                                 continue;
                         }
 
-                    throw new RCaronException($"keyword '{keywordString}' is invalid");
+                    throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
             }
         }
     }
@@ -184,7 +185,21 @@ public class Motor
             case TokenType.DecimalNumber:
                 return Decimal.Parse(token.ToString(Raw));
             case TokenType.String:
-                return token.ToString(Raw)[1..^1];
+                // todo(perf): maybe building with on a span first would be cool?
+                var s = token.ToString(Raw)[1..^1];
+                var str = new StringBuilder(s.Length);
+                for (var i = 0; i < s.Length; i++)
+                {
+                    var ch = s[i];
+                    if (ch == '\\')
+                    {
+                        str.Append(s[++i]);
+                        continue;
+                    }
+                    str.Append(s[i]);
+                }
+
+                return str.ToString();
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
         }

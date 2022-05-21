@@ -55,7 +55,7 @@ if ($h > 9) { break; }
     [Fact]
     public void WhileLoop()
     {
-        var m = RCaronRunner.Run(@"$h = 0;
+        var m = RCaronRunner.Run(@"$h = 10;
 while ($h > 0) {
     $h = $h - 1;
 }");
@@ -75,5 +75,12 @@ while ($h > 0) {
         RCaronRunner.GlobalLog = (RCaronRunnerLog)0b111111;
         RCaronRunner.Run("println 'woo';");
         RCaronRunner.GlobalLog = 0;
+    }
+
+    [Fact]
+    public void Strings()
+    {
+        var m = RCaronRunner.Run("$h = 'when the string is escaped == \\'kool!!!\\'';");
+        m.VariableEquals("h", "when the string is escaped == 'kool!!!'");
     }
 }
