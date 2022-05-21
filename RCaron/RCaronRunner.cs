@@ -47,13 +47,6 @@ public static class RCaronRunner
                             ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
                         blockDepth--;
                         break;
-                    // case ValuePosToken valuePosToken:
-                    //     valuePosToken.Depth = blockDepth;
-                    //     valuePosToken.Number = blockNumber;
-                    //     // // todo: probably won't need ParentNumber?
-                    //     // valuePosToken.ParentNumber =
-                    //     //     ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
-                    //     break;
                 }
 
                 (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
@@ -74,14 +67,10 @@ public static class RCaronRunner
                         var rem = h.index - 1;
                         var g = 0;
                         if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }))
-                            // rem += 1;
                             rem += 1;
                         if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
-                            // if (rem == 1)
                             goto beforeAdd;
-                        // -1 is for the ( before
                         tokens.RemoveFrom(rem);
-                        // tokens.RemoveRange(h.index -rem, (rem));
                         tokens.Add(new ValueGroupPosToken(TokenType.DumbShit,
                             (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
                         if (posToken is { Type: TokenType.SimpleBlockEnd })
@@ -154,11 +143,8 @@ public static class RCaronRunner
             // loop loop
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
             {
-                // var endingSimpleBlockIndex =
-                //     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
                 lines.Add(
                     new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop));
-                // i = endingSimpleBlockIndex;
             }
             // while loop
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "while")
@@ -197,8 +183,6 @@ public static class RCaronRunner
                 }
 
                 throw new RCaronException($"Invalid line at line {lineNumber}", RCaronExceptionTime.Parsetime);
-                // Console.Error.WriteLine("Invalid line at line {0}", lineNumber);
-                // Environment.Exit(-1);
             }
         }
 

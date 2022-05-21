@@ -19,7 +19,6 @@ public class TokenReader
         }
 
         var txt = text.AsSpan();
-        // var txt = text.AsSpan()[position..];
 
         void Skip(int count)
         {
@@ -97,10 +96,6 @@ public class TokenReader
             // collect a keyword e.g. "println"
             if (index == 0)
             {
-                // var hbgfd = txt[position..].IndexOf(' ');
-                // if (hbgfd == -1)
-                //     hbgfd = txt[position..].IndexOf(';') - 1;
-                // position = hbgfd + position;
                 index = CollectAlphaNumericAndSome(txt[position..]);
                 position += index;
                 return new PosToken(TokenType.Keyword, (initialPosition, position));

@@ -13,7 +13,7 @@ public class RCaronBenchmarks
     {
         SimpleMathOpMotor = new Motor(RCaronRunner.Parse(SimpleMathOp));
     }
-    [Benchmark]
+    [Benchmark(Baseline = true)]
     public void SimpleMathOpFull()
     {
         RCaronRunner.Run(SimpleMathOp);

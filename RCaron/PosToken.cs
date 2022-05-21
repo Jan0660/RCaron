@@ -51,10 +51,6 @@ public class BlockPosToken : PosToken
 
 public class ValuePosToken : PosToken
 {
-    // public int Depth { get; set; } = -1;
-    // // public int ParentNumber { get; set; } = -1;
-    // public int Number { get; set; } = -1;
-
     public ValuePosToken(TokenType type, (int Start, int End) position) : base(type, position)
     {
     }

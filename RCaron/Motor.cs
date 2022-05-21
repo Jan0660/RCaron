@@ -80,14 +80,8 @@ public class Motor
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
-                        if (LastConditional is { IsTrue: true, IsOnce: false })
-                        {
+                        if (LastConditional is { IsTrue: true})
                             BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
-                        }
-                        else if (LastConditional is { IsTrue: true, IsOnce: true })
-                        {
-                            BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
-                        }
                         else
                         {
                             i = Array.FindIndex(Lines,
@@ -100,8 +94,6 @@ public class Motor
                     {
                         var curBlock = BlockStack.Peek();
                         if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
-                            // i = curBlock.LineIndex;
-                            // i++;
                             continue;
                         else if (curBlock.Conditional is { IsOnce: false })
                         {
@@ -177,9 +169,7 @@ public class Motor
                 var name = token.ToString(Raw)[1..];
                 if (Variables.ContainsKey(name))
                     return Variables[name];
-                System.Console.Error.WriteLine("Variable '{0}' not found", name);
-                Environment.Exit(-1);
-                break;
+                throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
             case TokenType.Number:
                 return Int64.Parse(token.ToString(Raw));
             case TokenType.DecimalNumber:
@@ -211,7 +201,7 @@ public class Motor
     {
         // repeat action something math
         var index = 0;
-        object value = null;
+        object? value = null;
         while (index < tokens.Length - 1)
         {
             var first = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
@@ -237,16 +227,12 @@ public class Motor
     }
 
     public object SimpleEvaluateExpressionHigh(PosToken[] tokens)
-    {
-        if (tokens.Length == 1)
-            return SimpleEvaluateExpressionSingle(tokens[0]);
-        if (tokens.Length > 2)
+        => tokens.Length switch
         {
-            return SimpleEvaluateExpressionValue(tokens);
-        }
-
-        return new Exception("what he fuck");
-    }
+            1 => SimpleEvaluateExpressionSingle(tokens[0]),
+            > 2 => SimpleEvaluateExpressionValue(tokens),
+            _ => new Exception("what he fuck")
+        };
 
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {
