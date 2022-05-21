@@ -20,4 +20,5 @@ public enum LineType : byte
     KeywordPlainCall,
     LoopLoop,
     WhileLoop,
+    DoWhileLoop,
 }

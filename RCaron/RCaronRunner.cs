@@ -155,6 +155,15 @@ public static class RCaronRunner
                     new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.WhileLoop));
                 i = endingSimpleBlockIndex;
             }
+            // do while loop
+            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "dowhile")
+            {
+                var endingSimpleBlockIndex =
+                    tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
+                lines.Add(
+                    new Line(tokens.GetRange((i), endingSimpleBlockIndex - i + 1).ToArray(), LineType.DoWhileLoop));
+                i = endingSimpleBlockIndex;
+            }
             else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
             {
                 lines.Add(new Line(new[] { tokens[i] }, LineType.BlockStuff));

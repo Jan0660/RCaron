@@ -77,10 +77,17 @@ public class Motor
                         isTrue: SimpleEvaluateBool(tokens), isBreakWorthy: true, evalTokens: tokens);
                     break;
                 }
+                case LineType.DoWhileLoop:
+                {
+                    var tokens = line.Tokens[2..^1];
+                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
+                        isTrue: true, isBreakWorthy: true, evalTokens: tokens);
+                    break;
+                }
                 case LineType.BlockStuff:
                     if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                     {
-                        if (LastConditional is { IsTrue: true})
+                        if (LastConditional is { IsTrue: true })
                             BlockStack.Push((i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional));
                         else
                         {
@@ -99,10 +106,16 @@ public class Motor
                         {
                             if (curBlock.Conditional.EvaluateTokens == null)
                                 i = curBlock.LineIndex;
-                            else if (SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!))
-                                i = curBlock.LineIndex;
+                            else
+                            {
+                                var evaluated = SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!);
+                                curBlock.Conditional.IsTrue = evaluated;
+                                if (evaluated)
+                                    i = curBlock.LineIndex;
+                            }
                         }
                     }
+
                     break;
                 case LineType.LoopLoop:
                     LastConditional = new Conditional(lineIndex: i, isOnce: false,
@@ -186,6 +199,7 @@ public class Motor
                         str.Append(s[++i]);
                         continue;
                     }
+
                     str.Append(s[i]);
                 }
 
@@ -259,7 +273,7 @@ public class Motor
                     return Horrors.IsGreater(expr1, expr2);
                 // todo: unlazy myself lol
                 case Operations.IsGreaterOrEqualOp:
-                    return expr1.Equals(expr2) ||Horrors.IsGreater(expr1, expr2);
+                    return expr1.Equals(expr2) || Horrors.IsGreater(expr1, expr2);
                 case Operations.IsLessOp:
                     return !expr1.Equals(expr2) && !Horrors.IsGreater(expr1, expr2);
                 case Operations.IsLessOrEqualOp:

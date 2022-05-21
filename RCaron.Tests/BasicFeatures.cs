@@ -63,6 +63,16 @@ while ($h > 0) {
     }
 
     [Fact]
+    public void DoWhileLoop()
+    {
+        var m = RCaronRunner.Run(@"$h = 1;
+dowhile ($h > 1) {
+    $h = $h - 1;
+}");
+        m.VariableEquals("h", (long)0);
+    }
+
+    [Fact]
     public void InvalidLine()
     {
         var exp = Assert.Throws<RCaronException>(() => RCaronRunner.Parse("$h println 'huh';"));
