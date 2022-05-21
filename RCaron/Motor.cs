@@ -218,6 +218,12 @@ public class Motor
                 case Operations.MultiplyOp:
                     value = Horrors.Multiply(first, second);
                     break;
+                case Operations.DivideOp:
+                    value = Horrors.Divide(first, second);
+                    break;
+                case Operations.ModuloOp:
+                    value = Horrors.Modulo(first, second);
+                    break;
             }
 
             index += 2;
@@ -251,6 +257,13 @@ public class Motor
                     return !expr1.Equals(expr2);
                 case Operations.IsGreaterOp:
                     return Horrors.IsGreater(expr1, expr2);
+                // todo: unlazy myself lol
+                case Operations.IsGreaterOrEqualOp:
+                    return expr1.Equals(expr2) ||Horrors.IsGreater(expr1, expr2);
+                case Operations.IsLessOp:
+                    return !expr1.Equals(expr2) && !Horrors.IsGreater(expr1, expr2);
+                case Operations.IsLessOrEqualOp:
+                    return expr1.Equals(expr2) || !Horrors.IsGreater(expr1, expr2);
             }
         }
 

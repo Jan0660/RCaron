@@ -179,7 +179,13 @@ public class TokenReader
             return 2;
         if (IsMatch(in span, Operations.IsNotEqualOp))
             return 2;
+        if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
+            return 2;
+        if (IsMatch(in span, Operations.IsLessOrEqualOp))
+            return 2;
         if (IsMatch(in span, Operations.IsGreaterOp))
+            return 1;
+        if (IsMatch(in span, Operations.IsLessOp))
             return 1;
         if (IsMatch(in span, Operations.AssignmentOp))
             return 1;
@@ -188,6 +194,10 @@ public class TokenReader
         if (IsMatch(in span, Operations.SubtractOp))
             return 1;
         if (IsMatch(in span, Operations.MultiplyOp))
+            return 1;
+        if (IsMatch(in span, Operations.DivideOp))
+            return 1;
+        if (IsMatch(in span, Operations.ModuloOp))
             return 1;
 
         return 0;
