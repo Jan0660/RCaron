@@ -75,7 +75,8 @@ dowhile ($h > 1) {
     [Fact]
     public void InvalidLine()
     {
-        var exp = Assert.Throws<RCaronException>(() => RCaronRunner.Parse("$h println 'huh';"));
+        var exp = Assert.Throws<RCaronException>(() => RCaronRunner.Parse(@"$h = 0;
+$h println 'huh';"));
         Assert.Equal(RCaronExceptionTime.Parsetime, exp.Time);
     }
 

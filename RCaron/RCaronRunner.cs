@@ -177,9 +177,9 @@ public static class RCaronRunner
             // keyword plain call
             else if (tokens[i].Type == TokenType.Keyword)
             {
-                // check if keyword is lone keyword
-                if (tokens[i].ToString(text) == "loop")
-                    continue;
+                // check if keyword is lone keyword -- dont have to -- bruh
+                // if (tokens[i].ToString(text) == "loop")
+                //     continue;
                 var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
                 lines.Add(new Line(
                     tokens.Take(i..(endingIndex)).ToArray(),
