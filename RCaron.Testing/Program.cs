@@ -13,8 +13,8 @@ using Console = System.Console;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
-// BenchmarkRunner.Run<RCaronBenchmarks>();
-// return;
+BenchmarkRunner.Run<RCaronBenchmarks>();
+return;
 
 Console.WriteLine("Hello, World!");
 var stopwatch = Stopwatch.StartNew();

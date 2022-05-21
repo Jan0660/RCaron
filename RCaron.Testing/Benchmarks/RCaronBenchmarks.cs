@@ -19,7 +19,7 @@ public class RCaronBenchmarks
         RCaronRunner.Run(SimpleMathOp);
     }
 
-    [Benchmark()]
+    [Benchmark]
     public void SimpleMathOpParsed()
     {
         SimpleMathOpMotor.Run();

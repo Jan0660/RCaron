@@ -1,6 +1,4 @@
-﻿using CommandLine;
-
-namespace RCaron;
+﻿namespace RCaron;
 
 public static class RCaronRunner
 {
