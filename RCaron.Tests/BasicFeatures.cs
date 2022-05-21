@@ -83,4 +83,12 @@ while ($h > 0) {
         var m = RCaronRunner.Run("$h = 'when the string is escaped == \\'kool!!!\\'';");
         m.VariableEquals("h", "when the string is escaped == 'kool!!!'");
     }
+
+    [Fact]
+    public void Numbers()
+    {
+        var m = RCaronRunner.Run(@"$long = 123; $decimal = 123.123;");
+        m.VariableEquals("long", (long)123);
+        m.VariableEquals("decimal", 123.123M);
+    }
 }
