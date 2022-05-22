@@ -40,10 +40,8 @@ var opt = new MotorOptions()
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
 
-var text = @"for($h = 0, $h < 10, $h = $h + 1){
-    println $h;
-}
-";
+var text = @"$h = 1;
+println $h $h + 1 $h + 1 + 1;";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;

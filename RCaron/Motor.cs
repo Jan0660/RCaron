@@ -196,7 +196,8 @@ public class Motor
                 switch (keywordString)
                 {
                     case "println":
-                        System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
+                        foreach (var token in args)
+                            System.Console.WriteLine(SimpleEvaluateExpressionSingle(token));
                         return;
                     case "break":
                         var g = BlockStack.Pop();
@@ -225,7 +226,12 @@ public class Motor
                             Console.Debug(SimpleEvaluateExpressionHigh(args));
                             return;
                         case "dbg_assert_is_one":
-                            Variables[$"$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
+                            Variables["$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
+                            return;
+                        case "dbg_sum_three":
+                            Variables["$$assertResult"] = Horrors.Sum(
+                                Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]),
+                                    SimpleEvaluateExpressionSingle(args[1])), SimpleEvaluateExpressionSingle(args[2]));
                             return;
                     }
 
@@ -315,6 +321,8 @@ public class Motor
 
     public object SimpleEvaluateExpressionValue(PosToken[] tokens)
     {
+        // if (tokens.Length == 1)
+        //     return SimpleEvaluateExpressionSingle(tokens[0]);
         // repeat action something math
         var index = 0;
         object? value = null;

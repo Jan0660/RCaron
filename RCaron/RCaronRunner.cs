@@ -84,16 +84,29 @@ public static class RCaronRunner
                 (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
                 {
                     var i = tokens.Count - 1;
-                    while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken)
+                    while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && (tokens[i] is {Type: TokenType.Operation} || tokens[i-1] is {Type: TokenType.Operation}))
                         i--;
                     return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
                 }
 
-                if (posToken is not ValuePosToken && tokens.LastOrDefault() is ValuePosToken)
+                if (
+                    // (posToken is not ValuePosToken ||
+                    //  (posToken is ValuePosToken { Type: TokenType.Operation } &&
+                    //   posToken is ValuePosToken)) && 
+                    (tokens.LastOrDefault() is ValuePosToken && tokens.LastOrDefault() is not{Type: TokenType.Operation} &&
+                                                      posToken is not { Type: TokenType.Operation }))
                 {
                     var h = BackwardsCollectValuePosToken();
-                    if (h.tokens.Length != 1 && h.tokens.Length != 0)
+                    // if (h.tokens.Length == 1)
+                    // {
+                        // var lastToken = tokens.Last();
+                        // tokens.RemoveAt(tokens.Count-1);
+                        // tokens.Add(new ValueGroupPosToken(TokenType.DumbShit, lastToken.Position, h.tokens));
+                    // }
+                    if (h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
                     {
+                        if(h.tokens[1] is not {Type: TokenType.Operation})
+                            goto beforeAdd;
                         // AAAAAA
                         // remove those replace with fucking imposter thing
                         var rem = h.index - 1;
@@ -101,7 +114,8 @@ public static class RCaronRunner
                         if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) ||
                             posToken is not BlockPosToken { Type: TokenType.SimpleBlockEnd })
                             rem += 1;
-                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
+                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken &&
+                            tokens[rem] is not ValuePosToken)
                             goto beforeAdd;
                         tokens.RemoveFrom(rem);
                         tokens.Add(new ValueGroupPosToken(TokenType.DumbShit,

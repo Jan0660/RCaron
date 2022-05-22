@@ -24,6 +24,11 @@ public class BasicFeatures
             EnableDebugging = true,
         });
         m.VariableEquals("$$assertResult", true);
+        m = RCaronRunner.Run(@"dbg_sum_three 1 1 + 2 - 3 1;", new MotorOptions()
+        {
+            EnableDebugging = true,
+        });
+        m.VariableEquals("$$assertResult", (long)2);
     }
 
     [Fact]
