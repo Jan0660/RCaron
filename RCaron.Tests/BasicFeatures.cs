@@ -126,4 +126,12 @@ sus;");
         var m = RCaronRunner.Run(@"$h = sum(sum(1 + 2, 2 * 2 - 4), 1 + 3 + sum(1 + 1, 2 - 1 - 1));");
         m.VariableEquals("h", (long)9);
     }
+
+    [Fact]
+    public void ForLoop()
+    {
+        var m = RCaronRunner.Run(@"for($h = 0, $h < 10, $h = $h + 1){$l = $h;}");
+        m.VariableEquals("l", (long)9);
+        m.VariableEquals("h", (long)10);
+    }
 }

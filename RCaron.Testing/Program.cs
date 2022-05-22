@@ -39,8 +39,10 @@ var opt = new MotorOptions()
 // var text = @"loop {
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
-var text = @"$h = 0;
-printfunny(sum(1+2, 2));
+
+var text = @"for($h = 0, $h < 10, $h = $h + 1){
+    println $h;
+}
 ";
 Console.WriteLine(text);
 Console.WriteLine("===============================");

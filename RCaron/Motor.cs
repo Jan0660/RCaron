@@ -16,10 +16,11 @@ public class Motor
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
 
-    public record StackThing(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional, bool IsReturnWorthy, int PreviousLineIndex);
+    public record StackThing(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy,
+        Conditional Conditional, bool IsReturnWorthy, int PreviousLineIndex);
 
     public Stack<StackThing>
-    // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
+        // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
         BlockStack { get; set; } = new();
 
     public Conditional LastConditional { get; set; }
@@ -44,6 +45,27 @@ public class Motor
         public bool IsTrue { get; set; }
         public bool IsBreakWorthy { get; set; }
         public PosToken[]? EvaluateTokens { get; set; }
+
+        public virtual bool Evaluate(Motor m)
+            // todo: handle null
+            => m.SimpleEvaluateBool(EvaluateTokens);
+    }
+
+    public class ForLoopConditional : Conditional
+    {
+        public Line LastExecute { get; }
+
+        public ForLoopConditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[]? evalTokens,
+            Line lastExec) : base(lineIndex, isOnce, isTrue, isBreakWorthy, evalTokens)
+        {
+            LastExecute = lastExec;
+        }
+
+        public override bool Evaluate(Motor m)
+        {
+            m.RunLine(LastExecute);
+            return m.SimpleEvaluateBool(EvaluateTokens);
+        }
     }
 
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
@@ -58,157 +80,178 @@ public class Motor
         Raw = runnerContext.Code;
     }
 
+    /// <summary>
+    /// current line index
+    /// </summary>
+    private int curIndex;
+
     public void Run()
     {
-        for (var i = 0; i < Lines.Length; i++)
+        for (curIndex = 0; curIndex < Lines.Length; curIndex++)
         {
-            if (i >= Lines.Length)
+            if (curIndex >= Lines.Length)
                 break;
-            var line = Lines[i];
-            switch (line.Type)
+            var line = Lines[curIndex];
+            RunLine(line);
+        }
+    }
+
+    public void RunLine(Line line)
+    {
+        switch (line.Type)
+        {
+            case LineType.VariableAssignment:
+                var variableName = line.Tokens[0].ToString(Raw)[1..];
+                var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
+                Variables[variableName] = obj;
+                Console.Debug($"variable '{variableName}' set to '{obj}'");
+                break;
+            case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
-                case LineType.VariableAssignment:
-                    var variableName = line.Tokens[0].ToString(Raw)[1..];
-                    var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
-                    Variables[variableName] = obj;
-                    Console.Debug($"variable '{variableName}' set to '{obj}'");
-                    break;
-                case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
+                LastConditional = new Conditional(lineIndex: curIndex, isOnce: true,
+                    isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: false, evalTokens: null);
+                break;
+            }
+            case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
+            {
+                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
+                    isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: true,
+                    evalTokens: callToken.Arguments[0]);
+                break;
+            }
+            case LineType.DoWhileLoop when line.Tokens[0] is CallLikePosToken callToken:
+            {
+                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
+                    isTrue: true, isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
+                break;
+            }
+            case LineType.BlockStuff:
+                if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                 {
-                    LastConditional = new Conditional(lineIndex: i, isOnce: true,
-                        isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: false, evalTokens: null);
-                    break;
-                }
-                case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
-                {
-                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
-                        isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
-                    break;
-                }
-                case LineType.DoWhileLoop when line.Tokens[0] is CallLikePosToken callToken:
-                {
-                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
-                        isTrue: true, isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
-                    break;
-                }
-                case LineType.BlockStuff:
-                    if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
+                    if (LastConditional is { IsTrue: true })
+                        BlockStack.Push(new StackThing(curIndex, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy,
+                            LastConditional, false, curIndex));
+                    else
                     {
-                        if (LastConditional is { IsTrue: true })
-                            BlockStack.Push(new StackThing(i, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy, LastConditional, false, i));
+                        curIndex = Array.FindIndex(Lines,
+                            l => l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt2 &&
+                                 bpt2.Depth == bpt.Depth && bpt2.Number == bpt.Number);
+                        return;
+                    }
+                }
+                else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd })
+                {
+                    var curBlock = BlockStack.Peek();
+                    if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
+                        return;
+                    else if (curBlock.Conditional is { IsOnce: false })
+                    {
+                        if (curBlock.Conditional.EvaluateTokens == null)
+                            curIndex = curBlock.LineIndex;
                         else
                         {
-                            i = Array.FindIndex(Lines,
-                                l => l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt2 &&
-                                     bpt2.Depth == bpt.Depth && bpt2.Number == bpt.Number);
-                            continue;
+                            var evaluated = curBlock.Conditional.Evaluate(this);
+                            curBlock.Conditional.IsTrue = evaluated;
+                            if (evaluated)
+                                curIndex = curBlock.LineIndex;
                         }
                     }
-                    else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd })
-                    {
-                        var curBlock = BlockStack.Peek();
-                        if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
-                            continue;
-                        else if (curBlock.Conditional is { IsOnce: false })
-                        {
-                            if (curBlock.Conditional.EvaluateTokens == null)
-                                i = curBlock.LineIndex;
-                            else
-                            {
-                                var evaluated = SimpleEvaluateBool(curBlock.Conditional.EvaluateTokens!);
-                                curBlock.Conditional.IsTrue = evaluated;
-                                if (evaluated)
-                                    i = curBlock.LineIndex;
-                            }
-                        }
-                        else if (curBlock.Conditional == null)
-                            i = curBlock.PreviousLineIndex;
-                    }
-
-                    break;
-                case LineType.LoopLoop:
-                    LastConditional = new Conditional(lineIndex: i, isOnce: false,
-                        isTrue: true, isBreakWorthy: true, null);
-                    break;
-                case LineType.Function:
-                    var start = (BlockPosToken)Lines[i + 1].Tokens[0];
-                    var end = Array.IndexOf(Lines, (Line l) =>
-                        l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
-                    Functions[line.Tokens[1].ToString(Raw)] = (i+1, end);
-                    break;
-                case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
-                {
-                    // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
-                    var args = new object[callToken.Arguments.Length];
-                    for (var ind = 0; ind < callToken.Arguments.Length; ind++)
-                        args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
-                    MethodCall(callToken.GetName(Raw), args);
-                    break;
+                    else if (curBlock.Conditional == null)
+                        curIndex = curBlock.PreviousLineIndex;
                 }
-                case LineType.KeywordPlainCall:
+
+                break;
+            case LineType.LoopLoop:
+                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
+                    isTrue: true, isBreakWorthy: true, null);
+                break;
+            case LineType.ForLoop when line.Tokens[0] is CallLikePosToken callToken:
+                var falseI = 0;
+                RunLine(RCaronRunner.GetLine(callToken.Arguments[0].ToList(), ref falseI, Raw));
+                falseI = 0;
+                LastConditional = new ForLoopConditional(lineIndex: curIndex, isOnce: false,
+                    isTrue: true, isBreakWorthy: true, callToken.Arguments[1],
+                    RCaronRunner.GetLine(callToken.Arguments[2].ToList(), ref falseI, Raw));
+                break;
+            case LineType.Function:
+                var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
+                var end = Array.IndexOf(Lines, (Line l) =>
+                    l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
+                Functions[line.Tokens[1].ToString(Raw)] = (curIndex + 1, end);
+                break;
+            case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
+            {
+                // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
+                var args = new object[callToken.Arguments.Length];
+                for (var ind = 0; ind < callToken.Arguments.Length; ind++)
+                    args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
+                MethodCall(callToken.GetName(Raw), args);
+                break;
+            }
+            case LineType.KeywordPlainCall:
+            {
+                var keyword = line.Tokens[0];
+                var keywordString = keyword.ToString(Raw);
+                var args = line.Tokens[1..];
+                switch (keywordString)
                 {
-                    var keyword = line.Tokens[0];
-                    var keywordString = keyword.ToString(Raw);
-                    var args = line.Tokens[1..];
+                    case "println":
+                        System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
+                        return;
+                    case "break":
+                        var g = BlockStack.Pop();
+                        while (!g.IsBreakWorthy)
+                            g = BlockStack.Pop();
+                        // i = g.LineIndex;
+                        curIndex = Array.FindIndex(Lines,
+                            l => l is { Type: LineType.BlockStuff }
+                                 && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd }) + 1;
+                        // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
+                        // i = Array.FindIndex(Lines,
+                        //     l => l is
+                        //     {
+                        //         Type: LineType.BlockStuff, Tokens:  [BlockPosToken
+                        //         {
+                        //             Type: TokenType.BlockEnd
+                        //         },
+                        //         ..]});
+                        return;
+                }
+
+                if (Options.EnableDebugging)
                     switch (keywordString)
                     {
-                        case "println":
-                            System.Console.WriteLine(SimpleEvaluateExpressionHigh(args));
-                            continue;
-                        case "break":
-                            var g = BlockStack.Pop();
-                            while (!g.IsBreakWorthy)
-                                g = BlockStack.Pop();
-                            // i = g.LineIndex;
-                            i = Array.FindIndex(Lines,
-                                l => l is { Type: LineType.BlockStuff }
-                                     && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd }) + 1;
-                            // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
-                            // i = Array.FindIndex(Lines,
-                            //     l => l is
-                            //     {
-                            //         Type: LineType.BlockStuff, Tokens:  [BlockPosToken
-                            //         {
-                            //             Type: TokenType.BlockEnd
-                            //         },
-                            //         ..]});
-                            continue;
+                        case "dbg_println":
+                            Console.Debug(SimpleEvaluateExpressionHigh(args));
+                            return;
+                        case "dbg_assert_is_one":
+                            Variables[$"$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
+                            return;
                     }
 
-                    if (Options.EnableDebugging)
-                        switch (keywordString)
-                        {
-                            case "dbg_println":
-                                Console.Debug(SimpleEvaluateExpressionHigh(args));
-                                continue;
-                            case "dbg_assert_is_one":
-                                Variables[$"$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
-                                continue;
-                        }
-
-                    if (Options.EnableDumb)
-                        switch (keywordString)
-                        {
-                            case "goto_line":
-                                i = (int)(long)SimpleEvaluateExpressionHigh(args);
-                                continue;
-                        }
-
-                    if (Functions.TryGetValue(keywordString, out var func))
+                if (Options.EnableDumb)
+                    switch (keywordString)
                     {
-                        var st = (BlockPosToken)Lines[func.startLineIndex].Tokens[0];
-                        BlockStack.Push(new StackThing(func.startLineIndex, st.Depth, st.Number, false, null, true, i+1));
-                        i = func.startLineIndex;
-                        continue;
+                        case "goto_line":
+                            curIndex = (int)(long)SimpleEvaluateExpressionHigh(args);
+                            return;
                     }
 
-                    throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
+                if (Functions.TryGetValue(keywordString, out var func))
+                {
+                    var st = (BlockPosToken)Lines[func.startLineIndex].Tokens[0];
+                    BlockStack.Push(new StackThing(func.startLineIndex, st.Depth, st.Number, false, null, true,
+                        curIndex + 1));
+                    curIndex = func.startLineIndex;
+                    return;
                 }
-                default:
-                    // wtf
-                    Debugger.Break();
-                    break;
+
+                throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
             }
+            default:
+                // wtf
+                Debugger.Break();
+                break;
         }
     }
 
@@ -310,7 +353,7 @@ public class Motor
         {
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
-            _ => new Exception("what he fuck")
+            _ => throw new Exception("what he fuck")
         };
 
     public bool SimpleEvaluateBool(PosToken[] tokens)

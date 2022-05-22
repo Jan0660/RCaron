@@ -98,7 +98,8 @@ public static class RCaronRunner
                         // remove those replace with fucking imposter thing
                         var rem = h.index - 1;
                         var g = 0;
-                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) || posToken is not BlockPosToken{Type: TokenType.SimpleBlockEnd})
+                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) ||
+                            posToken is not BlockPosToken { Type: TokenType.SimpleBlockEnd })
                             rem += 1;
                         if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken)
                             goto beforeAdd;
@@ -153,84 +154,7 @@ public static class RCaronRunner
         var lines = new List<Line>();
         for (var i = 0; i < tokens.Count; i++)
         {
-            var callToken = tokens[i] as CallLikePosToken;
-            // variable assignment
-            if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
-                tokens[i + 1].ToString(text) == "=")
-            {
-                var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
-                lines.Add(new Line(
-                    tokens.Take(i..(endingIndex)).ToArray(),
-                    LineType.VariableAssignment));
-                i = endingIndex;
-            }
-            // if statement
-            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "if")
-            {
-                // var endingSimpleBlockIndex =
-                //     tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.SimpleBlockEnd));
-                lines.Add(
-                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.IfStatement));
-                // i = endingSimpleBlockIndex;
-            }
-            // loop loop
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
-            {
-                lines.Add(
-                    new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop));
-            }
-            // while loop
-            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "while")
-            {
-                lines.Add(
-                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.WhileLoop));
-            }
-            // do while loop
-            else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "dowhile")
-            {
-                lines.Add(
-                    new Line(tokens.GetRange((i), 1).ToArray(), LineType.DoWhileLoop));
-            }
-            // function
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "func")
-            {
-                lines.Add(new Line(tokens.GetRange((i), 2).ToArray(), LineType.Function));
-                i += 1;
-            }
-            else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
-            {
-                lines.Add(new Line(new[] { tokens[i] }, LineType.BlockStuff));
-            }
-            // keyword plain call
-            else if (tokens[i].Type == TokenType.Keyword)
-            {
-                // check if keyword is lone keyword -- dont have to -- bruh
-                // if (tokens[i].ToString(text) == "loop")
-                //     continue;
-                var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
-                lines.Add(new Line(
-                    tokens.Take(i..(endingIndex)).ToArray(),
-                    LineType.KeywordPlainCall));
-                i = endingIndex;
-            }
-            else if (callToken is not null)
-            {
-                lines.Add(new Line(tokens.GetRange(i..).ToArray(), LineType.KeywordCall));
-                i++;
-            }
-            // invalid line
-            else
-            {
-                var lineNumber = 0;
-                var pos = tokens[i].Position.Start;
-                for (var index = 0; index < pos; ++index)
-                {
-                    if (text[index] == '\n')
-                        lineNumber++;
-                }
-
-                throw new RCaronException($"Invalid line at line {lineNumber}", RCaronExceptionTime.Parsetime);
-            }
+            lines.Add(GetLine(tokens, ref i, text));
         }
 
         if (GlobalLog.HasFlag(RCaronRunnerLog.Lines))
@@ -250,6 +174,91 @@ public static class RCaronRunner
             Code = text,
             Lines = lines.ToArray()
         };
+    }
+
+    // todo: tokens doesn't need to be alive maybee?
+    public static Line GetLine(List<PosToken> tokens, ref int i, in string text)
+    {
+        Line? res = default;
+        var callToken = tokens[i] as CallLikePosToken;
+        // variable assignment
+        if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
+            tokens[i + 1].ToString(text) == "=")
+        {
+            // todo(perf)
+            var endingIndex = tokens.IndexOf(tokens.Skip(i).FirstOrDefault(t => t.Type == TokenType.LineEnding));
+            if (endingIndex == -1)
+                endingIndex = tokens.Count;
+            res = new Line(tokens.Take(i..(endingIndex)).ToArray(), LineType.VariableAssignment);
+            i = endingIndex;
+        }
+        // if statement
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "if")
+        {
+            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.IfStatement);
+        }
+        // loop loop
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
+        {
+            return new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop);
+        }
+        // while loop
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "while")
+        {
+            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.WhileLoop);
+        }
+        // do while loop
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "dowhile")
+        {
+            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.DoWhileLoop);
+        }
+        // for loop
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "for")
+        {
+            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.ForLoop);
+        }
+        // function
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "func")
+        {
+            res = new Line(tokens.GetRange((i), 2).ToArray(), LineType.Function);
+            i += 1;
+        }
+        else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
+        {
+            res = new Line(new[] { tokens[i] }, LineType.BlockStuff);
+        }
+        // keyword plain call
+        else if (tokens[i].Type == TokenType.Keyword)
+        {
+            // check if keyword is lone keyword -- dont have to -- bruh
+            // if (tokens[i].ToString(text) == "loop")
+            //     continue;
+            var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
+            res = new Line(
+                tokens.Take(i..(endingIndex)).ToArray(),
+                LineType.KeywordPlainCall);
+            i = endingIndex;
+        }
+        else if (callToken is not null)
+        {
+            res = new Line(tokens.GetRange(i..).ToArray(), LineType.KeywordCall);
+            i++;
+        }
+        // invalid line
+        else
+        {
+            var lineNumber = 0;
+            var pos = tokens[i].Position.Start;
+            for (var index = 0; index < pos; ++index)
+            {
+                if (text[index] == '\n')
+                    lineNumber++;
+            }
+
+            throw new RCaronException($"Invalid line at line {lineNumber}", RCaronExceptionTime.Parsetime);
+        }
+
+        return res.Value;
     }
 }
 
