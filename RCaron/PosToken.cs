@@ -7,6 +7,7 @@ public enum TokenType : byte
     Number,
     VariableIdentifier,
     Operation,
+    Operator,
     String,
     Whitespace,
     LineEnding,

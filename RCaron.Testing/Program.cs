@@ -13,7 +13,13 @@ using Console = System.Console;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
-// BenchmarkRunner.Run<RCaronBenchmarks>();
+BenchmarkRunner.Run<RCaronBenchmarks>();
+return;
+
+// for (var i = 0; i < 10_000_000; i++)
+// {
+//     RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
+// }
 // return;
 
 Console.WriteLine("Hello, World!");

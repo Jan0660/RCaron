@@ -98,7 +98,7 @@ public class TokenReader
         // operation
         else
         {
-            var index = CollectOperation(txt[position..]);
+            var (index, isValueOperator) = CollectOperation(txt[position..]);
             // collect a keyword e.g. "println"
             if (index == 0)
             {
@@ -110,10 +110,12 @@ public class TokenReader
             position += index;
             // match "value" operations
             var op = txt[initialPosition..position];
-            if (op.SequenceEqual(Operations.SumOp) || op.SequenceEqual(Operations.SubtractOp) ||
-                op.SequenceEqual(Operations.MultiplyOp) || op.SequenceEqual(Operations.DivideOp) ||
-                op.SequenceEqual(Operations.ModuloOp))
-                return new ValuePosToken(TokenType.Operation, (initialPosition, position));
+            if (isValueOperator
+                // op.SequenceEqual(Operations.SumOp) || op.SequenceEqual(Operations.SubtractOp) ||
+                // op.SequenceEqual(Operations.MultiplyOp) || op.SequenceEqual(Operations.DivideOp) ||
+                // op.SequenceEqual(Operations.ModuloOp)
+                )
+                return new ValuePosToken(TokenType.Operator, (initialPosition, position));
 
             return new PosToken(TokenType.Operation, (initialPosition, position));
         }
@@ -180,33 +182,33 @@ public class TokenReader
         return true;
     }
 
-    public int CollectOperation(in ReadOnlySpan<char> span)
+    public (int, bool isValueOperator) CollectOperation(in ReadOnlySpan<char> span)
     {
         if (IsMatch(in span, Operations.IsEqualOp))
-            return 2;
+            return (2, false);
         if (IsMatch(in span, Operations.IsNotEqualOp))
-            return 2;
+            return (2, false);
         if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
-            return 2;
+            return (2, false);
         if (IsMatch(in span, Operations.IsLessOrEqualOp))
-            return 2;
+            return (2, false);
         if (IsMatch(in span, Operations.IsGreaterOp))
-            return 1;
+            return (1, false);
         if (IsMatch(in span, Operations.IsLessOp))
-            return 1;
+            return (1, false);
         if (IsMatch(in span, Operations.AssignmentOp))
-            return 1;
+            return (1, false);
         if (IsMatch(in span, Operations.SumOp))
-            return 1;
+            return (1, true);
         if (IsMatch(in span, Operations.SubtractOp))
-            return 1;
+            return (1, true);
         if (IsMatch(in span, Operations.MultiplyOp))
-            return 1;
+            return (1, true);
         if (IsMatch(in span, Operations.DivideOp))
-            return 1;
+            return (1, true);
         if (IsMatch(in span, Operations.ModuloOp))
-            return 1;
+            return (1, true);
 
-        return 0;
+        return (0, false);
     }
 }

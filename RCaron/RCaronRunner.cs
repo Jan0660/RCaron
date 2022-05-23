@@ -1,4 +1,6 @@
-﻿namespace RCaron;
+﻿using System.Diagnostics;
+
+namespace RCaron;
 
 public static class RCaronRunner
 {
@@ -23,7 +25,7 @@ public static class RCaronRunner
         var blockNumber = -1;
         while (token != null)
         {
-            if (token is PosToken { Type: TokenType.Whitespace })
+            if (token is { Type: TokenType.Whitespace })
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                     Console.Write(token.ToString(text));
@@ -84,8 +86,16 @@ public static class RCaronRunner
                 (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
                 {
                     var i = tokens.Count - 1;
-                    while ((i != 0 && i != -1) && tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && (tokens[i] is {Type: TokenType.Operation} || tokens[i-1] is {Type: TokenType.Operation}))
+                    while ((i != 0 && i != -1) &&
+                           tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken &&
+                           (tokens[i] is { Type: TokenType.Operator } || tokens[i - 1] is { Type: TokenType.Operator }))
+                        // while ((i != 0 && i != -1) && 
+                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
+                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
+                        //       )
                         i--;
+                    if ((tokens.Count - i) % 2 == 0 || tokens.Count - i == 1)
+                        return (-1, Array.Empty<ValuePosToken>());
                     return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
                 }
 
@@ -93,19 +103,26 @@ public static class RCaronRunner
                     // (posToken is not ValuePosToken ||
                     //  (posToken is ValuePosToken { Type: TokenType.Operation } &&
                     //   posToken is ValuePosToken)) && 
-                    (tokens.LastOrDefault() is ValuePosToken && tokens.LastOrDefault() is not{Type: TokenType.Operation} &&
-                                                      posToken is not { Type: TokenType.Operation }))
+                    tokens.Count > 2 &&
+                    (tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.Operator &&
+                     posToken.Type != TokenType.Operator
+                    )
+
+                    // (tokens.LastOrDefault() is ValuePosToken && tokens.LastOrDefault() is not{Type: TokenType.Operation} &&
+                    //  posToken is not { Type: TokenType.Operation })
+                )
                 {
                     var h = BackwardsCollectValuePosToken();
                     // if (h.tokens.Length == 1)
                     // {
-                        // var lastToken = tokens.Last();
-                        // tokens.RemoveAt(tokens.Count-1);
-                        // tokens.Add(new ValueGroupPosToken(TokenType.DumbShit, lastToken.Position, h.tokens));
+                    // var lastToken = tokens.Last();
+                    // tokens.RemoveAt(tokens.Count-1);
+                    // tokens.Add(new ValueGroupPosToken(TokenType.DumbShit, lastToken.Position, h.tokens));
                     // }
-                    if (h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
+                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
                     {
-                        if(h.tokens[1] is not {Type: TokenType.Operation})
+                        // may not be needed?
+                        if (h.tokens[1] is not { Type: TokenType.Operator })
                             goto beforeAdd;
                         // AAAAAA
                         // remove those replace with fucking imposter thing
@@ -122,6 +139,11 @@ public static class RCaronRunner
                             (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
                         if (posToken is { Type: TokenType.SimpleBlockEnd })
                             goto afterAdd;
+                    }
+                    else
+                    {
+                        // if (h.index != -1)
+                        //     Debugger.Break();
                     }
                 }
 
