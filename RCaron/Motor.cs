@@ -142,6 +142,7 @@ public class Motor
                 else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd })
                 {
                     var curBlock = BlockStack.Peek();
+                    // todo: im literally not popping here?
                     if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
                         return;
                     else if (curBlock.Conditional is { IsOnce: false })
@@ -157,7 +158,10 @@ public class Motor
                         }
                     }
                     else if (curBlock.Conditional == null)
+                    {
+                        BlockStack.Pop();
                         curIndex = curBlock.PreviousLineIndex;
+                    }
                 }
 
                 break;
@@ -247,7 +251,7 @@ public class Motor
                 {
                     var st = (BlockPosToken)Lines[func.startLineIndex].Tokens[0];
                     BlockStack.Push(new StackThing(func.startLineIndex, st.Depth, st.Number, false, null, true,
-                        curIndex + 1));
+                        curIndex));
                     curIndex = func.startLineIndex;
                     return;
                 }
