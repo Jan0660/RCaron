@@ -46,8 +46,20 @@ var opt = new MotorOptions()
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
 
-var text = @"$h = 1;
-println $h $h + 1 $h + 1 + 1;";
+var text = @"
+$a = 0; $b = 1; $c = 0;
+
+func DoMath{
+    $c = $a + $b;
+}
+
+for($i = 0, $i < 90, $i = $i + 1) {
+    DoMath;
+    println $i;
+    println $c;
+    $a = $b;
+    $b = $c;
+}";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;

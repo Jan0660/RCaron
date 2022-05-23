@@ -37,6 +37,9 @@ public class PosToken
     public string ToString(string text)
         => text[Position.Start..(Position.End)];
 
+    public bool EqualsString(in string text, in string b)
+        => text.AsSpan()[Position.Start..Position.End].SequenceEqual(b);
+
     // the span doesnt seem to work for some reason?
     // public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)
     //     => span[Position.Start..(Position.End)];
@@ -84,4 +87,7 @@ public class CallLikePosToken : ValuePosToken
 
     public string GetName(string text)
         => text[Position.Start..NameEndIndex];
+
+    public bool NameEquals(in string text, in string b)
+        => text.AsSpan()[Position.Start..NameEndIndex].SequenceEqual(b);
 }

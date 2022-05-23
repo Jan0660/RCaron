@@ -1,4 +1,5 @@
 ﻿using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace RCaron;
 
@@ -59,15 +60,26 @@ public static class RCaronRunner
                     if (tokens[startIndex - 1] is { Type: TokenType.Keyword })
                     {
                         // todo: dear lord
-                        var tks = tokens.GetRange((startIndex + 1)..);
-                        var c = tks.Count(t => t.Type == TokenType.Comma) + 1;
+                        var tks = CollectionsMarshal.AsSpan(tokens)[(startIndex + 1)..];
+                        var c = 1;
+                        // count commas in tks
+                        for (var i = 0; i < tks.Length; i++)
+                        {
+                            if (tks[i].Type == TokenType.Comma) c++;
+                        }
                         var args = new PosToken[c][];
                         for (byte i = 0; i < c; i++)
                         {
-                            var ind = tks.FindIndex(t => t.Type == TokenType.Comma);
-                            args[i] = tks.GetRange(..(ind != -1 ? new Index(ind) : Index.End)).ToArray();
-                            if (ind != -1)
-                                tks = tks.GetRange((ind + 1)..);
+                            // find index of next comma
+                            var ind = 0;
+                            for (; ind < tks.Length; ind++)
+                            {
+                                if (tks[ind].Type == TokenType.Comma) break;
+                            }
+                            args[i] = tks[..(ind != -1 ? new Index(ind) : Index.End)].ToArray();
+                            // comma was not found
+                            if (ind != tks.Length)
+                                tks = tks[(ind + 1)..];
                         }
 
                         var h = new CallLikePosToken(TokenType.KeywordCall,
@@ -219,42 +231,41 @@ public static class RCaronRunner
         var callToken = tokens[i] as CallLikePosToken;
         // variable assignment
         if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
-            tokens[i + 1].ToString(text) == "=")
+            tokens[i + 1].EqualsString(text, "="))
         {
-            // todo(perf)
-            var endingIndex = tokens.IndexOf(tokens.Skip(i).FirstOrDefault(t => t.Type == TokenType.LineEnding));
+            var endingIndex = tokens.FindIndex(i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
                 endingIndex = tokens.Count;
             res = new Line(tokens.Take(i..(endingIndex)).ToArray(), LineType.VariableAssignment);
             i = endingIndex;
         }
         // if statement
-        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "if")
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "if"))
         {
-            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.IfStatement);
+            return new Line(new[]{tokens[i]}, LineType.IfStatement);
         }
         // loop loop
-        else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "loop")
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "loop"))
         {
-            return new Line(tokens.GetRange(i, 1).ToArray(), LineType.LoopLoop);
+            return new Line(new[]{tokens[i]}, LineType.LoopLoop);
         }
         // while loop
-        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "while")
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "while"))
         {
-            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.WhileLoop);
+            return new Line(new[]{tokens[i]}, LineType.WhileLoop);
         }
         // do while loop
-        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "dowhile")
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "dowhile"))
         {
-            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.DoWhileLoop);
+            return new Line(new[]{tokens[i]}, LineType.DoWhileLoop);
         }
         // for loop
-        else if (callToken is { Type: TokenType.KeywordCall } && callToken.GetName(text) == "for")
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
-            return new Line(tokens.GetRange((i), 1).ToArray(), LineType.ForLoop);
+            return new Line(new[]{tokens[i]}, LineType.ForLoop);
         }
         // function
-        else if (tokens[i].Type == TokenType.Keyword && tokens[i].ToString(text) == "func")
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
             res = new Line(tokens.GetRange((i), 2).ToArray(), LineType.Function);
             i += 1;
@@ -269,7 +280,7 @@ public static class RCaronRunner
             // check if keyword is lone keyword -- dont have to -- bruh
             // if (tokens[i].ToString(text) == "loop")
             //     continue;
-            var endingIndex = tokens.IndexOf(tokens.Skip(i).First(t => t.Type == TokenType.LineEnding));
+            var endingIndex = tokens.FindIndex(i, t => t.Type == TokenType.LineEnding);
             res = new Line(
                 tokens.Take(i..(endingIndex)).ToArray(),
                 LineType.KeywordPlainCall);
