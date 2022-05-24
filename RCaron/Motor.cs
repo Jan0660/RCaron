@@ -304,12 +304,12 @@ public class Motor
                     return Variables[name];
                 throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
             case TokenType.Number:
-                return Int64.Parse(token.ToString(Raw));
+                return Int64.Parse(token.ToSpan(Raw));
             case TokenType.DecimalNumber:
-                return Decimal.Parse(token.ToString(Raw));
+                return Decimal.Parse(token.ToSpan(Raw));
             case TokenType.String:
                 // todo(perf): maybe building with on a span first would be cool?
-                var s = token.ToString(Raw)[1..^1];
+                var s = token.ToSpan(Raw)[1..^1];
                 var str = new StringBuilder(s.Length);
                 for (var i = 0; i < s.Length; i++)
                 {

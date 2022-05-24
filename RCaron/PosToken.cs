@@ -42,8 +42,8 @@ public class PosToken
         => text.AsSpan()[Position.Start..Position.End].SequenceEqual(b);
 
     // the span doesnt seem to work for some reason?
-    // public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)
-    //     => span[Position.Start..(Position.End)];
+    public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)
+        => span[Position.Start..(Position.End)];
 }
 
 public class BlockPosToken : PosToken
