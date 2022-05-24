@@ -142,8 +142,8 @@ public static class RCaronRunner
                         // remove those replace with fucking imposter thing
                         var rem = h.index - 1;
                         var g = 0;
-                        if (rem < 1 || (tokens[rem] is not BlockPosToken { Type: TokenType.SimpleBlockStart }) ||
-                            posToken is not BlockPosToken { Type: TokenType.SimpleBlockEnd })
+                        if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
+                            posToken.Type != TokenType.SimpleBlockEnd)
                             rem += 1;
                         if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken &&
                             tokens[rem] is not ValuePosToken)

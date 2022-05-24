@@ -151,7 +151,7 @@ public class Motor
                         return;
                     }
                 }
-                else if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd })
+                else if (line.Tokens[0] is { Type: TokenType.BlockEnd })
                 {
                     var curBlock = BlockStack.Peek();
                     // todo: im literally not popping here?
@@ -221,8 +221,8 @@ public class Motor
                             g = BlockStack.Pop();
                         // i = g.LineIndex;
                         curIndex = Array.FindIndex(Lines,
-                            l => l is { Type: LineType.BlockStuff }
-                                 && l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd }) + 1;
+                            l => l.Type == LineType.BlockStuff
+                                 && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
                         // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
                         // i = Array.FindIndex(Lines,
                         //     l => l is
