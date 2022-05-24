@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text;
 using Console = Log73.Console;
 
@@ -16,8 +17,8 @@ public class Motor
     public Line[] Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
 
-    public record StackThing(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy,
-        Conditional Conditional, bool IsReturnWorthy, int PreviousLineIndex);
+    public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
+        Conditional? Conditional, int PreviousLineIndex);
 
     public Stack<StackThing>
         // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
@@ -132,17 +133,20 @@ public class Motor
                 // todo: can probably do this better
                 var variableName = line.Tokens[0].ToString(Raw)[1..];
                 if (line.Tokens[1].EqualsString(Raw, "++"))
-                    Variables[variableName] = Horrors.Sum(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1);
+                {
+                    Horrors.AddTo(ref CollectionsMarshal.GetValueRefOrNullRef(Variables, variableName), (long)1);
+                }
                 else if (line.Tokens[1].EqualsString(Raw, "--"))
                     Variables[variableName] = Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1);
+
                 break;
             }
             case LineType.BlockStuff:
                 if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
                 {
                     if (LastConditional is { IsTrue: true })
-                        BlockStack.Push(new StackThing(curIndex, bpt.Depth, bpt.Number, LastConditional.IsBreakWorthy,
-                            LastConditional, false, curIndex));
+                        BlockStack.Push(new StackThing(curIndex, LastConditional.IsBreakWorthy, false,
+                            LastConditional, curIndex));
                     else
                     {
                         curIndex = Array.FindIndex(Lines,
@@ -261,8 +265,7 @@ public class Motor
 
                 if (Functions.TryGetValue(keywordString, out var func))
                 {
-                    var st = (BlockPosToken)Lines[func.startLineIndex].Tokens[0];
-                    BlockStack.Push(new StackThing(func.startLineIndex, st.Depth, st.Number, false, null, true,
+                    BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
                         curIndex));
                     curIndex = func.startLineIndex;
                     return;
@@ -286,7 +289,7 @@ public class Motor
             case "sum":
                 return Horrors.Sum(arguments[0], arguments[1]);
             case "printfunny":
-                foreach(var arg in arguments)
+                foreach (var arg in arguments)
                     Console.WriteLine(arg);
                 return null;
         }
@@ -342,28 +345,28 @@ public class Motor
         //     return SimpleEvaluateExpressionSingle(tokens[0]);
         // repeat action something math
         var index = 0;
-        object? value = null;
+        object value = SimpleEvaluateExpressionSingle(tokens[0]);
         while (index < tokens.Length - 1)
         {
-            var first = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
+            // var value = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
             var op = tokens[index + 1].ToString(Raw);
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2]);
             switch (op)
             {
                 case Operations.SumOp:
-                    value = Horrors.Sum(first, second);
+                    Horrors.AddTo(ref value, second);
                     break;
                 case Operations.SubtractOp:
-                    value = Horrors.Subtract(first, second);
+                    value = Horrors.Subtract(value, second);
                     break;
                 case Operations.MultiplyOp:
-                    value = Horrors.Multiply(first, second);
+                    value = Horrors.Multiply(value, second);
                     break;
                 case Operations.DivideOp:
-                    value = Horrors.Divide(first, second);
+                    value = Horrors.Divide(value, second);
                     break;
                 case Operations.ModuloOp:
-                    value = Horrors.Modulo(first, second);
+                    value = Horrors.Modulo(value, second);
                     break;
             }
 
