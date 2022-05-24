@@ -101,11 +101,13 @@ public class Motor
         switch (line.Type)
         {
             case LineType.VariableAssignment:
+            {
                 var variableName = line.Tokens[0].ToString(Raw)[1..];
                 var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
                 Variables[variableName] = obj;
                 Console.Debug($"variable '{variableName}' set to '{obj}'");
                 break;
+            }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
                 LastConditional = new Conditional(lineIndex: curIndex, isOnce: true,
@@ -123,6 +125,16 @@ public class Motor
             {
                 LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
                     isTrue: true, isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
+                break;
+            }
+            case LineType.UnaryOperation:
+            {
+                // todo: can probably do this better
+                var variableName = line.Tokens[0].ToString(Raw)[1..];
+                if (line.Tokens[1].EqualsString(Raw, "++"))
+                    Variables[variableName] = Horrors.Sum(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1);
+                else if (line.Tokens[1].EqualsString(Raw, "--"))
+                    Variables[variableName] = Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1);
                 break;
             }
             case LineType.BlockStuff:

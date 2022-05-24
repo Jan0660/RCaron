@@ -243,6 +243,12 @@ public static class RCaronRunner
             res = new Line(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
+        // unary operation
+        else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
+        {
+            res = new Line(tokens[i..(i + 2)], LineType.UnaryOperation);
+            i += 2;
+        }
         // if statement
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "if"))
         {

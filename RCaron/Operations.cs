@@ -10,6 +10,10 @@ public static class Operations
     public const string IsGreaterOrEqualOp = ">=";
     public const string IsLessOp = "<";
     public const string IsLessOrEqualOp = "<=";
+
+    public const string UnaryIncrementOp = "++";
+    public const string UnaryDecrementOp = "--";
+
     public const string SumOp = "+";
     public const string SubtractOp = "-";
     public const string MultiplyOp = "*";

@@ -13,7 +13,7 @@ func DoMath{
     $c = $a + $b;
 }
 
-for($i = 0, $i < 2, $i = $i + 1) {
+for($i = 0, $i < 2, $i++) {
     DoMath;
     $a = $b;
     $b = $c;

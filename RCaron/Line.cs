@@ -24,4 +24,5 @@ public enum LineType : byte
     Function,
     KeywordCall,
     ForLoop,
+    UnaryOperation
 }

@@ -141,4 +141,14 @@ sus;");
         m.VariableEquals("l", (long)9);
         m.VariableEquals("h", (long)10);
     }
+
+    [Fact]
+    public void UnaryOperations()
+    {
+        var m = RCaronRunner.Run(@"$h = 3;
+$h++;
+$h++;
+$h--;");
+        m.VariableEquals("h", (long)4);
+    }
 }

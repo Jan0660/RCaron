@@ -20,6 +20,7 @@ public enum TokenType : byte
     DumbShit,
     KeywordCall,
     Comma,
+    UnaryOperation,
 }
 
 [DebuggerDisplay("Type = {Type}")]
