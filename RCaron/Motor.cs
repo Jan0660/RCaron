@@ -171,11 +171,11 @@ public class Motor
                 break;
             case LineType.ForLoop when line.Tokens[0] is CallLikePosToken callToken:
                 var falseI = 0;
-                RunLine(RCaronRunner.GetLine(callToken.Arguments[0].ToList(), ref falseI, Raw));
+                RunLine(RCaronRunner.GetLine(callToken.Arguments[0], ref falseI, Raw));
                 falseI = 0;
                 LastConditional = new ForLoopConditional(lineIndex: curIndex, isOnce: false,
                     isTrue: true, isBreakWorthy: true, callToken.Arguments[1],
-                    RCaronRunner.GetLine(callToken.Arguments[2].ToList(), ref falseI, Raw));
+                    RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 break;
             case LineType.Function:
                 var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
@@ -274,7 +274,8 @@ public class Motor
             case "sum":
                 return Horrors.Sum(arguments[0], arguments[1]);
             case "printfunny":
-                Console.WriteLine(arguments[0]);
+                foreach(var arg in arguments)
+                    Console.WriteLine(arg);
                 return null;
         }
 
@@ -375,6 +376,7 @@ public class Motor
             if (p > 0)
                 return false;
             var expr1 = SimpleEvaluateExpressionSingle(tokens[p]);
+            // todo: cant switch case with a Span yet -- rider doesnt support
             var op = tokens[p + 1].ToString(Raw);
             var expr2 = SimpleEvaluateExpressionSingle(tokens[p + 2]);
             switch (op)

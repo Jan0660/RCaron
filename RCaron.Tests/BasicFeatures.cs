@@ -130,6 +130,8 @@ sus;");
     {
         var m = RCaronRunner.Run(@"$h = sum(sum(1 + 2, 2 * 2 - 4), 1 + 3 + sum(1 + 1, 2 - 1 - 1));");
         m.VariableEquals("h", (long)9);
+        // todo: some better test like this
+        m = RCaronRunner.Run("printfunny(1, 2, 3, 4, 5 + 1);");
     }
 
     [Fact]

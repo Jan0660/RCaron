@@ -67,6 +67,7 @@ public static class RCaronRunner
                         {
                             if (tks[i].Type == TokenType.Comma) c++;
                         }
+
                         var args = new PosToken[c][];
                         for (byte i = 0; i < c; i++)
                         {
@@ -76,6 +77,7 @@ public static class RCaronRunner
                             {
                                 if (tks[ind].Type == TokenType.Comma) break;
                             }
+
                             args[i] = tks[..(ind != -1 ? new Index(ind) : Index.End)].ToArray();
                             // comma was not found
                             if (ind != tks.Length)
@@ -200,9 +202,11 @@ public static class RCaronRunner
 
 // find lines
         var lines = new List<Line>();
+        // todo
+        var t = tokens.ToArray();
         for (var i = 0; i < tokens.Count; i++)
         {
-            lines.Add(GetLine(tokens, ref i, text));
+            lines.Add(GetLine(t, ref i, text));
         }
 
         if (GlobalLog.HasFlag(RCaronRunnerLog.Lines))
@@ -225,7 +229,7 @@ public static class RCaronRunner
     }
 
     // todo: tokens doesn't need to be alive maybee?
-    public static Line GetLine(List<PosToken> tokens, ref int i, in string text)
+    public static Line GetLine(PosToken[] tokens, ref int i, in string text)
     {
         Line? res = default;
         var callToken = tokens[i] as CallLikePosToken;
@@ -233,41 +237,41 @@ public static class RCaronRunner
         if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
-            var endingIndex = tokens.FindIndex(i, t => t.Type == TokenType.LineEnding);
+            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
-                endingIndex = tokens.Count;
-            res = new Line(tokens.Take(i..(endingIndex)).ToArray(), LineType.VariableAssignment);
+                endingIndex = tokens.Length;
+            res = new Line(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
         // if statement
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "if"))
         {
-            return new Line(new[]{tokens[i]}, LineType.IfStatement);
+            return new Line(new[] { tokens[i] }, LineType.IfStatement);
         }
         // loop loop
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "loop"))
         {
-            return new Line(new[]{tokens[i]}, LineType.LoopLoop);
+            return new Line(new[] { tokens[i] }, LineType.LoopLoop);
         }
         // while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "while"))
         {
-            return new Line(new[]{tokens[i]}, LineType.WhileLoop);
+            return new Line(new[] { tokens[i] }, LineType.WhileLoop);
         }
         // do while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "dowhile"))
         {
-            return new Line(new[]{tokens[i]}, LineType.DoWhileLoop);
+            return new Line(new[] { tokens[i] }, LineType.DoWhileLoop);
         }
         // for loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
-            return new Line(new[]{tokens[i]}, LineType.ForLoop);
+            return new Line(new[] { tokens[i] }, LineType.ForLoop);
         }
         // function
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
-            res = new Line(tokens.GetRange((i), 2).ToArray(), LineType.Function);
+            res = new Line(tokens[i..(i + 2)], LineType.Function);
             i += 1;
         }
         else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
@@ -280,15 +284,15 @@ public static class RCaronRunner
             // check if keyword is lone keyword -- dont have to -- bruh
             // if (tokens[i].ToString(text) == "loop")
             //     continue;
-            var endingIndex = tokens.FindIndex(i, t => t.Type == TokenType.LineEnding);
+            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             res = new Line(
-                tokens.Take(i..(endingIndex)).ToArray(),
+                tokens[i..(endingIndex)],
                 LineType.KeywordPlainCall);
             i = endingIndex;
         }
         else if (callToken is not null)
         {
-            res = new Line(tokens.GetRange(i..).ToArray(), LineType.KeywordCall);
+            res = new Line(new[] { tokens[i] }, LineType.KeywordCall);
             i++;
         }
         // invalid line
