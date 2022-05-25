@@ -10,9 +10,7 @@ public static class RCaronRunner
     public static Motor Run(string text, MotorOptions? motorOptions = null)
     {
         var ctx = Parse(text);
-
         var motor = new Motor(ctx, motorOptions);
-        // var runtime = Stopwatch.StartNew();
         motor.Run();
         return motor;
     }
@@ -113,26 +111,11 @@ public static class RCaronRunner
                     return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
                 }
 
-                if (
-                    // (posToken is not ValuePosToken ||
-                    //  (posToken is ValuePosToken { Type: TokenType.Operation } &&
-                    //   posToken is ValuePosToken)) && 
-                    tokens.Count > 2 &&
-                    (tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.Operator &&
+                if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.Operator &&
                      posToken.Type != TokenType.Operator
-                    )
-
-                    // (tokens.LastOrDefault() is ValuePosToken && tokens.LastOrDefault() is not{Type: TokenType.Operation} &&
-                    //  posToken is not { Type: TokenType.Operation })
                 )
                 {
                     var h = BackwardsCollectValuePosToken();
-                    // if (h.tokens.Length == 1)
-                    // {
-                    // var lastToken = tokens.Last();
-                    // tokens.RemoveAt(tokens.Count-1);
-                    // tokens.Add(new ValueGroupPosToken(TokenType.DumbShit, lastToken.Position, h.tokens));
-                    // }
                     if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
                     {
                         // may not be needed?
@@ -141,7 +124,6 @@ public static class RCaronRunner
                         // AAAAAA
                         // remove those replace with fucking imposter thing
                         var rem = h.index - 1;
-                        var g = 0;
                         if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
                             posToken.Type != TokenType.SimpleBlockEnd)
                             rem += 1;
@@ -183,9 +165,6 @@ public static class RCaronRunner
                         Console.Write($"({bpt.Depth}, {bpt.Number})");
                     }
                 }
-
-                // if (posToken is not { Type: TokenType.Whitespace })
-                //     Console.WriteLine($"{posToken.Type}: {posToken.ToString(text)}");
             }
 
             token = reader.Read();
@@ -197,8 +176,6 @@ public static class RCaronRunner
             Console.ResetColor();
             Console.Out.Flush();
         }
-
-        // tokens.RemoveAll(t => t.Type == TokenType.Whitespace);
 
 // find lines
         var lines = new List<Line>();

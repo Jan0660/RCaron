@@ -109,18 +109,11 @@ public class TokenReader
 
             position += index;
             // match "value" operations
-            var op = txt[initialPosition..position];
-            if (tokenType == TokenType.Operator
-                // op.SequenceEqual(Operations.SumOp) || op.SequenceEqual(Operations.SubtractOp) ||
-                // op.SequenceEqual(Operations.MultiplyOp) || op.SequenceEqual(Operations.DivideOp) ||
-                // op.SequenceEqual(Operations.ModuloOp)
-               )
+            if (tokenType == TokenType.Operator)
                 return new ValuePosToken(TokenType.Operator, (initialPosition, position));
 
             return new PosToken(tokenType, (initialPosition, position));
         }
-
-        return null;
     }
 
     public (int index, bool isDecimal) CollectAnyNumber(in ReadOnlySpan<char> span)

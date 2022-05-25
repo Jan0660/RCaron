@@ -1,6 +1,7 @@
 using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
+using JetBrains.Annotations;
 using Console = Log73.Console;
 
 namespace RCaron;
@@ -24,7 +25,7 @@ public class Motor
         // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
         BlockStack { get; set; } = new();
 
-    public Conditional LastConditional { get; set; }
+    public Conditional? LastConditional { get; set; }
     public MotorOptions Options { get; }
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
 
@@ -223,19 +224,9 @@ public class Motor
                         var g = BlockStack.Pop();
                         while (!g.IsBreakWorthy)
                             g = BlockStack.Pop();
-                        // i = g.LineIndex;
                         curIndex = Array.FindIndex(Lines,
                             l => l.Type == LineType.BlockStuff
                                  && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
-                        // Rider doesn't support this stuff yet and thinks it's an error, not gonna use it for now i guess
-                        // i = Array.FindIndex(Lines,
-                        //     l => l is
-                        //     {
-                        //         Type: LineType.BlockStuff, Tokens:  [BlockPosToken
-                        //         {
-                        //             Type: TokenType.BlockEnd
-                        //         },
-                        //         ..]});
                         return;
                 }
 
@@ -339,16 +330,14 @@ public class Motor
         throw new Exception("yo wtf");
     }
 
+    [CollectionAccess(CollectionAccessType.Read)]
     public object SimpleEvaluateExpressionValue(PosToken[] tokens)
     {
-        // if (tokens.Length == 1)
-        //     return SimpleEvaluateExpressionSingle(tokens[0]);
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0]);
         while (index < tokens.Length - 1)
         {
-            // var value = index == 0 ? SimpleEvaluateExpressionSingle(tokens[index]) : value;
             var op = tokens[index + 1].ToString(Raw);
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2]);
             switch (op)
@@ -386,32 +375,27 @@ public class Motor
 
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {
-        for (var p = 0; p < tokens.Length; p++)
+        var val1 = SimpleEvaluateExpressionSingle(tokens[0]);
+        // todo: cant switch case with a Span yet -- rider doesnt support
+        var op = tokens[1].ToString(Raw);
+        var val2 = SimpleEvaluateExpressionSingle(tokens[2]);
+        switch (op)
         {
-            if (p > 0)
-                return false;
-            var expr1 = SimpleEvaluateExpressionSingle(tokens[p]);
-            // todo: cant switch case with a Span yet -- rider doesnt support
-            var op = tokens[p + 1].ToString(Raw);
-            var expr2 = SimpleEvaluateExpressionSingle(tokens[p + 2]);
-            switch (op)
-            {
-                case Operations.IsEqualOp:
-                    return expr1.Equals(expr2);
-                case Operations.IsNotEqualOp:
-                    return !expr1.Equals(expr2);
-                case Operations.IsGreaterOp:
-                    return Horrors.IsGreater(expr1, expr2);
-                // todo: unlazy myself lol
-                case Operations.IsGreaterOrEqualOp:
-                    return expr1.Equals(expr2) || Horrors.IsGreater(expr1, expr2);
-                case Operations.IsLessOp:
-                    return !expr1.Equals(expr2) && !Horrors.IsGreater(expr1, expr2);
-                case Operations.IsLessOrEqualOp:
-                    return expr1.Equals(expr2) || !Horrors.IsGreater(expr1, expr2);
-            }
+            case Operations.IsEqualOp:
+                return val1.Equals(val2);
+            case Operations.IsNotEqualOp:
+                return !val1.Equals(val2);
+            case Operations.IsGreaterOp:
+                return Horrors.IsGreater(val1, val2);
+            // todo: doesn't feel quite right to do this
+            case Operations.IsGreaterOrEqualOp:
+                return val1.Equals(val2) || Horrors.IsGreater(val1, val2);
+            case Operations.IsLessOp:
+                return !val1.Equals(val2) && !Horrors.IsGreater(val1, val2);
+            case Operations.IsLessOrEqualOp:
+                return val1.Equals(val2) || !Horrors.IsGreater(val1, val2);
+            default:
+                throw new RCaronException($"unknown operator: {op}", RCaronExceptionTime.Runtime);
         }
-
-        return false;
     }
 }
