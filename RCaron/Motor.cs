@@ -213,8 +213,9 @@ public class Motor
             {
                 var keyword = line.Tokens[0];
                 var keywordString = keyword.ToString(Raw);
-                // todo: span
-                var args = line.Tokens[1..];
+                var args = line.Tokens.AsSpan()[1..];
+                PosToken[] ArgsArray()
+                    => line.Tokens[1..];
                 switch (keywordString)
                 {
                     case "break":
@@ -241,7 +242,7 @@ public class Motor
                     switch (keywordString)
                     {
                         case "dbg_println":
-                            Console.Debug(SimpleEvaluateExpressionHigh(args));
+                            Console.Debug(SimpleEvaluateExpressionHigh(ArgsArray()));
                             return;
                         case "dbg_assert_is_one":
                             Variables["$$assertResult"] = (long)SimpleEvaluateExpressionSingle(args[0]) == 1;
