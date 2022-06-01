@@ -203,16 +203,17 @@ public class Motor
             {
                 // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
                 // todo(perf): Span
-                var args = new object[callToken.Arguments.Length];
-                for (var ind = 0; ind < callToken.Arguments.Length; ind++)
-                    args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
-                MethodCall(callToken.GetName(Raw), args);
+                // var args = new object[callToken.Arguments.Length];
+                // for (var ind = 0; ind < callToken.Arguments.Length; ind++)
+                //     args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
+                MethodCall(callToken.GetName(Raw), callToken: callToken);
                 break;
             }
             case LineType.KeywordPlainCall:
             {
                 var keyword = line.Tokens[0];
                 var keywordString = keyword.ToString(Raw);
+                // todo: span
                 var args = line.Tokens[1..];
                 switch (keywordString)
                 {
@@ -269,10 +270,8 @@ public class Motor
                 }
                 
                 // todo(perf): Span
-                var objs = new object[line.Tokens.Length-1];
-                for (var ind = 1; ind < line.Tokens.Length; ind++)
-                    objs[ind-1] = SimpleEvaluateExpressionSingle(line.Tokens[ind]);
-                MethodCall(keywordString, objs);
+                
+                MethodCall(keywordString, line.Tokens.AsSpan()[1..]);
                 break;
                 //
                 // throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
@@ -285,31 +284,60 @@ public class Motor
     }
 
     // todo: make local func to get arguments as object[] and instead in the method get a token array or smth
-    public object? MethodCall(string name, object[] arguments)
+    public object? MethodCall(string name, Span<PosToken> tokens = default, CallLikePosToken? callToken = null)
     {
+        object At(in Span<PosToken> tokens, int index)
+        {
+            if (callToken != null)
+                return SimpleEvaluateExpressionHigh(callToken.Arguments[index]);
+            return SimpleEvaluateExpressionSingle(tokens[index]);
+        }
+
+        object[] All(in Span<PosToken> tokens)
+        {
+            if (callToken != null)
+            {
+                var res = new object[callToken.Arguments.Length];
+                for (var ind = 0; ind < callToken.Arguments.Length; ind++)
+                    res[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
+                return res;
+            }
+            return EvaluateMultipleValues(tokens);
+        }
         switch (name)
         {
             case "string":
-                return arguments[0].ToString()!;
+                return At(tokens, 0).ToString()!;
             case "sum":
-                return Horrors.Sum(arguments[0], arguments[1]);
+                return Horrors.Sum(At(tokens, 0), At(tokens, 1));
             case "printfunny":
             case "println":
-                foreach (var arg in arguments)
+                foreach (var arg in All(tokens))
                     Console.WriteLine(arg);
                 return null;
             case "print":
-                for (var i = 0; i < arguments.Length; i++)
+            {
+                var args = All(tokens);
+                for (var i = 0; i < args.Length; i++)
                 {
                     if(i != 0)
                         Console.Out.Write(' ');
-                    Console.Out.Write(arguments[i]);
+                    Console.Out.Write(args[i]);
                 }
                 Console.Out.WriteLine();
                 return null;
+            }
         }
 
         throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);
+    }
+
+    public object[] EvaluateMultipleValues(in Span<PosToken> tokens, int tokensStartIndex = 0)
+    {
+        var objs = new object[tokens.Length-tokensStartIndex];
+        for (var ind = tokensStartIndex; ind < tokens.Length; ind++)
+            objs[ind-tokensStartIndex] = SimpleEvaluateExpressionSingle(tokens[ind]);
+        return objs;
     }
 
     public object SimpleEvaluateExpressionSingle(PosToken token)
@@ -345,10 +373,7 @@ public class Motor
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
-                var args = new object[callToken.Arguments.Length];
-                for (var i = 0; i < callToken.Arguments.Length; i++)
-                    args[i] = SimpleEvaluateExpressionHigh(callToken.Arguments[i]);
-                return MethodCall(callToken.GetName(Raw), args);
+                return MethodCall(callToken.GetName(Raw), callToken: callToken);
         }
 
         throw new Exception("yo wtf");
