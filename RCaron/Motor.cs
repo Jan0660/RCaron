@@ -159,9 +159,8 @@ public class Motor
                 else if (line.Tokens[0] is { Type: TokenType.BlockEnd })
                 {
                     var curBlock = BlockStack.Peek();
-                    // todo: im literally not popping here?
                     if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
-                        return;
+                        BlockStack.Pop();
                     else if (curBlock.Conditional is { IsOnce: false })
                     {
                         if (curBlock.Conditional.EvaluateTokens == null)
@@ -221,6 +220,7 @@ public class Motor
                             System.Console.WriteLine(SimpleEvaluateExpressionSingle(token));
                         return;
                     case "break":
+                    {
                         var g = BlockStack.Pop();
                         while (!g.IsBreakWorthy)
                             g = BlockStack.Pop();
@@ -228,6 +228,15 @@ public class Motor
                             l => l.Type == LineType.BlockStuff
                                  && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
                         return;
+                    }
+                    case "return":
+                    {
+                        var g = BlockStack.Pop();
+                        while (!g.IsReturnWorthy)
+                            g = BlockStack.Pop();
+                        curIndex = g.PreviousLineIndex;
+                        return;
+                    }
                 }
 
                 if (Options.EnableDebugging)
