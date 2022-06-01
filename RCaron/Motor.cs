@@ -105,7 +105,7 @@ public class Motor
         {
             case LineType.VariableAssignment:
             {
-                var variableName = line.Tokens[0].ToString(Raw)[1..];
+                var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 var obj = SimpleEvaluateExpressionHigh(new ArraySegment<PosToken>(line.Tokens, 2, line.Tokens.Length-2));
                 Variables[variableName] = obj;
                 // Console.Debug($"variable '{variableName}' set to '{obj}'");
@@ -133,7 +133,7 @@ public class Motor
             case LineType.UnaryOperation:
             {
                 // todo: can probably do this better
-                var variableName = line.Tokens[0].ToString(Raw)[1..];
+                var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 if (line.Tokens[1].EqualsString(Raw, "++"))
                 {
                     Horrors.AddTo(ref CollectionsMarshal.GetValueRefOrNullRef(Variables, variableName), (long)1);
