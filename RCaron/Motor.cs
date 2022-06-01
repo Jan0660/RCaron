@@ -106,7 +106,7 @@ public class Motor
             case LineType.VariableAssignment:
             {
                 var variableName = line.Tokens[0].ToString(Raw)[1..];
-                var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
+                var obj = SimpleEvaluateExpressionHigh(new ArraySegment<PosToken>(line.Tokens, 2, line.Tokens.Length-2));
                 Variables[variableName] = obj;
                 // Console.Debug($"variable '{variableName}' set to '{obj}'");
                 break;
@@ -211,8 +211,8 @@ public class Motor
                 var keywordString = keyword.ToString(Raw);
                 var args = line.Tokens.AsSpan()[1..];
 
-                PosToken[] ArgsArray()
-                    => line.Tokens[1..];
+                ArraySegment<PosToken> ArgsArray()
+                    => new(line.Tokens, 1, line.Tokens.Length-1);
 
                 switch (keywordString)
                 {
@@ -278,7 +278,6 @@ public class Motor
         }
     }
 
-    // todo: make local func to get arguments as object[] and instead in the method get a token array or smth
     public object? MethodCall(string name, Span<PosToken> tokens = default, CallLikePosToken? callToken = null)
     {
         object At(in Span<PosToken> tokens, int index)
@@ -352,7 +351,6 @@ public class Motor
             case TokenType.DecimalNumber:
                 return Decimal.Parse(token.ToSpan(Raw));
             case TokenType.String:
-                // todo(perf): maybe building with on a span first would be cool?
                 var s = token.ToSpan(Raw)[1..^1];
                 Span<char> g = stackalloc char[s.Length];
                 var str = new SpanStringBuilder(ref g);
@@ -379,12 +377,12 @@ public class Motor
     }
 
     [CollectionAccess(CollectionAccessType.Read)]
-    public object SimpleEvaluateExpressionValue(PosToken[] tokens)
+    public object SimpleEvaluateExpressionValue(ArraySegment<PosToken> tokens)
     {
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0]);
-        while (index < tokens.Length - 1)
+        while (index < tokens.Count - 1)
         {
             var op = tokens[index + 1].ToString(Raw);
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2]);
@@ -413,8 +411,8 @@ public class Motor
         return value;
     }
 
-    public object SimpleEvaluateExpressionHigh(PosToken[] tokens)
-        => tokens.Length switch
+    public object SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
+        => tokens.Count switch
         {
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
