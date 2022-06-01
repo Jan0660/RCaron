@@ -202,6 +202,7 @@ public class Motor
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
                 // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
+                // todo(perf): Span
                 var args = new object[callToken.Arguments.Length];
                 for (var ind = 0; ind < callToken.Arguments.Length; ind++)
                     args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
@@ -215,10 +216,6 @@ public class Motor
                 var args = line.Tokens[1..];
                 switch (keywordString)
                 {
-                    case "println":
-                        foreach (var token in args)
-                            System.Console.WriteLine(SimpleEvaluateExpressionSingle(token));
-                        return;
                     case "break":
                     {
                         var g = BlockStack.Pop();
@@ -246,7 +243,7 @@ public class Motor
                             Console.Debug(SimpleEvaluateExpressionHigh(args));
                             return;
                         case "dbg_assert_is_one":
-                            Variables["$$assertResult"] = (long)SimpleEvaluateExpressionHigh(args) == 1;
+                            Variables["$$assertResult"] = (long)SimpleEvaluateExpressionSingle(args[0]) == 1;
                             return;
                         case "dbg_sum_three":
                             Variables["$$assertResult"] = Horrors.Sum(
@@ -259,7 +256,7 @@ public class Motor
                     switch (keywordString)
                     {
                         case "goto_line":
-                            curIndex = (int)(long)SimpleEvaluateExpressionHigh(args);
+                            curIndex = (int)(long)SimpleEvaluateExpressionSingle(args[0]);
                             return;
                     }
 
@@ -270,8 +267,15 @@ public class Motor
                     curIndex = func.startLineIndex;
                     return;
                 }
-
-                throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
+                
+                // todo(perf): Span
+                var objs = new object[line.Tokens.Length-1];
+                for (var ind = 1; ind < line.Tokens.Length; ind++)
+                    objs[ind-1] = SimpleEvaluateExpressionSingle(line.Tokens[ind]);
+                MethodCall(keywordString, objs);
+                break;
+                //
+                // throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
             }
             default:
                 // wtf
@@ -280,6 +284,7 @@ public class Motor
         }
     }
 
+    // todo: make local func to get arguments as object[] and instead in the method get a token array or smth
     public object? MethodCall(string name, object[] arguments)
     {
         switch (name)
@@ -289,8 +294,18 @@ public class Motor
             case "sum":
                 return Horrors.Sum(arguments[0], arguments[1]);
             case "printfunny":
+            case "println":
                 foreach (var arg in arguments)
                     Console.WriteLine(arg);
+                return null;
+            case "print":
+                for (var i = 0; i < arguments.Length; i++)
+                {
+                    if(i != 0)
+                        Console.Out.Write(' ');
+                    Console.Out.Write(arguments[i]);
+                }
+                Console.Out.WriteLine();
                 return null;
         }
 
