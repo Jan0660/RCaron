@@ -39,7 +39,7 @@ for($i = 0, $i < 2, $i++) {
     {
         SimpleMathOpMotor.Run();
     }
-    [Benchmark()]
+    [Benchmark]
     public void FibbonaciFull()
     {
         RCaronRunner.Run(FibbonaciCode);

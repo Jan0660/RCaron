@@ -2,6 +2,7 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Text;
 using JetBrains.Annotations;
+using Log73;
 using Console = Log73.Console;
 
 namespace RCaron;
@@ -107,7 +108,7 @@ public class Motor
                 var variableName = line.Tokens[0].ToString(Raw)[1..];
                 var obj = SimpleEvaluateExpressionHigh(line.Tokens[2..]);
                 Variables[variableName] = obj;
-                Console.Debug($"variable '{variableName}' set to '{obj}'");
+                // Console.Debug($"variable '{variableName}' set to '{obj}'");
                 break;
             }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
@@ -353,7 +354,8 @@ public class Motor
             case TokenType.String:
                 // todo(perf): maybe building with on a span first would be cool?
                 var s = token.ToSpan(Raw)[1..^1];
-                var str = new StringBuilder(s.Length);
+                Span<char> g = stackalloc char[s.Length];
+                var str = new SpanStringBuilder(ref g);
                 for (var i = 0; i < s.Length; i++)
                 {
                     var ch = s[i];

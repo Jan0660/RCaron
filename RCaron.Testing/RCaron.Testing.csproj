@@ -9,8 +9,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\RCaron\RCaron.csproj"/>
-        <PackageReference Include="BenchmarkDotNet" Version="0.13.1.1796"/>
+        <ProjectReference Include="..\RCaron\RCaron.csproj" />
+        <PackageReference Include="BenchmarkDotNet" Version="0.13.1.1796" />
     </ItemGroup>
 
 </Project>

@@ -2,6 +2,7 @@
 
 
 using System.Diagnostics;
+using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Running;
 using Log73;
 using RCaron;
@@ -13,7 +14,7 @@ using Console = System.Console;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
-BenchmarkRunner.Run<RCaronBenchmarks>();
+BenchmarkRunner.Run<StringBenchmarks>();
 return;
 
 // for (var i = 0; i < 10_000_000; i++)
