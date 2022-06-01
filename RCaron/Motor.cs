@@ -201,11 +201,6 @@ public class Motor
                 break;
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
-                // todo(cleanup): code duplcation with inside of SimpleEvaluateExpressionSingle
-                // todo(perf): Span
-                // var args = new object[callToken.Arguments.Length];
-                // for (var ind = 0; ind < callToken.Arguments.Length; ind++)
-                //     args[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
                 MethodCall(callToken.GetName(Raw), callToken: callToken);
                 break;
             }
@@ -214,8 +209,10 @@ public class Motor
                 var keyword = line.Tokens[0];
                 var keywordString = keyword.ToString(Raw);
                 var args = line.Tokens.AsSpan()[1..];
+
                 PosToken[] ArgsArray()
                     => line.Tokens[1..];
+
                 switch (keywordString)
                 {
                     case "break":
@@ -269,13 +266,9 @@ public class Motor
                     curIndex = func.startLineIndex;
                     return;
                 }
-                
-                // todo(perf): Span
-                
+
                 MethodCall(keywordString, line.Tokens.AsSpan()[1..]);
                 break;
-                //
-                // throw new RCaronException($"keyword '{keywordString}' is invalid", RCaronExceptionTime.Runtime);
             }
             default:
                 // wtf
@@ -303,8 +296,10 @@ public class Motor
                     res[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
                 return res;
             }
+
             return EvaluateMultipleValues(tokens);
         }
+
         switch (name)
         {
             case "string":
@@ -321,10 +316,11 @@ public class Motor
                 var args = All(tokens);
                 for (var i = 0; i < args.Length; i++)
                 {
-                    if(i != 0)
+                    if (i != 0)
                         Console.Out.Write(' ');
                     Console.Out.Write(args[i]);
                 }
+
                 Console.Out.WriteLine();
                 return null;
             }
@@ -335,9 +331,9 @@ public class Motor
 
     public object[] EvaluateMultipleValues(in Span<PosToken> tokens, int tokensStartIndex = 0)
     {
-        var objs = new object[tokens.Length-tokensStartIndex];
+        var objs = new object[tokens.Length - tokensStartIndex];
         for (var ind = tokensStartIndex; ind < tokens.Length; ind++)
-            objs[ind-tokensStartIndex] = SimpleEvaluateExpressionSingle(tokens[ind]);
+            objs[ind - tokensStartIndex] = SimpleEvaluateExpressionSingle(tokens[ind]);
         return objs;
     }
 
