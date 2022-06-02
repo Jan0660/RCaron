@@ -32,22 +32,29 @@ fileArgument.SetDefaultValue(null);
 var interactiveOption = new Option<bool>("--interactive",
     "Run interactive.");
 interactiveOption.AddAlias("-i");
+var lintOption = new Option<bool>("--lint",
+    "Print code funny colored.");
+lintOption.AddAlias("-l");
 
 // Add the options to a root command:
 var rootCommand = new RootCommand();
 rootCommand.AddArgument(fileArgument);
 rootCommand.AddOption(interactiveOption);
+rootCommand.AddOption(lintOption);
 
 rootCommand.Description = "RCaron.Cli";
 
-rootCommand.SetHandler((FileInfo? f, bool interactive) =>
+rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
 {
+    RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor? motor = null;
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
-        motor = RCaronRunner.Run(File.ReadAllText(f.FullName));
+        motor = RCaronRunner.Run(File.ReadAllText(f.FullName), new MotorOptions());
     }
+
+    RCaronRunner.GlobalLog = 0;
 
     if (interactive)
     {
@@ -61,7 +68,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive) =>
             input = Console.ReadLine();
         }
     }
-}, fileArgument, interactiveOption);
+}, fileArgument, interactiveOption, lintOption);
 
 // Parse the incoming args and invoke the handler
 return rootCommand.Invoke(args);
