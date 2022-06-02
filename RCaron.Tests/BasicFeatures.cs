@@ -112,10 +112,16 @@ $h println 'huh';"));
     public void Functions()
     {
         var m = RCaronRunner.Run(@"func sus{
-    $h = 1;
+    for($r = 0, $r < 2, $r++){
+        print(1);
+    }
+    $h++;
 }
-sus;");
-        m.VariableEquals("h", (long)1);
+$h = 0;
+for($i = 0, $i < 3, $i++){
+    sus;
+}");
+        m.VariableEquals("h", (long)3);
     }
 
     [Fact]

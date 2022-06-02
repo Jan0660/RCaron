@@ -172,6 +172,8 @@ public class Motor
                             curBlock.Conditional.IsTrue = evaluated;
                             if (evaluated)
                                 curIndex = curBlock.LineIndex;
+                            else
+                                BlockStack.Pop();
                         }
                     }
                     else if (curBlock.Conditional == null)
