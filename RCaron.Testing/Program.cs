@@ -14,7 +14,7 @@ using Console = System.Console;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
-BenchmarkRunner.Run<StringBenchmarks>();
+BenchmarkRunner.Run<RCaronBenchmarks>();
 return;
 
 // for (var i = 0; i < 10_000_000; i++)

@@ -3,6 +3,7 @@
 namespace RCaron.Benchmarks;
 
 [MemoryDiagnoser]
+[Config(typeof(StringBenchmarks.Config))]
 public class RCaronBenchmarks
 {
     public const string SimpleMathOp = "$h = 2 * (2 + 3);";

@@ -24,7 +24,7 @@ public static class RCaronRunner
         var blockNumber = -1;
         while (token != null)
         {
-            if (token is { Type: TokenType.Whitespace })
+            if (token.Type == TokenType.Whitespace)
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                     Console.Write(token.ToString(text));
@@ -32,6 +32,7 @@ public static class RCaronRunner
                 continue;
             }
 
+            // for some reason, when not doing this, there is literally more memory allocated
             if (token is PosToken posToken)
             {
                 switch (posToken)
