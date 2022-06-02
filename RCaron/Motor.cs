@@ -16,7 +16,7 @@ public class MotorOptions
 public class Motor
 {
     public string Raw { get; set; }
-    public Line[] Lines { get; set; }
+    public IList<Line> Lines { get; set; }
     public Dictionary<string, object> Variables { get; set; } = new();
 
     public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
@@ -90,9 +90,9 @@ public class Motor
 
     public void Run()
     {
-        for (curIndex = 0; curIndex < Lines.Length; curIndex++)
+        for (curIndex = 0; curIndex < Lines.Count; curIndex++)
         {
-            if (curIndex >= Lines.Length)
+            if (curIndex >= Lines.Count)
                 break;
             var line = Lines[curIndex];
             RunLine(line);
@@ -106,7 +106,7 @@ public class Motor
             case LineType.VariableAssignment:
             {
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
-                var obj = SimpleEvaluateExpressionHigh(new ArraySegment<PosToken>(line.Tokens, 2, line.Tokens.Length-2));
+                var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..));
                 Variables[variableName] = obj;
                 // Console.Debug($"variable '{variableName}' set to '{obj}'");
                 break;
@@ -151,7 +151,7 @@ public class Motor
                             LastConditional, curIndex));
                     else
                     {
-                        curIndex = Array.FindIndex(Lines,
+                        curIndex = ListEx.FindIndex(Lines,
                             l => l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt2 &&
                                  bpt2.Depth == bpt.Depth && bpt2.Number == bpt.Number);
                         return;
@@ -196,7 +196,7 @@ public class Motor
                 break;
             case LineType.Function:
                 var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
-                var end = Array.IndexOf(Lines, (Line l) =>
+                var end = ListEx.IndexOf(Lines, (Line l) =>
                     l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
                 Functions[line.Tokens[1].ToString(Raw)] = (curIndex + 1, end);
                 break;
@@ -212,7 +212,7 @@ public class Motor
                 var args = line.Tokens.AsSpan()[1..];
 
                 ArraySegment<PosToken> ArgsArray()
-                    => new(line.Tokens, 1, line.Tokens.Length-1);
+                    => line.Tokens.Segment(1..);
 
                 switch (keywordString)
                 {
@@ -221,7 +221,7 @@ public class Motor
                         var g = BlockStack.Pop();
                         while (!g.IsBreakWorthy)
                             g = BlockStack.Pop();
-                        curIndex = Array.FindIndex(Lines,
+                        curIndex = ListEx.FindIndex(Lines,
                             l => l.Type == LineType.BlockStuff
                                  && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
                         return;

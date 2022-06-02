@@ -202,7 +202,7 @@ public static class RCaronRunner
         return new RCaronRunnerContext()
         {
             Code = text,
-            Lines = lines.ToArray()
+            Lines = lines
         };
     }
 
@@ -300,7 +300,7 @@ public static class RCaronRunner
 public class RCaronRunnerContext
 {
     public string Code { get; set; }
-    public Line[] Lines { get; set; }
+    public IList<Line> Lines { get; set; }
 }
 
 [Flags]
