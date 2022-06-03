@@ -1,0 +1,27 @@
+name: rcaron
+
+on: [push, pull_request]
+
+jobs:
+  rcaron:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v1.7.2
+        with:
+          dotnet-version: 6.0.x
+      - name: restore
+        run: dotnet restore RCaron
+      - name: build
+        run: dotnet build RCaron --no-restore
+      - name: restore tests
+        run: dotnet restore RCaron.Tests
+      - name: build tests
+        run: dotnet build RCaron.Tests --no-restore
+      - name: test
+        run: dotnet test RCaron.Tests --no-build
+      - name: restore cli
+        run: dotnet restore RCaron.Cli
+      - name: build cli
+        run: dotnet build RCaron.Cli --no-restore
