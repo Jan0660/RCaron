@@ -64,7 +64,15 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
         {
             var ctx = RCaronRunner.Parse(input);
             motor.UseContext(ctx);
-            motor.Run();
+            try
+            {
+                motor.Run();
+            }
+            catch (Exception exc)
+            {
+                Console.WriteLine(exc);
+            }
+
             input = Console.ReadLine();
         }
     }
