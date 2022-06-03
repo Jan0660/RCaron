@@ -14,8 +14,9 @@ using Console = System.Console;
 Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
-BenchmarkRunner.Run<RCaronBenchmarks>();
-return;
+// BenchmarkRunner.Run<RCaronBenchmarks>();
+// BenchmarkRunner.Run<TypeResolverBenchmarks>();
+// return;
 
 // for (var i = 0; i < 10_000_000; i++)
 // {
@@ -47,20 +48,25 @@ var opt = new MotorOptions()
 // println 'balls'; println 'balls'; println 'balls'; break;
 // }";
 
+// var text = @"
+// $a = 0; $b = 1; $c = 0;
+//
+// func DoMath{
+//     $c = $a + $b;
+// }
+//
+// for($i = 0, $i < 90, $i = $i + 1) {
+//     DoMath;
+//     println $i;
+//     println $c;
+//     $a = $b;
+//     $b = $c;
+// }";
 var text = @"
-$a = 0; $b = 1; $c = 0;
-
-func DoMath{
-    $c = $a + $b;
-}
-
-for($i = 0, $i < 90, $i = $i + 1) {
-    DoMath;
-    println $i;
-    println $c;
-    $a = $b;
-    $b = $c;
-}";
+open 'RCaron';
+#RCaronRunner.Run('print 1;');
+open 'System';
+println(#MathF.Sqrt(float(9)));";
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using JetBrains.Annotations;
@@ -29,6 +30,7 @@ public class Motor
     public Conditional? LastConditional { get; set; }
     public MotorOptions Options { get; }
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
+    public List<string>? OpenNamespaces { get; set; }
 
     public class Conditional
     {
@@ -302,10 +304,14 @@ public class Motor
             return EvaluateMultipleValues(tokens);
         }
 
-        switch (name)
+        switch (name.ToLowerInvariant())
         {
+            #region conversions
             case "string":
                 return At(tokens, 0).ToString()!;
+            case "float":
+                return Convert.ToSingle(At(tokens, 0));
+            #endregion
             case "sum":
                 return Horrors.Sum(At(tokens, 0), At(tokens, 1));
             case "printfunny":
@@ -326,6 +332,86 @@ public class Motor
                 Console.Out.WriteLine();
                 return null;
             }
+            case "open":
+                OpenNamespaces ??= new();
+                OpenNamespaces.AddRange(Array.ConvertAll(All(tokens), t => (string)t));
+                return null;
+        }
+
+        if (name[0] == '#')
+        {
+            var args = All(in tokens);
+            // todo(perf)
+            // var partsCount = 1 + name.Count(c => c == '.');
+            var parts = name.Split('.');
+            var d = string.Join('.', parts[..^1])[1..];
+            var type = TypeResolver.FindType(d, usedNamespaces: OpenNamespaces);
+                // Type.GetType(d, false, true);
+            // if (type == null && OpenNamespaces != null)
+            //     foreach (var ns in OpenNamespaces)
+            //     {
+            //         type = Type.GetType(ns + '.' + d, false, true);
+            //         if (type != null)
+            //             break;
+            //     }
+
+            if (type == null)
+                throw new RCaronException($"cannot find type '{d}' for external method call", RCaronExceptionTime.Runtime);
+
+            var methods = type.GetMethods()
+                .Where(m => m.Name.Equals(parts[^1], StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            Span<uint> scores = stackalloc uint[methods.Length];
+            for (var i = 0; i < methods.Length; i++)
+            {
+                uint score = 0;
+                var method = methods[i];
+                var parameters = method.GetParameters();
+                for (var j = 0; j < parameters.Length && j < args.Length; j++)
+                {
+                    if (parameters[j].ParameterType == args[j].GetType())
+                    {
+                        score += 100;
+                    }
+                    else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
+                    {
+                        score += 10;
+                    }
+                    else
+                    {
+                        score = 0;
+                        break;
+                    }
+                }
+
+                scores[i] = score;
+            }
+
+            var g = 0;
+            uint best = 0;
+            var bestIndex = 0;
+            for (; g < scores.Length; g++)
+            {
+                if (scores[g] > best)
+                {
+                    best = scores[g];
+                    bestIndex = g;
+                }
+            }
+
+
+            if (best == 0)
+                throw new RCaronException($"cannot find a match for method '{name}'", RCaronExceptionTime.Runtime);
+
+            // mismatch count arguments -> equate it out with null
+            // is equate even a word?
+            if (methods[bestIndex].GetParameters().Length > args.Length)
+            {
+                var argsNew = new object[methods[bestIndex].GetParameters().Length];
+                Array.Copy(args, argsNew, args.Length);
+                args = argsNew;
+            }
+
+            return methods[bestIndex].Invoke(null, args);
         }
 
         throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);

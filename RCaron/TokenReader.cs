@@ -95,6 +95,22 @@ public class TokenReader
             return new ValuePosToken(isDecimal ? TokenType.DecimalNumber : TokenType.Number,
                 (initialPosition, position));
         }
+        // multiline line comment
+        else if (txt[position] == '/' && txt[position+1] == '*')
+        {
+            position += 2;
+            while (txt[position] != '*' && txt[position + 1] != '/')
+                position++;
+            position+=3;
+            return new PosToken(TokenType.Comment, (initialPosition, position));
+        }
+        // extern thing
+        else if (txt[position] == '#')
+        {
+            position++;
+            position += CollectAlphaNumericAndSome(txt[position..]);
+            return new PosToken(TokenType.ExternThing, (initialPosition, position));
+        }
         // operation
         else
         {
@@ -144,7 +160,7 @@ public class TokenReader
     {
         var index = 0;
         while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_'))
+               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_' || span[index] == '.'))
             index++;
         return index;
     }

@@ -24,7 +24,7 @@ public static class RCaronRunner
         var blockNumber = -1;
         while (token != null)
         {
-            if (token.Type == TokenType.Whitespace)
+            if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment)
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                     Console.Write(token.ToString(text));
@@ -56,7 +56,7 @@ public static class RCaronRunner
                     var startIndex = tokens.FindIndex(
                         t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
                              bpt.Number == blockToken.Number);
-                    if (tokens[startIndex - 1] is { Type: TokenType.Keyword })
+                    if (tokens[startIndex - 1] is { Type: TokenType.Keyword or TokenType.ExternThing })
                     {
                         // todo: dear lord
                         var tks = CollectionsMarshal.AsSpan(tokens)[(startIndex + 1)..];
@@ -156,7 +156,7 @@ public static class RCaronRunner
                         TokenType.Number => ConsoleColor.Cyan,
                         TokenType.DecimalNumber => ConsoleColor.Cyan,
                         TokenType.VariableIdentifier => ConsoleColor.Green,
-                        TokenType.Keyword => ConsoleColor.Magenta,
+                        TokenType.Keyword or TokenType.ExternThing => ConsoleColor.Magenta,
                         _ => ConsoleColor.Black,
                     };
                     Console.Write(posToken.ToString(text));

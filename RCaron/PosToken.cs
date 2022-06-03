@@ -21,6 +21,8 @@ public enum TokenType : byte
     KeywordCall,
     Comma,
     UnaryOperation,
+    Comment,
+    ExternThing,
 }
 
 [DebuggerDisplay("Type = {Type}")]

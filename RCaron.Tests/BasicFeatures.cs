@@ -157,4 +157,23 @@ $h++;
 $h--;");
         m.VariableEquals("h", (long)4);
     }
+
+    [Fact]
+    public void MultilineComments()
+    {
+        var m = RCaronRunner.Run(@"/*when the comment is*/
+$h = 1;
+/**/ /* cool */");
+        m.VariableEquals("h", (long)1);
+    }
+
+    [Fact]
+    public void ExternalMethods()
+    {
+        var m = RCaronRunner.Run(@"$h1 = #System.MathF.Sqrt(float(9));
+open 'System';
+$h2 = #MathF.Sqrt(float(9));");
+        m.VariableEquals("h1", (float)3);
+        m.VariableEquals("h2", (float)3);
+    }
 }

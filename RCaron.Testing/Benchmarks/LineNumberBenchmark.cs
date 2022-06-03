@@ -51,7 +51,7 @@ $hello8 'a'     'aaa yee haawww hello worldy';";
 
         Console.WriteLine();
         Console.Out.Flush();
-        tokens.RemoveAll(t => t.Type == TokenType.Whitespace);
+        tokens.RemoveAll(t => t.Type == TokenType.Whitespace || t.Type == TokenType.Comment);
         LNB.i = 32;
         LNB.tokens = tokens;
         LNB.text = text;
