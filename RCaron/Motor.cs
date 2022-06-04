@@ -628,6 +628,8 @@ public class Motor
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.GetName(Raw), callToken: callToken);
+            case TokenType.Keyword:
+                return token.ToString(Raw);
         }
 
         throw new Exception("yo wtf");
