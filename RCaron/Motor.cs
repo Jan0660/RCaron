@@ -431,6 +431,15 @@ public class Motor
         {
             case TokenType.VariableIdentifier:
                 var name = token.ToString(Raw)[1..];
+                switch (name)
+                {
+                    case "true":
+                        return true;
+                    case "false":
+                        return false;
+                    case "null":
+                        return null;
+                }
                 if (Variables.ContainsKey(name))
                     return Variables[name];
                 throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
@@ -510,6 +519,11 @@ public class Motor
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {
         var val1 = SimpleEvaluateExpressionSingle(tokens[0]);
+        if (tokens.Length == 1)
+        {
+            if (val1 is bool b)
+                return b;
+        }
         // todo: cant switch case with a Span yet -- rider doesnt support
         var op = tokens[1].ToString(Raw);
         var val2 = SimpleEvaluateExpressionSingle(tokens[2]);
