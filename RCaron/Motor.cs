@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.InteropServices;
@@ -431,6 +432,56 @@ public class Motor
         {
             case TokenType.VariableIdentifier:
                 var name = token.ToString(Raw)[1..];
+                if (name.Contains('.'))
+                {
+                    // todo(perf)
+                    var parts = name.Split('.');
+                    // todo: variable doesnt exist handle
+                    var val = Variables[parts[0]];
+                    var type = val.GetType();
+                    for (var i = 1; i < parts.Length; i++)
+                    {
+                        var p = type.GetProperty(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+                        if (p != null)
+                        {
+                            val = p.GetValue(val);
+                            type = val?.GetType();
+                            continue;
+                        }
+                        var f = type.GetField(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+                        if (f != null)
+                        {
+                            val = f.GetValue(val);
+                            type = val?.GetType();
+                            continue;
+                        }
+
+                        if (val is IDictionary dictionary)
+                        {
+                            var args = type.GetGenericArguments();
+                            var (keyType, valueType) = (args[0], args[1]);
+                            val = dictionary[Convert.ChangeType(parts[i], keyType)];
+                            type = val?.GetType();
+                            continue;
+                        }
+                        var partIsInt = int.TryParse(parts[i], out var partIntValue);
+                        if (val is Array array && partIsInt)
+                        {
+                            val = array.GetValue(partIntValue);
+                            type = val?.GetType();
+                            continue;
+                        }
+                        if (val is IList list && partIsInt)
+                        {
+                            val = list[partIntValue];
+                            type = val?.GetType();
+                            continue;
+                        }
+
+                        throw new RCaronException($"cannot resolve '{parts[i]}'(index={i}) in '{name}'", RCaronExceptionTime.Runtime);
+                    }
+                    return val;
+                }
                 switch (name)
                 {
                     case "true":
