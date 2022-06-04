@@ -176,4 +176,13 @@ $h2 = #MathF.Sqrt(float(9));");
         m.VariableEquals("h1", (float)3);
         m.VariableEquals("h2", (float)3);
     }
+
+    [Fact]
+    public void SinglelineComments()
+    {
+        var m = RCaronRunner.Run(@"// w
+$h = 1;
+// WWWW");
+        m.VariableEquals("h", (long)1);
+    }
 }

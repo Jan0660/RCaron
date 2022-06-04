@@ -95,6 +95,14 @@ public class TokenReader
             return new ValuePosToken(isDecimal ? TokenType.DecimalNumber : TokenType.Number,
                 (initialPosition, position));
         }
+        // single line comment
+        else if (txt[position] == '/' && txt[position+1] == '/')
+        {
+            position += 2;
+            while (position < txt.Length && txt[position] != '\n')
+                position++;
+            return new PosToken(TokenType.Comment, (initialPosition, position));
+        }
         // multiline line comment
         else if (txt[position] == '/' && txt[position+1] == '*')
         {
