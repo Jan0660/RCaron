@@ -23,6 +23,7 @@ public enum TokenType : byte
     UnaryOperation,
     Comment,
     ExternThing,
+    ArrayLiteralStart,
 }
 
 [DebuggerDisplay("Type = {Type}")]

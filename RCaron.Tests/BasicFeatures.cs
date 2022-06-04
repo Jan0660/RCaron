@@ -185,4 +185,14 @@ $h = 1;
 // WWWW");
         m.VariableEquals("h", (long)1);
     }
+
+    [Fact]
+    public void Arrays()
+    {
+        var m = RCaronRunner.Run(@"$a = @(0, 1, 2, 3, 4, 5);
+$i0 = $a.0;
+$i5 = $a.5;");
+        m.VariableEquals("i0", (long)0);
+        m.VariableEquals("i5", (long)5);
+    }
 }

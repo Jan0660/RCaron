@@ -1,5 +1,6 @@
 namespace RCaron;
 
+// todo(perf): could be a struct so that it is kept on the stack?
 public class TokenReader
 {
     int position;
@@ -118,6 +119,12 @@ public class TokenReader
             position++;
             position += CollectAlphaNumericAndSome(txt[position..]);
             return new PosToken(TokenType.ExternThing, (initialPosition, position));
+        }
+        // array literal start
+        else if (txt[position] == '@' && txt[position + 1] == '(')
+        {
+            position++;
+            return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
         }
         // operation
         else

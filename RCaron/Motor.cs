@@ -307,6 +307,9 @@ public class Motor
             return EvaluateMultipleValues(tokens);
         }
 
+        if (callToken?.OriginalThingTokenType == TokenType.ArrayLiteralStart)
+            return All(in tokens);
+
         switch (name.ToLowerInvariant())
         {
             #region conversions
