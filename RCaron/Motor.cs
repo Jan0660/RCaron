@@ -1,10 +1,13 @@
 using System.Collections;
 using System.Diagnostics;
+using System.Dynamic;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
+using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
+using Microsoft.Win32.SafeHandles;
 using Console = Log73.Console;
 
 namespace RCaron;
@@ -32,6 +35,7 @@ public class Motor
     public MotorOptions Options { get; }
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
     public List<string>? OpenNamespaces { get; set; }
+    public List<string>? OpenNamespacesForExtensionMethods { get; set; }
 
     public class Conditional
     {
@@ -345,6 +349,10 @@ public class Motor
                 OpenNamespaces ??= new();
                 OpenNamespaces.AddRange(Array.ConvertAll(All(tokens), t => (string)t));
                 return null;
+            case "open_ext":
+                OpenNamespacesForExtensionMethods ??= new();
+                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(tokens), t => (string)t));
+                return null;
         }
 
         if (name[0] == '#' || callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
@@ -352,10 +360,12 @@ public class Motor
             var args = All(in tokens);
             Type type;
             string methodName;
-            object target = null;
+            object? target = null;
+            object? variable = null;
             if (callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
             {
                 var obj = EvaluateVariable(name[1..], false);
+                variable = obj;
                 target = obj;
                 type = obj.GetType();
                 var i = name.Length-1;
@@ -388,6 +398,36 @@ public class Motor
             resolveMethod: ;
             var methods = type.GetMethods()
                 .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            if (methods.Length == 0)
+            {
+                args = args.Prepend(variable!).ToArray();
+                var extensionMethods = new List<MethodInfo>();
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                // Type? endingMatch =  null;
+                foreach (var ass in assemblies)
+                {
+                    foreach (var exportedType in ass.GetTypes())
+                    {
+                        if(!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
+                            continue;
+                        // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
+                        // {
+                        //     endingMatch = type;
+                        // }
+                        // exact match
+                        foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                        {
+                            if (method.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase) &&
+                                (OpenNamespacesForExtensionMethods?.Contains(exportedType.Namespace) ?? false))
+                            {
+                                extensionMethods.Add(method);
+                            }
+                        }
+                    }
+                }
+
+                methods = extensionMethods.ToArray();
+            }
             Span<uint> scores = stackalloc uint[methods.Length];
             for (var i = 0; i < methods.Length; i++)
             {
@@ -405,6 +445,11 @@ public class Motor
                         score += 100;
                     }
                     else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
+                    {
+                        score += 10;
+                    }
+                    else if (parameters[j].ParameterType.IsGenericType &&
+                             ListEx.IsAssignableToGenericType(args[j].GetType(), parameters[j].ParameterType.GetGenericTypeDefinition()))
                     {
                         score += 10;
                     }
@@ -434,6 +479,7 @@ public class Motor
             if (best == 0)
                 throw new RCaronException($"cannot find a match for method '{name}'", RCaronExceptionTime.Runtime);
 
+            // todo: use default values
             // mismatch count arguments -> equate it out with null
             // is equate even a word?
             if (methods[bestIndex].GetParameters().Length > args.Length)
@@ -441,6 +487,23 @@ public class Motor
                 var argsNew = new object[methods[bestIndex].GetParameters().Length];
                 Array.Copy(args, argsNew, args.Length);
                 args = argsNew;
+            }
+            
+            // generic method handling aaa
+            if (methods[bestIndex].IsGenericMethod)
+            {
+                // todo(perf): probably not the fastest
+                var t = methods[bestIndex].DeclaringType;
+                // static class
+                if (t.IsSealed && t.IsAbstract)
+                {
+                    var staticContext = InvokeContext.CreateStatic;
+                    return Dynamic.InvokeMember(staticContext(t), methods[bestIndex].Name, args);
+                }
+                else
+                {
+                    return Dynamic.InvokeMember(target, methods[bestIndex].Name, args);
+                }
             }
 
             return methods[bestIndex].Invoke(target, args);
