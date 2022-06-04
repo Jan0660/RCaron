@@ -80,12 +80,14 @@ public class CallLikePosToken : ValuePosToken
 {
     public PosToken[][] Arguments { get; set; }
     public int NameEndIndex { get; }
+    public TokenType OriginalThingTokenType { get; }
 
-    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex) :
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, TokenType originalThingTokenType) :
         base(type, position)
     {
         Arguments = arguments;
         NameEndIndex = nameEndIndex;
+        OriginalThingTokenType = originalThingTokenType;
     }
 
     public string GetName(string text)
@@ -93,4 +95,7 @@ public class CallLikePosToken : ValuePosToken
 
     public bool NameEquals(in string text, in string b)
         => text.AsSpan()[Position.Start..NameEndIndex].SequenceEqual(b);
+
+    public bool ArgumentsEmpty()
+        => Arguments.Length == 0 || (Arguments.Length == 1 && Arguments[0].Length == 0);
 }

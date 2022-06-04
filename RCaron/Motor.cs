@@ -294,6 +294,8 @@ public class Motor
 
         object[] All(in Span<PosToken> tokens)
         {
+            if (tokens.Length == 0 && (callToken?.ArgumentsEmpty() ?? false))
+                return Array.Empty<object>();
             if (callToken != null)
             {
                 var res = new object[callToken.Arguments.Length];
@@ -308,11 +310,14 @@ public class Motor
         switch (name.ToLowerInvariant())
         {
             #region conversions
+
             case "string":
                 return At(tokens, 0).ToString()!;
             case "float":
                 return Convert.ToSingle(At(tokens, 0));
+
             #endregion
+
             case "sum":
                 return Horrors.Sum(At(tokens, 0), At(tokens, 1));
             case "printfunny":
@@ -339,15 +344,31 @@ public class Motor
                 return null;
         }
 
-        if (name[0] == '#')
+        if (name[0] == '#' || callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
         {
             var args = All(in tokens);
+            Type type;
+            string methodName;
+            object target = null;
+            if (callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
+            {
+                var obj = EvaluateVariable(name[1..], false);
+                target = obj;
+                type = obj.GetType();
+                var i = name.Length-1;
+                while (name[i] != '.')
+                    i--;
+                i++;
+                methodName = name[i..];
+                goto resolveMethod;
+            }
+
             // todo(perf)
             // var partsCount = 1 + name.Count(c => c == '.');
             var parts = name.Split('.');
             var d = string.Join('.', parts[..^1])[1..];
-            var type = TypeResolver.FindType(d, usedNamespaces: OpenNamespaces);
-                // Type.GetType(d, false, true);
+            type = TypeResolver.FindType(d, usedNamespaces: OpenNamespaces);
+            // Type.GetType(d, false, true);
             // if (type == null && OpenNamespaces != null)
             //     foreach (var ns in OpenNamespaces)
             //     {
@@ -357,16 +378,23 @@ public class Motor
             //     }
 
             if (type == null)
-                throw new RCaronException($"cannot find type '{d}' for external method call", RCaronExceptionTime.Runtime);
+                throw new RCaronException($"cannot find type '{d}' for external method call",
+                    RCaronExceptionTime.Runtime);
 
+            methodName = parts[^1];
+            resolveMethod: ;
             var methods = type.GetMethods()
-                .Where(m => m.Name.Equals(parts[^1], StringComparison.InvariantCultureIgnoreCase)).ToArray();
+                .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
             Span<uint> scores = stackalloc uint[methods.Length];
             for (var i = 0; i < methods.Length; i++)
             {
                 uint score = 0;
                 var method = methods[i];
                 var parameters = method.GetParameters();
+                if (parameters.Length == 0 && args.Length == 0)
+                {
+                    score = uint.MaxValue;
+                }
                 for (var j = 0; j < parameters.Length && j < args.Length; j++)
                 {
                     if (parameters[j].ParameterType == args[j].GetType())
@@ -412,7 +440,7 @@ public class Motor
                 args = argsNew;
             }
 
-            return methods[bestIndex].Invoke(null, args);
+            return methods[bestIndex].Invoke(target, args);
         }
 
         throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);
@@ -426,74 +454,89 @@ public class Motor
         return objs;
     }
 
+    public object EvaluateVariable(string name, bool externLastPart = true)
+    {
+        if (name.Contains('.'))
+        {
+            // todo(perf)
+            var parts = name.Split('.');
+            // todo: variable doesnt exist handle
+            var val = Variables[parts[0]];
+            if (!externLastPart && parts.Length == 2)
+                return val;
+            var type = val.GetType();
+            for (var i = 1; i < parts.Length - (externLastPart ? 0 : 1); i++)
+            {
+                var p = type.GetProperty(parts[i],
+                    BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+                if (p != null)
+                {
+                    val = p.GetValue(val);
+                    type = val?.GetType();
+                    continue;
+                }
+
+                var f = type.GetField(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+                if (f != null)
+                {
+                    val = f.GetValue(val);
+                    type = val?.GetType();
+                    continue;
+                }
+
+                if (val is IDictionary dictionary)
+                {
+                    var args = type.GetGenericArguments();
+                    var (keyType, valueType) = (args[0], args[1]);
+                    val = dictionary[Convert.ChangeType(parts[i], keyType)];
+                    type = val?.GetType();
+                    continue;
+                }
+
+                var partIsInt = int.TryParse(parts[i], out var partIntValue);
+                if (val is Array array && partIsInt)
+                {
+                    val = array.GetValue(partIntValue);
+                    type = val?.GetType();
+                    continue;
+                }
+
+                if (val is IList list && partIsInt)
+                {
+                    val = list[partIntValue];
+                    type = val?.GetType();
+                    continue;
+                }
+
+                throw new RCaronException($"cannot resolve '{parts[i]}'(index={i}) in '{name}'",
+                    RCaronExceptionTime.Runtime);
+            }
+
+            return val;
+        }
+
+        switch (name)
+        {
+            case "true":
+                return true;
+            case "false":
+                return false;
+            case "null":
+                return null;
+        }
+
+        if (Variables.ContainsKey(name))
+            return Variables[name];
+        throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
+    }
+
     public object SimpleEvaluateExpressionSingle(PosToken token)
     {
         switch (token.Type)
         {
             case TokenType.VariableIdentifier:
                 var name = token.ToString(Raw)[1..];
-                if (name.Contains('.'))
-                {
-                    // todo(perf)
-                    var parts = name.Split('.');
-                    // todo: variable doesnt exist handle
-                    var val = Variables[parts[0]];
-                    var type = val.GetType();
-                    for (var i = 1; i < parts.Length; i++)
-                    {
-                        var p = type.GetProperty(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
-                        if (p != null)
-                        {
-                            val = p.GetValue(val);
-                            type = val?.GetType();
-                            continue;
-                        }
-                        var f = type.GetField(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
-                        if (f != null)
-                        {
-                            val = f.GetValue(val);
-                            type = val?.GetType();
-                            continue;
-                        }
-
-                        if (val is IDictionary dictionary)
-                        {
-                            var args = type.GetGenericArguments();
-                            var (keyType, valueType) = (args[0], args[1]);
-                            val = dictionary[Convert.ChangeType(parts[i], keyType)];
-                            type = val?.GetType();
-                            continue;
-                        }
-                        var partIsInt = int.TryParse(parts[i], out var partIntValue);
-                        if (val is Array array && partIsInt)
-                        {
-                            val = array.GetValue(partIntValue);
-                            type = val?.GetType();
-                            continue;
-                        }
-                        if (val is IList list && partIsInt)
-                        {
-                            val = list[partIntValue];
-                            type = val?.GetType();
-                            continue;
-                        }
-
-                        throw new RCaronException($"cannot resolve '{parts[i]}'(index={i}) in '{name}'", RCaronExceptionTime.Runtime);
-                    }
-                    return val;
-                }
-                switch (name)
-                {
-                    case "true":
-                        return true;
-                    case "false":
-                        return false;
-                    case "null":
-                        return null;
-                }
-                if (Variables.ContainsKey(name))
-                    return Variables[name];
-                throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
+                return EvaluateVariable(name);
             case TokenType.Number:
                 return Int64.Parse(token.ToSpan(Raw));
             case TokenType.DecimalNumber:
@@ -575,6 +618,7 @@ public class Motor
             if (val1 is bool b)
                 return b;
         }
+
         // todo: cant switch case with a Span yet -- rider doesnt support
         var op = tokens[1].ToString(Raw);
         var val2 = SimpleEvaluateExpressionSingle(tokens[2]);

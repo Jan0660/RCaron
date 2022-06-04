@@ -56,7 +56,7 @@ public static class RCaronRunner
                     var startIndex = tokens.FindIndex(
                         t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
                              bpt.Number == blockToken.Number);
-                    if (tokens[startIndex - 1] is { Type: TokenType.Keyword or TokenType.ExternThing })
+                    if (tokens[startIndex - 1] is { Type: TokenType.Keyword or TokenType.ExternThing or TokenType.VariableIdentifier })
                     {
                         // todo: dear lord
                         var tks = CollectionsMarshal.AsSpan(tokens)[(startIndex + 1)..];
@@ -77,6 +77,7 @@ public static class RCaronRunner
                                 if (tks[ind].Type == TokenType.Comma) break;
                             }
 
+                            // todo: maybe doesn't need to be set on every iteration?
                             args[i] = tks[..(ind != -1 ? new Index(ind) : Index.End)].ToArray();
                             // comma was not found
                             if (ind != tks.Length)
@@ -89,7 +90,7 @@ public static class RCaronRunner
                             // {
                             //     tokens.GetRange((startIndex + 1)..).ToArray()
                             // }
-                            tokens[startIndex - 1].Position.End);
+                            tokens[startIndex - 1].Position.End, tokens[startIndex - 1].Type);
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
                         goto afterAdd;

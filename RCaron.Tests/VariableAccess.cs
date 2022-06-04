@@ -53,4 +53,13 @@ public class VariableAccess
         m.VariableEquals("zero", "0");
         m.VariableEquals("nested", "WOOO");
     }
+
+    [Fact]
+    public void MethodOnVariable()
+    {
+        var m = new Motor(RCaronRunner.Parse(@"$h = $array.0.ToString();"));
+        m.Variables["array"] = new[] { 0, 1, 2, 3, 4, 5 };
+        m.Run();
+        m.VariableEquals("h", "0");
+    }
 }
