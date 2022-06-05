@@ -322,6 +322,10 @@ public class Motor
                 return At(tokens, 0).ToString()!;
             case "float":
                 return Convert.ToSingle(At(tokens, 0));
+            case "int32":
+                return Convert.ToInt32(At(tokens, 0));
+            case "int64":
+                return Convert.ToInt64(At(tokens, 0));
 
             #endregion
 
@@ -698,13 +702,12 @@ public class Motor
                 return !val1.Equals(val2);
             case Operations.IsGreaterOp:
                 return Horrors.IsGreater(val1, val2);
-            // todo: doesn't feel quite right to do this
             case Operations.IsGreaterOrEqualOp:
                 return val1.Equals(val2) || Horrors.IsGreater(val1, val2);
             case Operations.IsLessOp:
-                return !val1.Equals(val2) && !Horrors.IsGreater(val1, val2);
+                return !val1.Equals(val2) && Horrors.IsLess(val1, val2);
             case Operations.IsLessOrEqualOp:
-                return val1.Equals(val2) || !Horrors.IsGreater(val1, val2);
+                return val1.Equals(val2) || Horrors.IsLess(val1, val2);
             default:
                 throw new RCaronException($"unknown operator: {op}", RCaronExceptionTime.Runtime);
         }

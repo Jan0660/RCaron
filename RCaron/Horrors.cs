@@ -1,52 +1,97 @@
-﻿namespace RCaron;
+// This file is auto-generated hell.
 
+// ReSharper disable InconsistentNaming
+// ReSharper disable BuiltInTypeReferenceStyle
+// ReSharper disable RedundantCast
+
+using System.Diagnostics.CodeAnalysis;
+
+namespace RCaron;
+
+[ExcludeFromCodeCoverage]
 public static class Horrors
 {
     public static void AddTo(ref object a, object b)
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                a = (sbyte)(sbyte1 + sbyte2);
+            case Byte Byte1 when b is Byte Byte2:
+                a = (Byte)(Byte1 + Byte2);
                 break;
-            case byte byte1 when b is byte byte2:
-                a = (byte)(byte1 + byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                a = (Byte)(Byte1 + Convert.ToByte(convertible));
                 break;
-            case short short1 when b is short short2:
-                a = (short)(short1 + short2);
+            case Char Char1 when b is Char Char2:
+                a = (Char)(Char1 + Char2);
                 break;
-            case ushort ushort1 when b is ushort ushort2:
-                a = (ushort)(ushort1 + ushort2);
+            case Char Char1 when b is IConvertible convertible:
+                a = (Char)(Char1 + Convert.ToChar(convertible));
                 break;
-            case int int1 when b is int int2:
-                a = (int)(int1 + int2);
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                a = (Decimal)(Decimal1 + Decimal2);
                 break;
-            case uint uint1 when b is uint uint2:
-                a = (uint)(uint1 + uint2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                a = (Decimal)(Decimal1 + Convert.ToDecimal(convertible));
                 break;
-            case long long1 when b is long long2:
-                a = (long)(long1 + long2);
+            case Double Double1 when b is Double Double2:
+                a = (Double)(Double1 + Double2);
                 break;
-            case ulong ulong1 when b is ulong ulong2:
-                a = (ulong)(ulong1 + ulong2);
+            case Double Double1 when b is IConvertible convertible:
+                a = (Double)(Double1 + Convert.ToDouble(convertible));
                 break;
-            case nint nint1 when b is nint nint2:
-                a = (nint)(nint1 + nint2);
+            case Int16 Int161 when b is Int16 Int162:
+                a = (Int16)(Int161 + Int162);
                 break;
-            case nuint nuint1 when b is nuint nuint2:
-                a = (nuint)(nuint1 + nuint2);
+            case Int16 Int161 when b is IConvertible convertible:
+                a = (Int16)(Int161 + Convert.ToInt16(convertible));
                 break;
-            case float float1 when b is float float2:
-                a = (float)(float1 + float2);
+            case Int32 Int321 when b is Int32 Int322:
+                a = (Int32)(Int321 + Int322);
                 break;
-            case double double1 when b is double double2:
-                a = (double)(double1 + double2);
+            case Int32 Int321 when b is IConvertible convertible:
+                a = (Int32)(Int321 + Convert.ToInt32(convertible));
                 break;
-            case decimal decimal1 when b is decimal decimal2:
-                a = (decimal)(decimal1 + decimal2);
+            case Int64 Int641 when b is Int64 Int642:
+                a = (Int64)(Int641 + Int642);
                 break;
-            case string string1 when b is string string2:
-                a = (string)(string1 + string2);
+            case Int64 Int641 when b is IConvertible convertible:
+                a = (Int64)(Int641 + Convert.ToInt64(convertible));
+                break;
+            case SByte SByte1 when b is SByte SByte2:
+                a = (SByte)(SByte1 + SByte2);
+                break;
+            case SByte SByte1 when b is IConvertible convertible:
+                a = (SByte)(SByte1 + Convert.ToSByte(convertible));
+                break;
+            case Single Single1 when b is Single Single2:
+                a = (Single)(Single1 + Single2);
+                break;
+            case Single Single1 when b is IConvertible convertible:
+                a = (Single)(Single1 + Convert.ToSingle(convertible));
+                break;
+            case String String1 when b is String String2:
+                a = (String)(String1 + String2);
+                break;
+            case String String1 when b is IConvertible convertible:
+                a = (String)(String1 + Convert.ToString(convertible));
+                break;
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                a = (UInt16)(UInt161 + UInt162);
+                break;
+            case UInt16 UInt161 when b is IConvertible convertible:
+                a = (UInt16)(UInt161 + Convert.ToUInt16(convertible));
+                break;
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                a = (UInt32)(UInt321 + UInt322);
+                break;
+            case UInt32 UInt321 when b is IConvertible convertible:
+                a = (UInt32)(UInt321 + Convert.ToUInt32(convertible));
+                break;
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                a = (UInt64)(UInt641 + UInt642);
+                break;
+            case UInt64 UInt641 when b is IConvertible convertible:
+                a = (UInt64)(UInt641 + Convert.ToUInt64(convertible));
                 break;
             default:
                 throw new Exception("Unsupported operands for +");
@@ -57,211 +102,402 @@ public static class Horrors
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte)(sbyte1 + sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte)(byte1 + byte2);
-            case short short1 when b is short short2:
-                return (short)(short1 + short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort)(ushort1 + ushort2);
-            case int int1 when b is int int2:
-                return (int)(int1 + int2);
-            case uint uint1 when b is uint uint2:
-                return (uint)(uint1 + uint2);
-            case long long1 when b is long long2:
-                return (long)(long1 + long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong)(ulong1 + ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint)(nint1 + nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint)(nuint1 + nuint2);
-            case float float1 when b is float float2:
-                return (float)(float1 + float2);
-            case double double1 when b is double double2:
-                return (double)(double1 + double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal)(decimal1 + decimal2);
-            case string string1 when b is string string2:
-                return (string)(string1 + string2);
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte)(Byte1 + Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte)(Byte1 + Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char)(Char1 + Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char)(Char1 + Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal)(Decimal1 + Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal)(Decimal1 + Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double)(Double1 + Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double)(Double1 + Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int16)(Int161 + Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int16)(Int161 + Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int32)(Int321 + Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int32)(Int321 + Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int64)(Int641 + Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int64)(Int641 + Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte)(SByte1 + SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte)(SByte1 + Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single)(Single1 + Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single)(Single1 + Convert.ToSingle(convertible));
+            case String String1 when b is String String2:
+                return (String)(String1 + String2);
+            case String String1 when b is IConvertible convertible:
+                return (String)(String1 + Convert.ToString(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt16)(UInt161 + UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt16)(UInt161 + Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt32)(UInt321 + UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt32)(UInt321 + Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt64)(UInt641 + UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt64)(UInt641 + Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for +");
         }
-
-        throw new Exception("Unsupported operands for +");
     }
 
     public static object Subtract(object a, object b)
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte)(sbyte1 - sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte)(byte1 - byte2);
-            case short short1 when b is short short2:
-                return (short)(short1 - short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort)(ushort1 - ushort2);
-            case int int1 when b is int int2:
-                return (int)(int1 - int2);
-            case uint uint1 when b is uint uint2:
-                return (uint)(uint1 - uint2);
-            case long long1 when b is long long2:
-                return (long)(long1 - long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong)(ulong1 - ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint)(nint1 - nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint)(nuint1 - nuint2);
-            case float float1 when b is float float2:
-                return (float)(float1 - float2);
-            case double double1 when b is double double2:
-                return (double)(double1 - double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal)(decimal1 - decimal2);
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte)(Byte1 - Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte)(Byte1 - Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char)(Char1 - Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char)(Char1 - Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal)(Decimal1 - Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal)(Decimal1 - Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double)(Double1 - Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double)(Double1 - Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int16)(Int161 - Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int16)(Int161 - Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int32)(Int321 - Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int32)(Int321 - Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int64)(Int641 - Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int64)(Int641 - Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte)(SByte1 - SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte)(SByte1 - Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single)(Single1 - Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single)(Single1 - Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt16)(UInt161 - UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt16)(UInt161 - Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt32)(UInt321 - UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt32)(UInt321 - Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt64)(UInt641 - UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt64)(UInt641 - Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for -");
         }
-
-        throw new Exception("Unsupported operands for -");
     }
 
     public static object Multiply(object a, object b)
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte)(sbyte1 * sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte)(byte1 * byte2);
-            case short short1 when b is short short2:
-                return (short)(short1 * short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort)(ushort1 * ushort2);
-            case int int1 when b is int int2:
-                return (int)(int1 * int2);
-            case uint uint1 when b is uint uint2:
-                return (uint)(uint1 * uint2);
-            case long long1 when b is long long2:
-                return (long)(long1 * long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong)(ulong1 * ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint)(nint1 * nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint)(nuint1 * nuint2);
-            case float float1 when b is float float2:
-                return (float)(float1 * float2);
-            case double double1 when b is double double2:
-                return (double)(double1 * double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal)(decimal1 * decimal2);
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte)(Byte1 * Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte)(Byte1 * Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char)(Char1 * Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char)(Char1 * Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal)(Decimal1 * Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal)(Decimal1 * Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double)(Double1 * Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double)(Double1 * Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int16)(Int161 * Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int16)(Int161 * Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int32)(Int321 * Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int32)(Int321 * Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int64)(Int641 * Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int64)(Int641 * Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte)(SByte1 * SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte)(SByte1 * Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single)(Single1 * Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single)(Single1 * Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt16)(UInt161 * UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt16)(UInt161 * Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt32)(UInt321 * UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt32)(UInt321 * Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt64)(UInt641 * UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt64)(UInt641 * Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for *");
         }
-
-        throw new Exception("Unsupported operands for *");
-    }
-
-    public static bool IsGreater(object a, object b)
-    {
-        switch (a)
-        {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte1 > sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte1 > byte2);
-            case short short1 when b is short short2:
-                return (short1 > short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort1 > ushort2);
-            case int int1 when b is int int2:
-                return (int1 > int2);
-            case uint uint1 when b is uint uint2:
-                return (uint1 > uint2);
-            case long long1 when b is long long2:
-                return (long1 > long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong1 > ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint1 > nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint1 > nuint2);
-            case float float1 when b is float float2:
-                return (float1 > float2);
-            case double double1 when b is double double2:
-                return (double1 > double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal1 > decimal2);
-        }
-
-        throw new Exception("Unsupported operands for >");
     }
 
     public static object Divide(object a, object b)
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte1 / sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte1 / byte2);
-            case short short1 when b is short short2:
-                return (short1 / short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort1 / ushort2);
-            case int int1 when b is int int2:
-                return (int1 / int2);
-            case uint uint1 when b is uint uint2:
-                return (uint1 / uint2);
-            case long long1 when b is long long2:
-                return (long1 / long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong1 / ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint1 / nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint1 / nuint2);
-            case float float1 when b is float float2:
-                return (float1 / float2);
-            case double double1 when b is double double2:
-                return (double1 / double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal1 / decimal2);
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte)(Byte1 / Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte)(Byte1 / Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char)(Char1 / Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char)(Char1 / Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal)(Decimal1 / Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal)(Decimal1 / Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double)(Double1 / Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double)(Double1 / Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int16)(Int161 / Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int16)(Int161 / Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int32)(Int321 / Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int32)(Int321 / Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int64)(Int641 / Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int64)(Int641 / Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte)(SByte1 / SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte)(SByte1 / Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single)(Single1 / Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single)(Single1 / Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt16)(UInt161 / UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt16)(UInt161 / Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt32)(UInt321 / UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt32)(UInt321 / Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt64)(UInt641 / UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt64)(UInt641 / Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for /");
         }
-
-        throw new Exception("Unsupported operands for /");
     }
 
     public static object Modulo(object a, object b)
     {
         switch (a)
         {
-            case sbyte sbyte1 when b is sbyte sbyte2:
-                return (sbyte1 % sbyte2);
-            case byte byte1 when b is byte byte2:
-                return (byte1 % byte2);
-            case short short1 when b is short short2:
-                return (short1 % short2);
-            case ushort ushort1 when b is ushort ushort2:
-                return (ushort1 % ushort2);
-            case int int1 when b is int int2:
-                return (int1 % int2);
-            case uint uint1 when b is uint uint2:
-                return (uint1 % uint2);
-            case long long1 when b is long long2:
-                return (long1 % long2);
-            case ulong ulong1 when b is ulong ulong2:
-                return (ulong1 % ulong2);
-            case nint nint1 when b is nint nint2:
-                return (nint1 % nint2);
-            case nuint nuint1 when b is nuint nuint2:
-                return (nuint1 % nuint2);
-            case float float1 when b is float float2:
-                return (float1 % float2);
-            case double double1 when b is double double2:
-                return (double1 % double2);
-            case decimal decimal1 when b is decimal decimal2:
-                return (decimal1 % decimal2);
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte)(Byte1 % Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte)(Byte1 % Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char)(Char1 % Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char)(Char1 % Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal)(Decimal1 % Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal)(Decimal1 % Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double)(Double1 % Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double)(Double1 % Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int16)(Int161 % Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int16)(Int161 % Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int32)(Int321 % Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int32)(Int321 % Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int64)(Int641 % Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int64)(Int641 % Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte)(SByte1 % SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte)(SByte1 % Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single)(Single1 % Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single)(Single1 % Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt16)(UInt161 % UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt16)(UInt161 % Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt32)(UInt321 % UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt32)(UInt321 % Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt64)(UInt641 % UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt64)(UInt641 % Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for %");
         }
+    }
 
-        throw new Exception("Unsupported operands for &");
+    public static bool IsGreater(object a, object b)
+    {
+        switch (a)
+        {
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte1 > Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte1 > Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char1 > Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char1 > Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal1 > Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal1 > Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double1 > Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double1 > Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int161 > Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int161 > Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int321 > Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int321 > Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int641 > Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int641 > Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte1 > SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte1 > Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single1 > Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single1 > Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt161 > UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt161 > Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt321 > UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt321 > Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt641 > UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt641 > Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for >");
+        }
+    }
+
+    public static bool IsLess(object a, object b)
+    {
+        switch (a)
+        {
+            case Byte Byte1 when b is Byte Byte2:
+                return (Byte1 < Byte2);
+            case Byte Byte1 when b is IConvertible convertible:
+                return (Byte1 < Convert.ToByte(convertible));
+            case Char Char1 when b is Char Char2:
+                return (Char1 < Char2);
+            case Char Char1 when b is IConvertible convertible:
+                return (Char1 < Convert.ToChar(convertible));
+            case Decimal Decimal1 when b is Decimal Decimal2:
+                return (Decimal1 < Decimal2);
+            case Decimal Decimal1 when b is IConvertible convertible:
+                return (Decimal1 < Convert.ToDecimal(convertible));
+            case Double Double1 when b is Double Double2:
+                return (Double1 < Double2);
+            case Double Double1 when b is IConvertible convertible:
+                return (Double1 < Convert.ToDouble(convertible));
+            case Int16 Int161 when b is Int16 Int162:
+                return (Int161 < Int162);
+            case Int16 Int161 when b is IConvertible convertible:
+                return (Int161 < Convert.ToInt16(convertible));
+            case Int32 Int321 when b is Int32 Int322:
+                return (Int321 < Int322);
+            case Int32 Int321 when b is IConvertible convertible:
+                return (Int321 < Convert.ToInt32(convertible));
+            case Int64 Int641 when b is Int64 Int642:
+                return (Int641 < Int642);
+            case Int64 Int641 when b is IConvertible convertible:
+                return (Int641 < Convert.ToInt64(convertible));
+            case SByte SByte1 when b is SByte SByte2:
+                return (SByte1 < SByte2);
+            case SByte SByte1 when b is IConvertible convertible:
+                return (SByte1 < Convert.ToSByte(convertible));
+            case Single Single1 when b is Single Single2:
+                return (Single1 < Single2);
+            case Single Single1 when b is IConvertible convertible:
+                return (Single1 < Convert.ToSingle(convertible));
+            case UInt16 UInt161 when b is UInt16 UInt162:
+                return (UInt161 < UInt162);
+            case UInt16 UInt161 when b is IConvertible convertible:
+                return (UInt161 < Convert.ToUInt16(convertible));
+            case UInt32 UInt321 when b is UInt32 UInt322:
+                return (UInt321 < UInt322);
+            case UInt32 UInt321 when b is IConvertible convertible:
+                return (UInt321 < Convert.ToUInt32(convertible));
+            case UInt64 UInt641 when b is UInt64 UInt642:
+                return (UInt641 < UInt642);
+            case UInt64 UInt641 when b is IConvertible convertible:
+                return (UInt641 < Convert.ToUInt64(convertible));
+            default:
+                throw new Exception("Unsupported operands for <");
+        }
     }
 }
