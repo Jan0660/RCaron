@@ -62,4 +62,13 @@ public class VariableAccess
         m.Run();
         m.VariableEquals("h", "0");
     }
+
+    [Fact]
+    public void MethodOnDirect()
+    {
+        var m = RCaronRunner.Run(@"$h = 1.ToString();
+$arrayLength = @(0, 1, 2, 3).Length;");
+        m.VariableEquals("h", "1");
+        m.VariableEquals("arrayLength", 4);
+    }
 }

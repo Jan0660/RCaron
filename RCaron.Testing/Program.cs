@@ -63,15 +63,16 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-open 'RCaron';
-#RCaronRunner.Run('print 1;');
-open 'System';
-println(#MathF.Sqrt(float(9)));";
+$h = 2.ToString();
+print $h;
+";
+// $g = @(1, 2).Length;
+// print $g;
 Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
 RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
-RCaronRunner.Run(text, opt);
+var m = RCaronRunner.Run(text, opt);
 // while (true)
 // {
 //     stopwatch = Stopwatch.StartNew();

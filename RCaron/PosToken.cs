@@ -24,6 +24,8 @@ public enum TokenType : byte
     Comment,
     ExternThing,
     ArrayLiteralStart,
+    Dot,
+    DotGroup,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -47,6 +49,17 @@ public class PosToken
     // the span doesnt seem to work for some reason?
     public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)
         => span[Position.Start..(Position.End)];
+
+    public bool IsDotJoinableSomething()
+        => Type switch
+        {
+            TokenType.Dot => true,
+            TokenType.Number => true,
+            TokenType.VariableIdentifier => true,
+            TokenType.Keyword => true,
+            TokenType.KeywordCall => true,
+            _ => false,
+        };
 }
 
 public class BlockPosToken : PosToken
@@ -81,14 +94,16 @@ public class CallLikePosToken : ValuePosToken
 {
     public PosToken[][] Arguments { get; set; }
     public int NameEndIndex { get; }
-    public TokenType OriginalThingTokenType { get; }
+    // todo(cleanup)
+    public TokenType OriginalThingTokenType => OriginalToken.Type;
+    public PosToken OriginalToken;
 
-    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, TokenType originalThingTokenType) :
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, PosToken originalToken) :
         base(type, position)
     {
         Arguments = arguments;
         NameEndIndex = nameEndIndex;
-        OriginalThingTokenType = originalThingTokenType;
+        OriginalToken = originalToken;
     }
 
     public string GetName(string text)
@@ -99,4 +114,15 @@ public class CallLikePosToken : ValuePosToken
 
     public bool ArgumentsEmpty()
         => Arguments.Length == 0 || (Arguments.Length == 1 && Arguments[0].Length == 0);
+}
+
+public class DotGroupPosToken : PosToken
+{
+    public PosToken[] Tokens { get; }
+
+    public DotGroupPosToken(TokenType type, (int Start, int End) position, PosToken[] tokens) : base(type,
+        position)
+    {
+        Tokens = tokens;
+    }
 }

@@ -287,7 +287,8 @@ public class Motor
         }
     }
 
-    public object? MethodCall(string name, Span<PosToken> tokens = default, CallLikePosToken? callToken = null)
+    public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null,
+        Span<PosToken> instanceTokens = default)
     {
         object At(in Span<PosToken> tokens, int index)
         {
@@ -312,33 +313,33 @@ public class Motor
         }
 
         if (callToken?.OriginalThingTokenType == TokenType.ArrayLiteralStart)
-            return All(in tokens);
+            return All(in argumentTokens);
 
         switch (name.ToLowerInvariant())
         {
             #region conversions
 
             case "string":
-                return At(tokens, 0).ToString()!;
+                return At(argumentTokens, 0).ToString()!;
             case "float":
-                return Convert.ToSingle(At(tokens, 0));
+                return Convert.ToSingle(At(argumentTokens, 0));
             case "int32":
-                return Convert.ToInt32(At(tokens, 0));
+                return Convert.ToInt32(At(argumentTokens, 0));
             case "int64":
-                return Convert.ToInt64(At(tokens, 0));
+                return Convert.ToInt64(At(argumentTokens, 0));
 
             #endregion
 
             case "sum":
-                return Horrors.Sum(At(tokens, 0), At(tokens, 1));
+                return Horrors.Sum(At(argumentTokens, 0), At(argumentTokens, 1));
             case "printfunny":
             case "println":
-                foreach (var arg in All(tokens))
+                foreach (var arg in All(argumentTokens))
                     Console.WriteLine(arg);
                 return null;
             case "print":
             {
-                var args = All(tokens);
+                var args = All(argumentTokens);
                 for (var i = 0; i < args.Length; i++)
                 {
                     if (i != 0)
@@ -351,32 +352,39 @@ public class Motor
             }
             case "open":
                 OpenNamespaces ??= new();
-                OpenNamespaces.AddRange(Array.ConvertAll(All(tokens), t => (string)t));
+                OpenNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => (string)t));
                 return null;
             case "open_ext":
                 OpenNamespacesForExtensionMethods ??= new();
-                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(tokens), t => (string)t));
+                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => (string)t));
                 return null;
         }
 
-        if (name[0] == '#' || callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
+        if (name[0] == '#' || instanceTokens.Length != 0)
         {
-            var args = All(in tokens);
+            var args = All(in argumentTokens);
             Type type;
             string methodName;
             object? target = null;
             object? variable = null;
-            if (callToken?.OriginalThingTokenType == TokenType.VariableIdentifier)
+            if (instanceTokens.Length != 0 && instanceTokens[0].Type != TokenType.ExternThing)
             {
-                var obj = EvaluateVariable(name[1..], false);
+                Span<PosToken> given = instanceTokens;
+                if (instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
+                {
+                    given = dotGroupPosToken.Tokens[..^2];
+                    instanceTokens = dotGroupPosToken.Tokens;
+                }
+                var obj = EvaluateDotThings(given);
                 variable = obj;
                 target = obj;
                 type = obj.GetType();
-                var i = name.Length-1;
-                while (name[i] != '.')
-                    i--;
-                i++;
-                methodName = name[i..];
+                // var i = name.Length - 1;
+                // while (name[i] != '.')
+                //     i--;
+                // i++;
+                // todo(perf): just steal it from name var? -- fix name var first lol maybe
+                methodName = instanceTokens[^1].ToString(Raw);
                 goto resolveMethod;
             }
 
@@ -412,7 +420,7 @@ public class Motor
                 {
                     foreach (var exportedType in ass.GetTypes())
                     {
-                        if(!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
+                        if (!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
                             continue;
                         // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
                         // {
@@ -432,6 +440,7 @@ public class Motor
 
                 methods = extensionMethods.ToArray();
             }
+
             Span<uint> scores = stackalloc uint[methods.Length];
             for (var i = 0; i < methods.Length; i++)
             {
@@ -442,6 +451,7 @@ public class Motor
                 {
                     score = uint.MaxValue;
                 }
+
                 for (var j = 0; j < parameters.Length && j < args.Length; j++)
                 {
                     if (parameters[j].ParameterType == args[j].GetType())
@@ -453,7 +463,8 @@ public class Motor
                         score += 10;
                     }
                     else if (parameters[j].ParameterType.IsGenericType &&
-                             ListEx.IsAssignableToGenericType(args[j].GetType(), parameters[j].ParameterType.GetGenericTypeDefinition()))
+                             ListEx.IsAssignableToGenericType(args[j].GetType(),
+                                 parameters[j].ParameterType.GetGenericTypeDefinition()))
                     {
                         score += 10;
                     }
@@ -481,7 +492,7 @@ public class Motor
 
 
             if (best == 0)
-                throw new RCaronException($"cannot find a match for method '{name}'", RCaronExceptionTime.Runtime);
+                throw new RCaronException($"cannot find a match for method '{methodName}'", RCaronExceptionTime.Runtime);
 
             // todo: use default values
             // mismatch count arguments -> equate it out with null
@@ -492,7 +503,7 @@ public class Motor
                 Array.Copy(args, argsNew, args.Length);
                 args = argsNew;
             }
-            
+
             // generic method handling aaa
             if (methods[bestIndex].IsGenericMethod)
             {
@@ -516,6 +527,65 @@ public class Motor
         throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);
     }
 
+    public object? EvaluateDotThings(Span<PosToken> instanceTokens)
+    {
+        if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
+            instanceTokens = dotGroupPosToken.Tokens;
+        var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
+        var type = val.GetType();
+        for (int i = 2; i < instanceTokens.Length; i++)
+        {
+            if(instanceTokens[i].Type == TokenType.Dot)
+                continue;
+            var str = instanceTokens[i].ToString(Raw);
+            var p = type.GetProperty(str,
+                BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+            if (p != null)
+            {
+                val = p.GetValue(val);
+                type = val?.GetType();
+                continue;
+            }
+
+            var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+            if (f != null)
+            {
+                val = f.GetValue(val);
+                type = val?.GetType();
+                continue;
+            }
+
+            if (val is IDictionary dictionary)
+            {
+                var args = type.GetGenericArguments();
+                var (keyType, valueType) = (args[0], args[1]);
+                val = dictionary[Convert.ChangeType(str, keyType)];
+                type = val?.GetType();
+                continue;
+            }
+
+            var partIsInt = int.TryParse(str, out var partIntValue);
+            if (val is Array array && partIsInt)
+            {
+                val = array.GetValue(partIntValue);
+                type = val?.GetType();
+                continue;
+            }
+
+            if (val is IList list && partIsInt)
+            {
+                val = list[partIntValue];
+                type = val?.GetType();
+                continue;
+            }
+
+            throw new RCaronException($"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
+                RCaronExceptionTime.Runtime);
+        }
+
+        return val;
+    }
+
     public object[] EvaluateMultipleValues(in Span<PosToken> tokens, int tokensStartIndex = 0)
     {
         var objs = new object[tokens.Length - tokensStartIndex];
@@ -526,65 +596,6 @@ public class Motor
 
     public object EvaluateVariable(string name, bool externLastPart = true)
     {
-        if (name.Contains('.'))
-        {
-            // todo(perf)
-            var parts = name.Split('.');
-            // todo: variable doesnt exist handle
-            var val = Variables[parts[0]];
-            if (!externLastPart && parts.Length == 2)
-                return val;
-            var type = val.GetType();
-            for (var i = 1; i < parts.Length - (externLastPart ? 0 : 1); i++)
-            {
-                var p = type.GetProperty(parts[i],
-                    BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
-                if (p != null)
-                {
-                    val = p.GetValue(val);
-                    type = val?.GetType();
-                    continue;
-                }
-
-                var f = type.GetField(parts[i], BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
-                if (f != null)
-                {
-                    val = f.GetValue(val);
-                    type = val?.GetType();
-                    continue;
-                }
-
-                if (val is IDictionary dictionary)
-                {
-                    var args = type.GetGenericArguments();
-                    var (keyType, valueType) = (args[0], args[1]);
-                    val = dictionary[Convert.ChangeType(parts[i], keyType)];
-                    type = val?.GetType();
-                    continue;
-                }
-
-                var partIsInt = int.TryParse(parts[i], out var partIntValue);
-                if (val is Array array && partIsInt)
-                {
-                    val = array.GetValue(partIntValue);
-                    type = val?.GetType();
-                    continue;
-                }
-
-                if (val is IList list && partIsInt)
-                {
-                    val = list[partIntValue];
-                    type = val?.GetType();
-                    continue;
-                }
-
-                throw new RCaronException($"cannot resolve '{parts[i]}'(index={i}) in '{name}'",
-                    RCaronExceptionTime.Runtime);
-            }
-
-            return val;
-        }
-
         switch (name)
         {
             case "true":
@@ -631,9 +642,11 @@ public class Motor
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
-                return MethodCall(callToken.GetName(Raw), callToken: callToken);
+                return MethodCall(callToken.GetName(Raw), callToken: callToken, instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
             case TokenType.Keyword:
                 return token.ToString(Raw);
+            case TokenType.DotGroup:
+                return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
         }
 
         throw new Exception("yo wtf");
@@ -642,6 +655,11 @@ public class Motor
     [CollectionAccess(CollectionAccessType.Read)]
     public object SimpleEvaluateExpressionValue(ArraySegment<PosToken> tokens)
     {
+        // todo(perf)
+        if (tokens[^1] is CallLikePosToken callToken && tokens.Any(t => t.Type == TokenType.Dot))
+        {
+            return MethodCall(callToken.ToString(Raw), callToken: callToken, instanceTokens: tokens[..^2]);
+        }
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0]);
@@ -678,9 +696,26 @@ public class Motor
         => tokens.Count switch
         {
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
+            // todo: i guess its not even needed?
+            // method call on a single thing -- weird
+            // 2 => MethodCallOnThing(tokens),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("what he fuck")
         };
+
+    public object MethodCallOnThing(in ArraySegment<PosToken> tokens)
+    {
+        // [0] should be a IsDotJoinableSomething something idk
+        // [1] should be a CallLikePosToken
+        if (tokens[1] is CallLikePosToken callToken)
+        {
+            return MethodCall(callToken.GetName(Raw), callToken: callToken, instanceTokens: tokens);
+        }
+        else
+        {
+            throw new Exception("wtf -- MethodCallOnThing");
+        }
+    }
 
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {

@@ -117,7 +117,7 @@ public class TokenReader
         else if (txt[position] == '#')
         {
             position++;
-            position += CollectAlphaNumericAndSome(txt[position..]);
+            position += CollectAlphaNumericAndSomeAndDot(txt[position..]);
             return new PosToken(TokenType.ExternThing, (initialPosition, position));
         }
         // array literal start
@@ -125,6 +125,12 @@ public class TokenReader
         {
             position++;
             return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
+        }
+        // dot
+        else if (txt[position] == '.')
+        {
+            position++;
+            return new PosToken(TokenType.Dot, (initialPosition, position));
         }
         // operation
         else
@@ -154,8 +160,10 @@ public class TokenReader
         // todo: isDecimal turn it on smartly ok?
         while (char.IsDigit(span[index]) || span[index] == '.')
         {
-            if (span[index] == '.')
+            if (span[index] == '.' && char.IsDigit(span[index+1]))
                 isDecimal = true;
+            else if (span[index] == '.')
+                return (index, isDecimal);
             index++;
         }
 
@@ -172,6 +180,15 @@ public class TokenReader
     }
 
     public int CollectAlphaNumericAndSome(in ReadOnlySpan<char> span)
+    {
+        var index = 0;
+        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
+               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_'))
+            index++;
+        return index;
+    }
+
+    public int CollectAlphaNumericAndSomeAndDot(in ReadOnlySpan<char> span)
     {
         var index = 0;
         while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
