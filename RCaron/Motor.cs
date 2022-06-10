@@ -312,7 +312,7 @@ public class Motor
             return EvaluateMultipleValues(tokens);
         }
 
-        if (callToken?.OriginalThingTokenType == TokenType.ArrayLiteralStart)
+        if (callToken?.OriginalToken.Type == TokenType.ArrayLiteralStart)
             return All(in argumentTokens);
 
         switch (name.ToLowerInvariant())
@@ -659,11 +659,6 @@ public class Motor
     [CollectionAccess(CollectionAccessType.Read)]
     public object SimpleEvaluateExpressionValue(ArraySegment<PosToken> tokens)
     {
-        // todo(perf)
-        if (tokens[^1] is CallLikePosToken callToken && tokens.Any(t => t.Type == TokenType.Dot))
-        {
-            return MethodCall(callToken.ToString(Raw), callToken: callToken, instanceTokens: tokens[..^2]);
-        }
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0]);

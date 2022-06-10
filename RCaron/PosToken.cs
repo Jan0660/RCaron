@@ -94,8 +94,6 @@ public class CallLikePosToken : ValuePosToken
 {
     public PosToken[][] Arguments { get; set; }
     public int NameEndIndex { get; }
-    // todo(cleanup)
-    public TokenType OriginalThingTokenType => OriginalToken.Type;
     public PosToken OriginalToken;
 
     public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, PosToken originalToken) :
