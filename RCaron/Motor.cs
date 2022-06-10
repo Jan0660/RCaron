@@ -494,13 +494,17 @@ public class Motor
             if (best == 0)
                 throw new RCaronException($"cannot find a match for method '{methodName}'", RCaronExceptionTime.Runtime);
 
-            // todo: use default values
-            // mismatch count arguments -> equate it out with null
+            // mismatch count arguments -> equate it out with default values
             // is equate even a word?
-            if (methods[bestIndex].GetParameters().Length > args.Length)
+            var paramss = methods[bestIndex].GetParameters();
+            if (paramss.Length > args.Length)
             {
-                var argsNew = new object[methods[bestIndex].GetParameters().Length];
+                var argsNew = new object[paramss.Length];
                 Array.Copy(args, argsNew, args.Length);
+                for (var i = args.Length; i < argsNew.Length; i++)
+                {
+                    argsNew[i] = paramss[i].DefaultValue!;
+                }
                 args = argsNew;
             }
 
