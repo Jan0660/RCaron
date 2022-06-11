@@ -12,8 +12,12 @@ public class BasicFeatures
     [Fact]
     public void IfStatement()
     {
-        var m = RCaronRunner.Run(@"$h = 2; if ($h == 2){ $h = 1; }");
+        var m = RCaronRunner.Run(@"$h = 2;
+$h2 = 0;
+if ($h == 2){ $h = 1; }
+if ($true){ $h2 = 1; }");
         m.AssertVariableEquals("h", (long)1);
+        m.AssertVariableEquals("h2", (long)1);
     }
 
     [Fact]
@@ -115,7 +119,7 @@ $h println 'huh';"));
     for($r = 0, $r < 2, $r++){
         print(1);
     }
-    $h++;
+    globalset('h', globalget('h') + 1);
 }
 $h = 0;
 for($i = 0, $i < 3, $i++){

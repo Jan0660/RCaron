@@ -360,6 +360,21 @@ public class Motor
 
             case "sum":
                 return Horrors.Sum(At(argumentTokens, 0), At(argumentTokens, 1));
+            case "globalget":
+            {
+                var val = GlobalScope.GetVariable((string)At(argumentTokens, 0));
+                if (val.Equals(RCaronInsideEnum.VariableNotFound))
+                    throw RCaronException.VariableNotFound(name);
+                return val;
+            }
+            case "globalset":
+            {
+                ref var val = ref GlobalScope.GetVariableRef((string)At(argumentTokens, 0));
+                if (Unsafe.IsNullRef(ref val))
+                    throw RCaronException.VariableNotFound(name);
+                val = At(argumentTokens, 1);
+                return null;
+            }
             case "printfunny":
             case "println":
                 foreach (var arg in All(argumentTokens))
@@ -783,9 +798,9 @@ public class Motor
 
     public object? GetVar(string name)
     {
-        for (var i = 1; i < BlockStack.Count; i++)
+        for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^i);
+            var el = BlockStack.ElementAt(^(i+1));
             if (el.Scope != null && el.Scope.TryGetVariable(name, out var value))
             {
                 return value;
@@ -802,9 +817,9 @@ public class Motor
 
     public ref object? GetVarRef(string name)
     {
-        for (var i = 1; i < BlockStack.Count; i++)
+        for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^i);
+            var el = BlockStack.ElementAt(^(i+1));
             // todo: attempt at making a TryGetVariableRef method -- apply it in SetVar too
             if (el.Scope != null && el.Scope.VariableExists(name))
             {

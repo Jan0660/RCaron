@@ -13,6 +13,7 @@ public class VariableAccess
         m.GlobalScope.SetVariable("obj", new PropertyDummyObject());
         m.Run();
         m.AssertVariableEquals("h", "VALUE");
+        Assert.Throws<RCaronException>(() => m.RunWithCode("$h = $obj.not;"));
     }
 
     public class FieldDummyObject
@@ -26,6 +27,7 @@ public class VariableAccess
         m.GlobalScope.SetVariable("obj", new FieldDummyObject());
         m.Run();
         m.AssertVariableEquals("h", "VALUE");
+        Assert.Throws<RCaronException>(() => m.RunWithCode("$h = $obj.not;"));
     }
 
     [Fact]
@@ -36,6 +38,8 @@ public class VariableAccess
         m.Run();
         m.AssertVariableEquals("i0", 0);
         m.AssertVariableEquals("i2", 2);
+        // todo(error clarity): throw a RCaronException when index is out of bounds
+        Assert.Throws<IndexOutOfRangeException>(() => m.RunWithCode("$i10 = $array.10;"));
     }
 
     [Fact]
@@ -61,6 +65,7 @@ public class VariableAccess
         m.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
         m.Run();
         m.AssertVariableEquals("h", "0");
+        Assert.Throws<RCaronException>(() => m.RunWithCode("$h = $array.0.NonExistentMethod();"));
     }
 
     [Fact]

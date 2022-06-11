@@ -11,4 +11,10 @@ public static class AssertionExtensions
     {
         Assert.IsType<T>(motor.GlobalScope.GetVariable(variableName));
     }
+
+    public static void RunWithCode(this Motor motor, string code)
+    {
+        motor.UseContext(RCaronRunner.Parse(code));
+        motor.Run();
+    }
 }

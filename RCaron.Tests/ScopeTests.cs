@@ -3,7 +3,7 @@
 public class ScopeTests
 {
     [Fact]
-    public void Bordered()
+    public void Set()
     {
         var m = RCaronRunner.Run(@"
 func Woo{
@@ -13,5 +13,16 @@ $h = 1;
 Woo;
 ");
         m.AssertVariableEquals("h", (long)1);
+    }
+    [Fact]
+    public void Get()
+    {
+        Assert.Throws<RCaronException>(() => RCaronRunner.Run(@"
+func Woo{
+    $g = $h;
+}
+$h = 1;
+Woo;
+"));
     }
 }
