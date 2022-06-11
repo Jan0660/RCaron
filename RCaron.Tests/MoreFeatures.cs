@@ -9,7 +9,7 @@ public class MoreFeatures
 $array = @(0, 1, 2, 3, 4, 5);
 $g = $array.ToList();
 $i5 = $g.5;");
-        m.VariableEquals("i5", (long)5);
-        Assert.IsType<List<object>>(m.Variables["g"]);
+        m.AssertVariableEquals("i5", (long)5);
+        m.AssertVariableIsType<List<object>>("g");
     }
 }

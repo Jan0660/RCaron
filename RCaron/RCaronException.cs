@@ -8,6 +8,9 @@ public class RCaronException : Exception
     {
         Time = time;
     }
+    
+    public static RCaronException VariableNotFound(string name)
+        => new($"variable '{name}' does not exist in this scope", RCaronExceptionTime.Runtime);
 }
 
 public enum RCaronExceptionTime : byte

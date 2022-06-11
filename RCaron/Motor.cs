@@ -2,6 +2,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Dynamic;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Dynamitey;
@@ -11,6 +12,11 @@ using Microsoft.Win32.SafeHandles;
 using Console = Log73.Console;
 
 namespace RCaron;
+
+public enum RCaronInsideEnum: byte
+{
+    VariableNotFound
+}
 
 public class MotorOptions
 {
@@ -22,10 +28,29 @@ public class Motor
 {
     public string Raw { get; set; }
     public IList<Line> Lines { get; set; }
-    public Dictionary<string, object> Variables { get; set; } = new();
 
-    public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
-        Conditional? Conditional, int PreviousLineIndex);
+    // public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
+    //     Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope);
+    public class StackThing
+    {
+        public StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
+            Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope)
+        {
+            this.LineIndex = LineIndex;
+            this.IsBreakWorthy = IsBreakWorthy;
+            this.IsReturnWorthy = IsReturnWorthy;
+            this.Conditional = Conditional;
+            this.PreviousLineIndex = PreviousLineIndex;
+            this.Scope = Scope;
+        }
+
+        public int LineIndex { get; init; }
+        public bool IsBreakWorthy { get; init; }
+        public bool IsReturnWorthy { get; init; }
+        public Conditional? Conditional { get; init; }
+        public int PreviousLineIndex { get; init; }
+        public LocalScope? Scope { get; set; }
+    }
 
     public Stack<StackThing>
         // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
@@ -36,6 +61,7 @@ public class Motor
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
     public List<string>? OpenNamespaces { get; set; }
     public List<string>? OpenNamespacesForExtensionMethods { get; set; }
+    public LocalScope GlobalScope { get; set; } = new();
 
     public class Conditional
     {
@@ -114,7 +140,7 @@ public class Motor
             {
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..));
-                Variables[variableName] = obj;
+                SetVar(variableName, obj);
                 // Console.Debug($"variable '{variableName}' set to '{obj}'");
                 break;
             }
@@ -143,10 +169,11 @@ public class Motor
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 if (line.Tokens[1].EqualsString(Raw, "++"))
                 {
-                    Horrors.AddTo(ref CollectionsMarshal.GetValueRefOrNullRef(Variables, variableName), (long)1);
+                    Horrors.AddTo(ref GetVarRef(variableName), (long)1);
                 }
                 else if (line.Tokens[1].EqualsString(Raw, "--"))
-                    Variables[variableName] = Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1);
+                    SetVar(variableName,
+                        Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1));
 
                 break;
             }
@@ -155,7 +182,7 @@ public class Motor
                 {
                     if (LastConditional is { IsTrue: true })
                         BlockStack.Push(new StackThing(curIndex, LastConditional.IsBreakWorthy, false,
-                            LastConditional, curIndex));
+                            LastConditional, curIndex, null));
                     else
                     {
                         curIndex = ListEx.FindIndex(Lines,
@@ -252,12 +279,13 @@ public class Motor
                             Console.Debug(SimpleEvaluateExpressionHigh(ArgsArray()));
                             return;
                         case "dbg_assert_is_one":
-                            Variables["$$assertResult"] = (long)SimpleEvaluateExpressionSingle(args[0]) == 1;
+                            GlobalScope.SetVariable("$$assertResult",
+                                (long)SimpleEvaluateExpressionSingle(args[0]) == 1);
                             return;
                         case "dbg_sum_three":
-                            Variables["$$assertResult"] = Horrors.Sum(
+                            GlobalScope.SetVariable("$$assertResult", Horrors.Sum(
                                 Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]),
-                                    SimpleEvaluateExpressionSingle(args[1])), SimpleEvaluateExpressionSingle(args[2]));
+                                    SimpleEvaluateExpressionSingle(args[1])), SimpleEvaluateExpressionSingle(args[2])));
                             return;
                     }
 
@@ -272,7 +300,7 @@ public class Motor
                 if (Functions.TryGetValue(keywordString, out var func))
                 {
                     BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
-                        curIndex));
+                        curIndex, null));
                     curIndex = func.startLineIndex;
                     return;
                 }
@@ -375,6 +403,7 @@ public class Motor
                     given = dotGroupPosToken.Tokens[..^2];
                     instanceTokens = dotGroupPosToken.Tokens;
                 }
+
                 var obj = EvaluateDotThings(given);
                 variable = obj;
                 target = obj;
@@ -492,7 +521,8 @@ public class Motor
 
 
             if (best == 0)
-                throw new RCaronException($"cannot find a match for method '{methodName}'", RCaronExceptionTime.Runtime);
+                throw new RCaronException($"cannot find a match for method '{methodName}'",
+                    RCaronExceptionTime.Runtime);
 
             // mismatch count arguments -> equate it out with default values
             // is equate even a word?
@@ -505,6 +535,7 @@ public class Motor
                 {
                     argsNew[i] = paramss[i].DefaultValue!;
                 }
+
                 args = argsNew;
             }
 
@@ -539,7 +570,7 @@ public class Motor
         var type = val.GetType();
         for (int i = 2; i < instanceTokens.Length; i++)
         {
-            if(instanceTokens[i].Type == TokenType.Dot)
+            if (instanceTokens[i].Type == TokenType.Dot)
                 continue;
             var str = instanceTokens[i].ToString(Raw);
             var p = type.GetProperty(str,
@@ -583,7 +614,8 @@ public class Motor
                 continue;
             }
 
-            throw new RCaronException($"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
+            throw new RCaronException(
+                $"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
                 RCaronExceptionTime.Runtime);
         }
 
@@ -598,7 +630,7 @@ public class Motor
         return objs;
     }
 
-    public object EvaluateVariable(string name, bool externLastPart = true)
+    public object EvaluateVariable(string name)
     {
         switch (name)
         {
@@ -610,9 +642,10 @@ public class Motor
                 return null;
         }
 
-        if (Variables.ContainsKey(name))
-            return Variables[name];
-        throw new RCaronException($"variable '{name}' does not exist", RCaronExceptionTime.Runtime);
+        var val = GetVar(name);
+        if (val.Equals(RCaronInsideEnum.VariableNotFound))
+            throw RCaronException.VariableNotFound(name);
+        return val;
     }
 
     public object SimpleEvaluateExpressionSingle(PosToken token)
@@ -646,7 +679,8 @@ public class Motor
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
-                return MethodCall(callToken.GetName(Raw), callToken: callToken, instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
+                return MethodCall(callToken.GetName(Raw), callToken: callToken,
+                    instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
             case TokenType.Keyword:
                 return token.ToString(Raw);
             case TokenType.DotGroup:
@@ -745,5 +779,75 @@ public class Motor
             default:
                 throw new RCaronException($"unknown operator: {op}", RCaronExceptionTime.Runtime);
         }
+    }
+
+    public object? GetVar(string name)
+    {
+        for (var i = 1; i < BlockStack.Count; i++)
+        {
+            var el = BlockStack.ElementAt(^i);
+            if (el.Scope != null && el.Scope.TryGetVariable(name, out var value))
+            {
+                return value;
+            }
+
+            if (el.IsReturnWorthy)
+                return RCaronInsideEnum.VariableNotFound;
+        }
+
+        if (GlobalScope.TryGetVariable(name, out var value2))
+            return value2;
+        return RCaronInsideEnum.VariableNotFound;
+    }
+
+    public ref object? GetVarRef(string name)
+    {
+        for (var i = 1; i < BlockStack.Count; i++)
+        {
+            var el = BlockStack.ElementAt(^i);
+            // todo: attempt at making a TryGetVariableRef method -- apply it in SetVar too
+            if (el.Scope != null && el.Scope.VariableExists(name))
+            {
+                return ref el.Scope.GetVariableRef(name);
+            }
+
+            if (el.IsReturnWorthy)
+                return ref Unsafe.NullRef<object?>();
+        }
+
+
+        if (GlobalScope.VariableExists(name))
+            return ref GlobalScope.GetVariableRef(name);
+        return ref Unsafe.NullRef<object?>();
+    }
+
+    public void SetVar(string name, object? value)
+    {
+        var hasReturnWorthy = false;
+        for (var i = 0; i < BlockStack.Count; i++)
+        {
+            var el = BlockStack.ElementAt(^(i+1));
+            if (el.Scope != null && el.Scope.VariableExists(name))
+            {
+                el.Scope.SetVariable(name, value);
+                return;
+            }
+
+            if (el.IsReturnWorthy)
+            {
+                hasReturnWorthy = true;
+                break;
+            }
+        }
+
+        if (BlockStack.Count == 0 || (!hasReturnWorthy && GlobalScope.VariableExists(name)))
+        {
+            GlobalScope.SetVariable(name, value);
+            return;
+        }
+
+        var currentStack = BlockStack.Peek();
+        currentStack.Scope ??= new();
+        currentStack.Scope.SetVariable(name, value);
     }
 }
