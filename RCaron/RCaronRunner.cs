@@ -1,5 +1,4 @@
-﻿using System.Diagnostics;
-using System.Runtime.InteropServices;
+﻿using System.Runtime.InteropServices;
 
 namespace RCaron;
 
@@ -252,11 +251,7 @@ public static class RCaronRunner
             }
         }
 
-        return new RCaronRunnerContext()
-        {
-            Code = text,
-            Lines = lines
-        };
+        return new RCaronRunnerContext(text, lines);
     }
 
     // todo: tokens doesn't need to be alive maybee?
@@ -350,11 +345,7 @@ public static class RCaronRunner
     }
 }
 
-public class RCaronRunnerContext
-{
-    public string Code { get; set; }
-    public IList<Line> Lines { get; set; }
-}
+public record RCaronRunnerContext(string Code, IList<Line> Lines);
 
 [Flags]
 public enum RCaronRunnerLog

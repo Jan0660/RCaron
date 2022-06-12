@@ -58,7 +58,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
 
     if (interactive)
     {
-        motor ??= new(new());
+        motor ??= new(new(null!, null!));
         var input = Console.ReadLine();
         while (input != null)
         {

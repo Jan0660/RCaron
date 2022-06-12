@@ -1,14 +1,11 @@
 using System.Collections;
 using System.Diagnostics;
-using System.Dynamic;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
-using System.Text;
 using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
-using Microsoft.Win32.SafeHandles;
 using Console = Log73.Console;
 
 namespace RCaron;
@@ -33,15 +30,15 @@ public class Motor
     //     Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope);
     public class StackThing
     {
-        public StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
-            Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope)
+        public StackThing(int lineIndex, bool isBreakWorthy, bool isReturnWorthy,
+            Conditional? conditional, int previousLineIndex, LocalScope? scope)
         {
-            this.LineIndex = LineIndex;
-            this.IsBreakWorthy = IsBreakWorthy;
-            this.IsReturnWorthy = IsReturnWorthy;
-            this.Conditional = Conditional;
-            this.PreviousLineIndex = PreviousLineIndex;
-            this.Scope = Scope;
+            this.LineIndex = lineIndex;
+            this.IsBreakWorthy = isBreakWorthy;
+            this.IsReturnWorthy = isReturnWorthy;
+            this.Conditional = conditional;
+            this.PreviousLineIndex = previousLineIndex;
+            this.Scope = scope;
         }
 
         public int LineIndex { get; init; }
@@ -91,7 +88,7 @@ public class Motor
     {
         public Line LastExecute { get; }
 
-        public ForLoopConditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[]? evalTokens,
+        public ForLoopConditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[] evalTokens,
             Line lastExec) : base(lineIndex, isOnce, isTrue, isBreakWorthy, evalTokens)
         {
             LastExecute = lastExec;
@@ -100,11 +97,13 @@ public class Motor
         public override bool Evaluate(Motor m)
         {
             m.RunLine(LastExecute);
-            return m.SimpleEvaluateBool(EvaluateTokens);
+            return m.SimpleEvaluateBool(EvaluateTokens!);
         }
     }
 
+#pragma warning disable CS8618
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
+#pragma warning restore CS8618
     {
         UseContext(runnerContext);
         Options = options ?? new();
@@ -169,11 +168,11 @@ public class Motor
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 if (line.Tokens[1].EqualsString(Raw, "++"))
                 {
-                    Horrors.AddTo(ref GetVarRef(variableName), (long)1);
+                    Horrors.AddTo(ref GetVarRef(variableName)!, (long)1);
                 }
                 else if (line.Tokens[1].EqualsString(Raw, "--"))
                     SetVar(variableName,
-                        Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]), (long)1));
+                        Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]).NotNull(), (long)1));
 
                 break;
             }
@@ -232,8 +231,8 @@ public class Motor
                 break;
             case LineType.Function:
                 var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
-                var end = ListEx.IndexOf(Lines, (Line l) =>
-                    l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt && bpt.Number == start.Number);
+                var end = ListEx.IndexOf(Lines, (l) =>
+                    l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bp && bp.Number == start.Number);
                 Functions[line.Tokens[1].ToString(Raw)] = (curIndex + 1, end);
                 break;
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
@@ -280,12 +279,12 @@ public class Motor
                             return;
                         case "dbg_assert_is_one":
                             GlobalScope.SetVariable("$$assertResult",
-                                (long)SimpleEvaluateExpressionSingle(args[0]) == 1);
+                                SimpleEvaluateExpressionSingle(args[0]).Expect<long>() == 1);
                             return;
                         case "dbg_sum_three":
                             GlobalScope.SetVariable("$$assertResult", Horrors.Sum(
-                                Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]),
-                                    SimpleEvaluateExpressionSingle(args[1])), SimpleEvaluateExpressionSingle(args[2])));
+                                Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]).NotNull(),
+                                    SimpleEvaluateExpressionSingle(args[1]).NotNull()), SimpleEvaluateExpressionSingle(args[2]).NotNull()));
                             return;
                     }
 
@@ -293,7 +292,7 @@ public class Motor
                     switch (keywordString)
                     {
                         case "goto_line":
-                            curIndex = (int)(long)SimpleEvaluateExpressionSingle(args[0]);
+                            curIndex = (int)SimpleEvaluateExpressionSingle(args[0]).Expect<long>();
                             return;
                     }
 
@@ -318,20 +317,20 @@ public class Motor
     public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null,
         Span<PosToken> instanceTokens = default)
     {
-        object At(in Span<PosToken> tokens, int index)
+        object? At(in Span<PosToken> tokens, int index)
         {
             if (callToken != null)
                 return SimpleEvaluateExpressionHigh(callToken.Arguments[index]);
             return SimpleEvaluateExpressionSingle(tokens[index]);
         }
 
-        object[] All(in Span<PosToken> tokens)
+        object?[] All(in Span<PosToken> tokens)
         {
             if (tokens.Length == 0 && (callToken?.ArgumentsEmpty() ?? false))
                 return Array.Empty<object>();
             if (callToken != null)
             {
-                var res = new object[callToken.Arguments.Length];
+                var res = new object?[callToken.Arguments.Length];
                 for (var ind = 0; ind < callToken.Arguments.Length; ind++)
                     res[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
                 return res;
@@ -359,17 +358,17 @@ public class Motor
             #endregion
 
             case "sum":
-                return Horrors.Sum(At(argumentTokens, 0), At(argumentTokens, 1));
+                return Horrors.Sum(At(argumentTokens, 0).NotNull(), At(argumentTokens, 1).NotNull());
             case "globalget":
             {
-                var val = GlobalScope.GetVariable((string)At(argumentTokens, 0));
+                var val = GlobalScope.GetVariable(At(argumentTokens, 0).Expect<string>());
                 if (val.Equals(RCaronInsideEnum.VariableNotFound))
                     throw RCaronException.VariableNotFound(name);
                 return val;
             }
             case "globalset":
             {
-                ref var val = ref GlobalScope.GetVariableRef((string)At(argumentTokens, 0));
+                ref var val = ref GlobalScope.GetVariableRef(At(argumentTokens, 0).Expect<string>());
                 if (Unsafe.IsNullRef(ref val))
                     throw RCaronException.VariableNotFound(name);
                 val = At(argumentTokens, 1);
@@ -395,18 +394,18 @@ public class Motor
             }
             case "open":
                 OpenNamespaces ??= new();
-                OpenNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => (string)t));
+                OpenNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return null;
             case "open_ext":
                 OpenNamespacesForExtensionMethods ??= new();
-                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => (string)t));
+                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return null;
         }
 
         if (name[0] == '#' || instanceTokens.Length != 0)
         {
             var args = All(in argumentTokens);
-            Type type;
+            Type? type;
             string methodName;
             object? target = null;
             object? variable = null;
@@ -474,7 +473,7 @@ public class Motor
                         foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                         {
                             if (method.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase) &&
-                                (OpenNamespacesForExtensionMethods?.Contains(exportedType.Namespace) ?? false))
+                                (OpenNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ?? false))
                             {
                                 extensionMethods.Add(method);
                             }
@@ -558,7 +557,7 @@ public class Motor
             if (methods[bestIndex].IsGenericMethod)
             {
                 // todo(perf): probably not the fastest
-                var t = methods[bestIndex].DeclaringType;
+                var t = methods[bestIndex].DeclaringType!;
                 // static class
                 if (t.IsSealed && t.IsAbstract)
                 {
@@ -582,13 +581,17 @@ public class Motor
         if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
             instanceTokens = dotGroupPosToken.Tokens;
         var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
+        if (val == null)
+            throw RCaronException.NullInTokens(instanceTokens, Raw, 0);
         var type = val.GetType();
         for (int i = 2; i < instanceTokens.Length; i++)
         {
             if (instanceTokens[i].Type == TokenType.Dot)
                 continue;
+            if(i != instanceTokens.Length && val == null)
+                throw RCaronException.NullInTokens(instanceTokens, Raw, i);
             var str = instanceTokens[i].ToString(Raw);
-            var p = type.GetProperty(str,
+            var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
             if (p != null)
             {
@@ -608,7 +611,7 @@ public class Motor
             if (val is IDictionary dictionary)
             {
                 var args = type.GetGenericArguments();
-                var (keyType, valueType) = (args[0], args[1]);
+                var keyType = args[0];
                 val = dictionary[Convert.ChangeType(str, keyType)];
                 type = val?.GetType();
                 continue;
@@ -637,15 +640,15 @@ public class Motor
         return val;
     }
 
-    public object[] EvaluateMultipleValues(in Span<PosToken> tokens, int tokensStartIndex = 0)
+    public object?[] EvaluateMultipleValues(in Span<PosToken> tokens, int tokensStartIndex = 0)
     {
-        var objs = new object[tokens.Length - tokensStartIndex];
+        var objs = new object?[tokens.Length - tokensStartIndex];
         for (var ind = tokensStartIndex; ind < tokens.Length; ind++)
             objs[ind - tokensStartIndex] = SimpleEvaluateExpressionSingle(tokens[ind]);
         return objs;
     }
 
-    public object EvaluateVariable(string name)
+    public object? EvaluateVariable(string name)
     {
         switch (name)
         {
@@ -658,12 +661,12 @@ public class Motor
         }
 
         var val = GetVar(name);
-        if (val.Equals(RCaronInsideEnum.VariableNotFound))
+        if (val?.Equals(RCaronInsideEnum.VariableNotFound) ?? false)
             throw RCaronException.VariableNotFound(name);
         return val;
     }
 
-    public object SimpleEvaluateExpressionSingle(PosToken token)
+    public object? SimpleEvaluateExpressionSingle(PosToken token)
     {
         switch (token.Type)
         {
@@ -710,11 +713,11 @@ public class Motor
     {
         // repeat action something math
         var index = 0;
-        object value = SimpleEvaluateExpressionSingle(tokens[0]);
+        object value = SimpleEvaluateExpressionSingle(tokens[0])!;
         while (index < tokens.Count - 1)
         {
             var op = tokens[index + 1].ToString(Raw);
-            var second = SimpleEvaluateExpressionSingle(tokens[index + 2]);
+            var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
             switch (op)
             {
                 case Operations.SumOp:
@@ -740,34 +743,17 @@ public class Motor
         return value;
     }
 
-    public object SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
+    public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
         => tokens.Count switch
         {
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
-            // todo: i guess its not even needed?
-            // method call on a single thing -- weird
-            // 2 => MethodCallOnThing(tokens),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("what he fuck")
         };
 
-    public object MethodCallOnThing(in ArraySegment<PosToken> tokens)
-    {
-        // [0] should be a IsDotJoinableSomething something idk
-        // [1] should be a CallLikePosToken
-        if (tokens[1] is CallLikePosToken callToken)
-        {
-            return MethodCall(callToken.GetName(Raw), callToken: callToken, instanceTokens: tokens);
-        }
-        else
-        {
-            throw new Exception("wtf -- MethodCallOnThing");
-        }
-    }
-
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {
-        var val1 = SimpleEvaluateExpressionSingle(tokens[0]);
+        var val1 = SimpleEvaluateExpressionSingle(tokens[0])!;
         if (tokens.Length == 1)
         {
             if (val1 is bool b)
@@ -776,7 +762,7 @@ public class Motor
 
         // todo: cant switch case with a Span yet -- rider doesnt support
         var op = tokens[1].ToString(Raw);
-        var val2 = SimpleEvaluateExpressionSingle(tokens[2]);
+        var val2 = SimpleEvaluateExpressionSingle(tokens[2])!;
         switch (op)
         {
             case Operations.IsEqualOp:

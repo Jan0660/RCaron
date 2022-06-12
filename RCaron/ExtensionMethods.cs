@@ -115,4 +115,20 @@ static class ListEx
 
         return IsAssignableToGenericType(baseType, genericType);
     }
+
+    public static T Expect<T>(this object? obj)
+    {
+        if (obj is T o)
+            return o;
+        // todo(error clarity)
+        throw new RCaronException($"expected type '{typeof(T)}' from '{obj}'", RCaronExceptionTime.Runtime);
+    }
+
+    public static object NotNull(this object? obj)
+    {
+        if (obj == null)
+            // todo(error clarity)
+            throw new RCaronException($"expected not null", RCaronExceptionTime.Runtime);
+        return obj;
+    }
 }
