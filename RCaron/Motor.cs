@@ -55,6 +55,7 @@ public class Motor
     public MotorOptions Options { get; }
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
     public LocalScope GlobalScope { get; set; } = new();
+    public object? ReturnValue = null;
 
     public class Conditional
     {
@@ -116,18 +117,27 @@ public class Motor
     /// </summary>
     private int curIndex;
 
-    public void Run()
+    public void Run(int startIndex = 0)
     {
-        for (curIndex = 0; curIndex < Lines.Count; curIndex++)
+        curIndex = startIndex;
+        for (; curIndex < Lines.Count; curIndex++)
         {
             if (curIndex >= Lines.Count)
                 break;
             var line = Lines[curIndex];
-            RunLine(line);
+            var res = RunLine(line);
+            if(res == RunLineResult.Exit)
+                return;
         }
     }
 
-    public void RunLine(Line line)
+    public enum RunLineResult : byte
+    {
+        Nothing = 0,
+        Exit = 1,
+    }
+
+    public RunLineResult RunLine(Line line)
     {
         switch (line.Type)
         {
@@ -182,7 +192,7 @@ public class Motor
                         curIndex = ListEx.FindIndex(Lines,
                             l => l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt2 &&
                                  bpt2.Depth == bpt.Depth && bpt2.Number == bpt.Number);
-                        return;
+                        return RunLineResult.Nothing;
                     }
                 }
                 else if (line.Tokens[0] is { Type: TokenType.BlockEnd })
@@ -254,15 +264,16 @@ public class Motor
                         curIndex = ListEx.FindIndex(Lines,
                             l => l.Type == LineType.BlockStuff
                                  && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
-                        return;
+                        return RunLineResult.Nothing;
                     }
                     case "return":
                     {
+                        ReturnValue = SimpleEvaluateExpressionHigh(ArgsArray());
                         var g = BlockStack.Pop();
                         while (!g.IsReturnWorthy)
                             g = BlockStack.Pop();
                         curIndex = g.PreviousLineIndex;
-                        return;
+                        return RunLineResult.Exit;
                     }
                 }
 
@@ -271,16 +282,16 @@ public class Motor
                     {
                         case "dbg_println":
                             Console.Debug(SimpleEvaluateExpressionHigh(ArgsArray()));
-                            return;
+                            return RunLineResult.Nothing;
                         case "dbg_assert_is_one":
                             GlobalScope.SetVariable("$$assertResult",
                                 SimpleEvaluateExpressionSingle(args[0]).Expect<long>() == 1);
-                            return;
+                            return RunLineResult.Nothing;
                         case "dbg_sum_three":
                             GlobalScope.SetVariable("$$assertResult", Horrors.Sum(
                                 Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]).NotNull(),
                                     SimpleEvaluateExpressionSingle(args[1]).NotNull()), SimpleEvaluateExpressionSingle(args[2]).NotNull()));
-                            return;
+                            return RunLineResult.Nothing;
                     }
 
                 if (Options.EnableDumb)
@@ -288,7 +299,7 @@ public class Motor
                     {
                         case "goto_line":
                             curIndex = (int)SimpleEvaluateExpressionSingle(args[0]).Expect<long>();
-                            return;
+                            return RunLineResult.Nothing;
                     }
 
                 if (Functions.TryGetValue(keywordString, out var func))
@@ -296,7 +307,7 @@ public class Motor
                     BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
                         curIndex, null));
                     curIndex = func.startLineIndex;
-                    return;
+                    return RunLineResult.Nothing;
                 }
 
                 MethodCall(keywordString, line.Tokens.AsSpan()[1..]);
@@ -307,6 +318,8 @@ public class Motor
                 Debugger.Break();
                 break;
         }
+
+        return RunLineResult.Nothing;
     }
 
     public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null,
@@ -395,6 +408,14 @@ public class Motor
                 FileScope.UsedNamespacesForExtensionMethods ??= new();
                 FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return null;
+        }
+
+        if (Functions.TryGetValue(name, out var func))
+        {
+            BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
+                curIndex, null));
+            Run(func.startLineIndex+1);
+            return ReturnValue;
         }
 
         if (name[0] == '#' || instanceTokens.Length != 0)

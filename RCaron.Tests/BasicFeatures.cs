@@ -129,6 +129,18 @@ for($i = 0, $i < 3, $i++){
     }
 
     [Fact]
+    public void FunctionReturnValue()
+    {
+        var m = RCaronRunner.Run(@"func v{
+    $g = 2;
+    return $g;
+}
+$h = v();
+");
+        m.AssertVariableEquals("h", (long)2);
+    }
+
+    [Fact]
     public void ToStringKeywordCall()
     {
         var m = RCaronRunner.Run(@"$h = 0; $g = string($h);");
