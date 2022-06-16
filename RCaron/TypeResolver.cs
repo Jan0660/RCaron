@@ -2,15 +2,17 @@
 
 public static class TypeResolver
 {
-    public static Type? FindType(string name, IList<string>? usedNamespaces = null)
+    public static Type? FindType(string name, FileScope? fileScope = null)
     {
+        var usedNamespaces = fileScope?.UsedNamespaces;
         // name with no dot and no used namespaces
         if (!name.Contains('.') && usedNamespaces == null)
             return null;
+        if(fileScope?.TypeCache != null && fileScope.TypeCache.TryGetValue(name, out var t))
+            return t;
         var res = Type.GetType(name, false, true);
         if (res != null)
             return res;
-        // todo(perf): if no dot in name just search used namespaces
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         // Type? endingMatch =  null;
         foreach (var ass in assemblies)
@@ -30,6 +32,11 @@ public static class TypeResolver
                 if (type.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
                     (usedNamespaces?.Contains(type.Namespace) ?? false))
                 {
+                    if (fileScope != null)
+                    {
+                        fileScope.TypeCache ??= new();
+                        fileScope.TypeCache.Add(name, type);
+                    }
                     return type;
                 }
             }
