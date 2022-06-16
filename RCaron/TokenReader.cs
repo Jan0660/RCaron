@@ -157,7 +157,6 @@ public class TokenReader
     {
         var index = 0;
         var isDecimal = false;
-        // todo: isDecimal turn it on smartly ok?
         while (char.IsDigit(span[index]) || span[index] == '.')
         {
             if (span[index] == '.' && char.IsDigit(span[index+1]))

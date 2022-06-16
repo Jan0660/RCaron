@@ -254,7 +254,6 @@ public static class RCaronRunner
         return new RCaronRunnerContext(text, lines);
     }
 
-    // todo: tokens doesn't need to be alive maybee?
     public static Line GetLine(PosToken[] tokens, ref int i, in string text)
     {
         Line? res = default;

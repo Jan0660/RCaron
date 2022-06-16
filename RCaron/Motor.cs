@@ -164,7 +164,6 @@ public class Motor
             }
             case LineType.UnaryOperation:
             {
-                // todo: can probably do this better
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 if (line.Tokens[1].EqualsString(Raw, "++"))
                 {
@@ -431,10 +430,7 @@ public class Motor
                 goto resolveMethod;
             }
 
-            // todo(perf)
-            // var partsCount = 1 + name.Count(c => c == '.');
-            var parts = name.Split('.');
-            var d = string.Join('.', parts[..^1])[1..];
+            var d = name[1..(name.LastIndexOf('.'))];
             type = TypeResolver.FindType(d, usedNamespaces: OpenNamespaces);
             // Type.GetType(d, false, true);
             // if (type == null && OpenNamespaces != null)
@@ -449,7 +445,7 @@ public class Motor
                 throw new RCaronException($"cannot find type '{d}' for external method call",
                     RCaronExceptionTime.Runtime);
 
-            methodName = parts[^1];
+            methodName = name[(name.LastIndexOf('.')+1)..];
             resolveMethod: ;
             var methods = type.GetMethods()
                 .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
@@ -806,10 +802,12 @@ public class Motor
         for (var i = 0; i < BlockStack.Count; i++)
         {
             var el = BlockStack.ElementAt(^(i+1));
-            // todo: attempt at making a TryGetVariableRef method -- apply it in SetVar too
-            if (el.Scope != null && el.Scope.VariableExists(name))
+            if (el.Scope != null)
             {
-                return ref el.Scope.GetVariableRef(name);
+                ref object? reference = ref el.Scope.GetVariableRef(name);
+                if (Unsafe.IsNullRef(ref reference)) 
+                    return ref Unsafe.NullRef<object?>();
+                return ref reference;
             }
 
             if (el.IsReturnWorthy)
