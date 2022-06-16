@@ -17,7 +17,7 @@ public class TypeResolverBenchmarks
         TypeResolver.FindType("Internal.Console");
     }
 
-    public List<string> VarShortNameAndUsed = new() { "System" };
+    public FileScope VarShortNameAndUsed = new(){ UsedNamespaces = new() { "System" } };
     [Benchmark()]
     public void ShortNameAndUsed()
     {

@@ -49,15 +49,11 @@ public class Motor
         public LocalScope? Scope { get; set; }
     }
 
-    public Stack<StackThing>
-        // public Stack<(int LineIndex, int BlockDepth, int BlockNumber, bool IsBreakWorthy, Conditional Conditional)>
-        BlockStack { get; set; } = new();
-
+    public Stack<StackThing> BlockStack { get; set; } = new();
+    public FileScope FileScope { get; set; } = new();
     public Conditional? LastConditional { get; set; }
     public MotorOptions Options { get; }
     public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
-    public List<string>? OpenNamespaces { get; set; }
-    public List<string>? OpenNamespacesForExtensionMethods { get; set; }
     public LocalScope GlobalScope { get; set; } = new();
 
     public class Conditional
@@ -392,12 +388,12 @@ public class Motor
                 return null;
             }
             case "open":
-                OpenNamespaces ??= new();
-                OpenNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
+                FileScope.UsedNamespaces ??= new();
+                FileScope.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return null;
             case "open_ext":
-                OpenNamespacesForExtensionMethods ??= new();
-                OpenNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
+                FileScope.UsedNamespacesForExtensionMethods ??= new();
+                FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return null;
         }
 
@@ -431,7 +427,7 @@ public class Motor
             }
 
             var d = name[1..(name.LastIndexOf('.'))];
-            type = TypeResolver.FindType(d, usedNamespaces: OpenNamespaces);
+            type = TypeResolver.FindType(d, FileScope);
             // Type.GetType(d, false, true);
             // if (type == null && OpenNamespaces != null)
             //     foreach (var ns in OpenNamespaces)
@@ -469,7 +465,7 @@ public class Motor
                         foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                         {
                             if (method.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase) &&
-                                (OpenNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ?? false))
+                                (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ?? false))
                             {
                                 extensionMethods.Add(method);
                             }

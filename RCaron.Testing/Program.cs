@@ -15,8 +15,8 @@ Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
 // BenchmarkRunner.Run<RCaronBenchmarks>();
-// BenchmarkRunner.Run<TypeResolverBenchmarks>();
-// return;
+BenchmarkRunner.Run<TypeResolverBenchmarks>();
+return;
 
 // for (var i = 0; i < 10_000_000; i++)
 // {
