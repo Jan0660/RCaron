@@ -26,7 +26,10 @@ public class LocalScope
     }
 
     public ref object? GetVariableRef(string name)
-        => ref CollectionsMarshal.GetValueRefOrNullRef(Variables, name);
+    {
+        Variables ??= new();
+        return ref CollectionsMarshal.GetValueRefOrNullRef(Variables, name);
+    }
 
     public bool VariableExists(string name)
         => Variables?.ContainsKey(name) ?? false;

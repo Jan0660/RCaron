@@ -414,10 +414,7 @@ public class Motor
             }
             case "globalset":
             {
-                ref var val = ref GlobalScope.GetVariableRef(At(argumentTokens, 0).Expect<string>());
-                if (Unsafe.IsNullRef(ref val))
-                    throw RCaronException.VariableNotFound(name);
-                val = At(argumentTokens, 1);
+                GlobalScope.SetVariable(At(argumentTokens, 0).Expect<string>(), At(argumentTokens, 1));
                 return null;
             }
             case "printfunny":

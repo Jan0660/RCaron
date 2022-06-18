@@ -17,16 +17,22 @@ $i5 = $g.5;");
     public void FunctionArguments()
     {
         var definition = @"func Funny($Arg, $OptArg = 1){
+    globalset('global', $Arg + $OptArg);
     return $Arg + $OptArg;
 }";
         var m = RCaronRunner.Run(@$"
 {definition}
 
 $h1 = Funny 2 -OptArg 2;
-$h2 = Funny 2;
-Funny 2 -OptArg 1;");
+$h2 = Funny 2;");
         m.AssertVariableEquals("h1", (long)4);
         m.AssertVariableEquals("h2", (long)3);
+        Assert.Empty(m.BlockStack);
+        
+        m.RunWithCode($@"{definition}
+Funny 2 -OptArg 3;");
+        m.AssertVariableEquals("global", (long)5);
+        Assert.Empty(m.BlockStack);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
 $h = InvalidName 2;"), RCaronExceptionCode.FunctionNotFound);
