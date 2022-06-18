@@ -40,7 +40,7 @@ if ($true){ $h2 = 1; }");
     {
         var p = RCaronRunner.Parse("dbg_println 'h';");
         new Motor(p, new MotorOptions { EnableDebugging = true }).Run();
-        Assert.Throws<RCaronException>(() => new Motor(p).Run());
+        ExtraAssert.ThrowsCode(() => new Motor(p).Run(), RCaronExceptionCode.MethodNotFound);
     }
 
     [Fact]
@@ -48,7 +48,7 @@ if ($true){ $h2 = 1; }");
     {
         var p = RCaronRunner.Parse("goto_line 0;");
         new Motor(p, new MotorOptions { EnableDumb = true }).Run();
-        Assert.Throws<RCaronException>(() => new Motor(p).Run());
+        ExtraAssert.ThrowsCode(() => new Motor(p).Run(), RCaronExceptionCode.MethodNotFound);
     }
 
     [Fact]
@@ -84,9 +84,8 @@ dowhile ($h > 1) {
     [Fact]
     public void InvalidLine()
     {
-        var exp = Assert.Throws<RCaronException>(() => RCaronRunner.Parse(@"$h = 0;
-$h println 'huh';"));
-        Assert.Equal(RCaronExceptionTime.Parsetime, exp.Time);
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Parse(@"$h = 0;
+$h println 'huh';"), ExceptionCode.ParseInvalidLine);
     }
 
     [Fact]

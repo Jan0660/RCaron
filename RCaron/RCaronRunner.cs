@@ -337,7 +337,7 @@ public static class RCaronRunner
                     lineNumber++;
             }
 
-            throw new RCaronException($"Invalid line at line {lineNumber}", RCaronExceptionTime.Parsetime);
+            throw new RCaronException($"invalid line at line {lineNumber}", RCaronExceptionCode.ParseInvalidLine);
         }
 
         return res.Value;

@@ -7,12 +7,15 @@ using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
 using Console = Log73.Console;
+using ExceptionCode = RCaron.RCaronExceptionCode;
 
 namespace RCaron;
 
-public enum RCaronInsideEnum: byte
+public enum RCaronInsideEnum : byte
 {
-    VariableNotFound
+    VariableNotFound,
+    NoDefaultValue,
+    NotAssigned,
 }
 
 public class MotorOptions
@@ -53,7 +56,21 @@ public class Motor
     public FileScope FileScope { get; set; } = new();
     public Conditional? LastConditional { get; set; }
     public MotorOptions Options { get; }
-    public Dictionary<string, (int startLineIndex, int endLineIndex)> Functions { get; set; } = new();
+
+    public record Function(int StartLineIndex, int EndLineIndex, FunctionArgument[]? Arguments);
+
+    public class FunctionArgument
+    {
+        public FunctionArgument(string Name)
+        {
+            this.Name = Name;
+        }
+
+        public string Name { get; }
+        public object? DefaultValue { get; set; } = RCaronInsideEnum.NoDefaultValue;
+    }
+
+    public Dictionary<string, Function> Functions { get; set; } = new();
     public LocalScope GlobalScope { get; set; } = new();
     public object? ReturnValue = null;
 
@@ -126,7 +143,7 @@ public class Motor
                 break;
             var line = Lines[curIndex];
             var res = RunLine(line);
-            if(res == RunLineResult.Exit)
+            if (res == RunLineResult.Exit)
                 return;
         }
     }
@@ -235,11 +252,33 @@ public class Motor
                     RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 break;
             case LineType.Function:
+            {
                 var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
                 var end = ListEx.IndexOf(Lines, (l) =>
                     l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bp && bp.Number == start.Number);
-                Functions[line.Tokens[1].ToString(Raw)] = (curIndex + 1, end);
+                string name;
+                FunctionArgument[]? arguments = null;
+                if (line.Tokens[1] is CallLikePosToken callToken)
+                {
+                    name = callToken.GetName(Raw);
+                    arguments = new FunctionArgument[callToken.Arguments.Length];
+                    for (int i = 0; i < callToken.Arguments.Length; i++)
+                    {
+                        var cur = callToken.Arguments[i];
+                        var argName = Raw[(cur[0].Position.Start + 1)..cur[0].Position.End];
+                        arguments[i] = new FunctionArgument(argName);
+                        if (cur.Length > 1 && cur[1].EqualsString(Raw, "="))
+                        {
+                            arguments[i].DefaultValue = SimpleEvaluateExpressionHigh(cur[2..]);
+                        }
+                    }
+                }
+                else
+                    name = line.Tokens[1].ToString(Raw);
+
+                Functions[name] = new Function(curIndex + 1, end, arguments);
                 break;
+            }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
                 MethodCall(callToken.GetName(Raw), callToken: callToken);
@@ -290,7 +329,8 @@ public class Motor
                         case "dbg_sum_three":
                             GlobalScope.SetVariable("$$assertResult", Horrors.Sum(
                                 Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]).NotNull(),
-                                    SimpleEvaluateExpressionSingle(args[1]).NotNull()), SimpleEvaluateExpressionSingle(args[2]).NotNull()));
+                                    SimpleEvaluateExpressionSingle(args[1]).NotNull()),
+                                SimpleEvaluateExpressionSingle(args[2]).NotNull()));
                             return RunLineResult.Nothing;
                     }
 
@@ -304,9 +344,7 @@ public class Motor
 
                 if (Functions.TryGetValue(keywordString, out var func))
                 {
-                    BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
-                        curIndex, null));
-                    curIndex = func.startLineIndex;
+                    FunctionPlainCall(line.Tokens);
                     return RunLineResult.Nothing;
                 }
 
@@ -406,15 +444,16 @@ public class Motor
                 return null;
             case "open_ext":
                 FileScope.UsedNamespacesForExtensionMethods ??= new();
-                FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
+                FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
+                    t => t.Expect<string>()));
                 return null;
         }
 
         if (Functions.TryGetValue(name, out var func))
         {
-            BlockStack.Push(new StackThing(func.startLineIndex, false, true, null,
+            BlockStack.Push(new StackThing(func.StartLineIndex, false, true, null,
                 curIndex, null));
-            Run(func.startLineIndex+1);
+            Run(func.StartLineIndex + 1);
             return ReturnValue;
         }
 
@@ -460,9 +499,9 @@ public class Motor
 
             if (type == null)
                 throw new RCaronException($"cannot find type '{d}' for external method call",
-                    RCaronExceptionTime.Runtime);
+                    RCaronExceptionCode.ExternalTypeNotFound);
 
-            methodName = name[(name.LastIndexOf('.')+1)..];
+            methodName = name[(name.LastIndexOf('.') + 1)..];
             resolveMethod: ;
             var methods = type.GetMethods()
                 .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
@@ -486,7 +525,8 @@ public class Motor
                         foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                         {
                             if (method.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase) &&
-                                (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ?? false))
+                                (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
+                                 false))
                             {
                                 extensionMethods.Add(method);
                             }
@@ -549,7 +589,7 @@ public class Motor
 
             if (best == 0)
                 throw new RCaronException($"cannot find a match for method '{methodName}'",
-                    RCaronExceptionTime.Runtime);
+                    ExceptionCode.MethodNoSuitableMatch);
 
             // mismatch count arguments -> equate it out with default values
             // is equate even a word?
@@ -586,7 +626,7 @@ public class Motor
             return methods[bestIndex].Invoke(target, args);
         }
 
-        throw new RCaronException($"method '{name}' is invalid", RCaronExceptionTime.Runtime);
+        throw new RCaronException($"method '{name}' not found", ExceptionCode.MethodNotFound);
     }
 
     public object? EvaluateDotThings(Span<PosToken> instanceTokens)
@@ -601,7 +641,7 @@ public class Motor
         {
             if (instanceTokens[i].Type == TokenType.Dot)
                 continue;
-            if(i != instanceTokens.Length && val == null)
+            if (i != instanceTokens.Length && val == null)
                 throw RCaronException.NullInTokens(instanceTokens, Raw, i);
             var str = instanceTokens[i].ToString(Raw);
             var p = type!.GetProperty(str,
@@ -647,7 +687,7 @@ public class Motor
 
             throw new RCaronException(
                 $"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
-                RCaronExceptionTime.Runtime);
+                ExceptionCode.CannotResolveInDotThing);
         }
 
         return val;
@@ -759,10 +799,87 @@ public class Motor
     public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
         => tokens.Count switch
         {
+            > 0 when tokens[0].Type == TokenType.Keyword => FunctionPlainCall(tokens),
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("what he fuck")
         };
+
+    public object? FunctionPlainCall(ArraySegment<PosToken> tokens)
+    {
+        var name = tokens[0].ToString(Raw);
+        if (!Functions.TryGetValue(name, out var function))
+            throw new RCaronException($"function '{name}' not found", ExceptionCode.FunctionNotFound);
+        LocalScope scope = null;
+        if (function.Arguments != null)
+        {
+            scope ??= new();
+            object?[] argumentValues = new object?[function.Arguments.Length];
+            for (var i = 0; i < function.Arguments.Length; i++)
+            {
+                if (function.Arguments[i].DefaultValue?.Equals(RCaronInsideEnum.NoDefaultValue) ?? false)
+                    argumentValues[i] = RCaronInsideEnum.NotAssigned;
+                else
+                    argumentValues[i] = function.Arguments[i].DefaultValue;
+            }
+
+            var argPos = 0;
+            for (var i = 1; i < tokens.Count; i++)
+            {
+                if (tokens[i].Type == TokenType.Operator && tokens[i].EqualsString(Raw, "-") &&
+                    tokens[i + 1].Type == TokenType.Keyword)
+                {
+                    var argName = tokens[i + 1].ToSpan(Raw);
+                    var j = 0;
+                    for (; j < function.Arguments.Length; j++)
+                    {
+                        if (argName.SequenceEqual(function.Arguments[j].Name))
+                            break;
+                        else if (j == function.Arguments.Length - 1)
+                            throw new RCaronException($"function argument '{name}' not found",
+                                ExceptionCode.NamedFunctionArgumentNotFound);
+                    }
+
+                    argumentValues[j] = SimpleEvaluateExpressionSingle(tokens[i + 2]);
+                    i += 2;
+                    argPos++;
+                }
+                else
+                {
+                    for (var j = 0; j < function.Arguments.Length; j++)
+                    {
+                        if (argumentValues[j].Equals(RCaronInsideEnum.NotAssigned))
+                        {
+                            argumentValues[j] = SimpleEvaluateExpressionSingle(tokens[i]);
+                            argPos++;
+                            break;
+                        }
+                        else if (j == function.Arguments.Length - 1)
+                            throw new RCaronException(
+                                $"positional argument encountered with no unassigned arguments left",
+                                ExceptionCode.LeftOverFunctionPositionalArgument);
+                    }
+
+                    argPos++;
+                }
+            }
+
+            if (argumentValues.Contains(RCaronInsideEnum.NotAssigned))
+                throw new RCaronException("function arguments left unassigned",
+                    ExceptionCode.FunctionArgumentsLeftUnassigned);
+
+            scope.Variables ??= new();
+            for (var i = 0; i < function.Arguments.Length; i++)
+            {
+                scope.Variables[function.Arguments[i].Name] = argumentValues[i];
+            }
+        }
+
+        BlockStack.Push(new StackThing(function.StartLineIndex, false, true, null,
+            curIndex, scope));
+        Run(function.StartLineIndex + 1);
+        return ReturnValue;
+    }
 
     public bool SimpleEvaluateBool(PosToken[] tokens)
     {
@@ -791,7 +908,7 @@ public class Motor
             case Operations.IsLessOrEqualOp:
                 return val1.Equals(val2) || Horrors.IsLess(val1, val2);
             default:
-                throw new RCaronException($"unknown operator: {op}", RCaronExceptionTime.Runtime);
+                throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
         }
     }
 
@@ -799,7 +916,7 @@ public class Motor
     {
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i+1));
+            var el = BlockStack.ElementAt(^(i + 1));
             if (el.Scope != null && el.Scope.TryGetVariable(name, out var value))
             {
                 return value;
@@ -818,11 +935,11 @@ public class Motor
     {
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i+1));
+            var el = BlockStack.ElementAt(^(i + 1));
             if (el.Scope != null)
             {
                 ref object? reference = ref el.Scope.GetVariableRef(name);
-                if (Unsafe.IsNullRef(ref reference)) 
+                if (Unsafe.IsNullRef(ref reference))
                     return ref Unsafe.NullRef<object?>();
                 return ref reference;
             }
@@ -842,7 +959,7 @@ public class Motor
         var hasReturnWorthy = false;
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i+1));
+            var el = BlockStack.ElementAt(^(i + 1));
             if (el.Scope != null && el.Scope.VariableExists(name))
             {
                 el.Scope.SetVariable(name, value);

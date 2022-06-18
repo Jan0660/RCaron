@@ -1,26 +1,39 @@
-﻿namespace RCaron;
+﻿using ExceptionCode = RCaron.RCaronExceptionCode;
+
+namespace RCaron;
+
+public enum RCaronExceptionCode
+{
+    FunctionNotFound,
+    NamedFunctionArgumentNotFound,
+    FunctionArgumentsLeftUnassigned,
+    VariableNotFound,
+    MethodNotFound,
+    ParseInvalidLine,
+    LeftOverFunctionPositionalArgument,
+    MethodNoSuitableMatch,
+    UnknownOperator,
+    ExpectedNotNull,
+    TypeMismatch,
+    ExternalTypeNotFound,
+    NullInDotThing,
+    CannotResolveInDotThing
+}
 
 public class RCaronException : Exception
 {
-    public RCaronExceptionTime Time { get; }
+    public ExceptionCode Code { get; }
 
-    public RCaronException(string message, RCaronExceptionTime time = RCaronExceptionTime.Unknown) : base(message)
+    public RCaronException(string message, ExceptionCode exceptionCode) : base(message)
     {
-        Time = time;
+        Code = exceptionCode;
     }
     
     public static RCaronException VariableNotFound(string name)
-        => new($"variable '{name}' does not exist in this scope", RCaronExceptionTime.Runtime);
+        => new($"variable '{name}' does not exist in this scope", ExceptionCode.VariableNotFound);
     
     public static RCaronException NullInTokens(in Span<PosToken> tokens, string raw, int index)
         => new(
                 $"null resolved in '{tokens[index].ToString(raw)}'(index={index}) in '{raw[tokens[0].Position.Start..tokens[^1].Position.End]}'",
-                RCaronExceptionTime.Runtime);
-}
-
-public enum RCaronExceptionTime : byte
-{
-    Unknown,
-    Runtime,
-    Parsetime,
+                ExceptionCode.NullInDotThing);
 }

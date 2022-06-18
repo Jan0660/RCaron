@@ -17,12 +17,12 @@ Woo;
     [Fact]
     public void Get()
     {
-        Assert.Throws<RCaronException>(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
 func Woo{
     $g = $h;
 }
 $h = 1;
 Woo;
-"));
+"), RCaronExceptionCode.VariableNotFound);
     }
 }
