@@ -4,13 +4,12 @@ namespace RCaron;
 
 public enum RCaronExceptionCode
 {
-    FunctionNotFound,
-    NamedFunctionArgumentNotFound,
-    FunctionArgumentsLeftUnassigned,
+    NamedArgumentNotFound,
+    ArgumentsLeftUnassigned,
     VariableNotFound,
     MethodNotFound,
     ParseInvalidLine,
-    LeftOverFunctionPositionalArgument,
+    LeftOverPositionalArgument,
     MethodNoSuitableMatch,
     UnknownOperator,
     ExpectedNotNull,
@@ -36,4 +35,14 @@ public class RCaronException : Exception
         => new(
                 $"null resolved in '{tokens[index].ToString(raw)}'(index={index}) in '{raw[tokens[0].Position.Start..tokens[^1].Position.End]}'",
                 ExceptionCode.NullInDotThing);
+
+    public static RCaronException LeftOverPositionalArgument()
+        => new("positional argument encountered with no unassigned arguments left",
+            ExceptionCode.LeftOverPositionalArgument);
+
+    public static RCaronException NamedArgumentNotFound(in ReadOnlySpan<char> argName)
+        => new($"argument '{argName}' not found", ExceptionCode.NamedArgumentNotFound);
+
+    public static RCaronException ArgumentsLeftUnassigned()
+        => new("required arguments left unassigned", ExceptionCode.ArgumentsLeftUnassigned);
 }

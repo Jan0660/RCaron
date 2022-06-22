@@ -15,8 +15,8 @@ Log.Configure.EnableVirtualTerminalProcessing();
 
 // BenchmarkRunner.Run<LineNumberBenchmark>();
 // BenchmarkRunner.Run<RCaronBenchmarks>();
-BenchmarkRunner.Run<TypeResolverBenchmarks>();
-return;
+// BenchmarkRunner.Run<TypeResolverBenchmarks>();
+// return;
 
 // for (var i = 0; i < 10_000_000; i++)
 // {
@@ -63,8 +63,7 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-$h = 2.ToString();
-print $h;
+warn 'warning';
 ";
 // $g = @(1, 2).Length;
 // print $g;

@@ -14,7 +14,7 @@ $i5 = $g.5;");
     }
 
     [Fact]
-    public void FunctionArguments()
+    public void FunctionCall()
     {
         var definition = @"func Funny($Arg, $OptArg = 1){
     globalset('global', $Arg + $OptArg);
@@ -35,18 +35,44 @@ Funny 2 -OptArg 3;");
         Assert.Empty(m.BlockStack);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = InvalidName 2;"), RCaronExceptionCode.FunctionNotFound);
+$h = InvalidName 2;"), RCaronExceptionCode.MethodNotFound);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = Funny 2 -InvalidOptArg 2;"), RCaronExceptionCode.NamedFunctionArgumentNotFound);
+$h = Funny 2 -InvalidOptArg 2;"), RCaronExceptionCode.NamedArgumentNotFound);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = Funny;"), RCaronExceptionCode.FunctionArgumentsLeftUnassigned);
+$h = Funny;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = Funny -OptArg 3;"), RCaronExceptionCode.FunctionArgumentsLeftUnassigned);
+$h = Funny -OptArg 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
         
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = Funny 2 -OptArg 3 4;"), RCaronExceptionCode.LeftOverFunctionPositionalArgument);
+$h = Funny 2 -OptArg 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+    }
+
+    [Fact]
+    public void ModuleMethodCall()
+    {
+            var m = RCaronRunner.Run(@$"
+$h1 = ForUnitTests 2 -b 2;
+$h2 = ForUnitTests 2;");
+            m.AssertVariableEquals("h1", (long)4);
+            m.AssertVariableEquals("h2", (long)3);
+            Assert.Empty(m.BlockStack);
+        
+            m.RunWithCode(@"ForUnitTests 2 -b 3;");
+            m.AssertVariableEquals("global", (long)5);
+            Assert.Empty(m.BlockStack);
+        
+            ExtraAssert.ThrowsCode(() => RCaronRunner.Run("$h = ForUnitTests 2 -InvalidOptArg 2;"), RCaronExceptionCode.NamedArgumentNotFound);
+        
+            ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+$h = ForUnitTests;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
+        
+            ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+$h = ForUnitTests -b 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
+        
+            ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+$h = ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
     }
 }

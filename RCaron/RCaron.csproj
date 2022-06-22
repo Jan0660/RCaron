@@ -6,7 +6,8 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <EnablePreviewFeatures>True</EnablePreviewFeatures>
-<!--        <LangVersion>preview</LangVersion>-->
+        <LangVersion>preview</LangVersion>
+        <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
     </PropertyGroup>
 
     <ItemGroup>
@@ -14,6 +15,10 @@
       <PackageReference Include="JetBrains.Annotations" Version="2022.1.0" />
       <PackageReference Include="Log73" Version="0.8.0-preview2" />
       <PackageReference Include="System.Runtime.Experimental" Version="6.0.2" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" ReferenceOutputAssembly="false" />
     </ItemGroup>
 
 </Project>
