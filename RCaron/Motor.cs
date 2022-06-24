@@ -428,13 +428,13 @@ public class Motor
             case "globalset":
             {
                 GlobalScope.SetVariable(At(argumentTokens, 0).Expect<string>(), At(argumentTokens, 1));
-                return null;
+                return RCaronInsideEnum.NoReturnValue;
             }
             case "printfunny":
             case "println":
                 foreach (var arg in All(argumentTokens))
                     Console.WriteLine(arg);
-                return null;
+                return RCaronInsideEnum.NoReturnValue;
             case "print":
             {
                 var args = All(argumentTokens);
@@ -446,17 +446,17 @@ public class Motor
                 }
 
                 Console.Out.WriteLine();
-                return null;
+                return RCaronInsideEnum.NoReturnValue;
             }
             case "open":
                 FileScope.UsedNamespaces ??= new();
                 FileScope.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
-                return null;
+                return RCaronInsideEnum.NoReturnValue;
             case "open_ext":
                 FileScope.UsedNamespacesForExtensionMethods ??= new();
                 FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
                     t => t.Expect<string>()));
-                return null;
+                return RCaronInsideEnum.NoReturnValue;
         }
 
         if (Functions.TryGetValue(name, out var func))
