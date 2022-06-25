@@ -76,4 +76,31 @@ $arrayLength = @(0, 1, 2, 3).Length;");
         m.AssertVariableEquals("h", "1");
         m.AssertVariableEquals("arrayLength", 4);
     }
+
+    [Fact]
+    public void NormalArrayAccess()
+    {
+        var m = RCaronRunner.Run(@"$arr = @(0, 1, 2, 3);
+$h1 = $arr[1];
+$h = 2;
+$h2 = $arr[$h];");
+        m.AssertVariableEquals("h1", (long)1);
+        m.AssertVariableEquals("h2", (long)2);
+    }
+
+    public class NormalArrayAccessOnDotThingDummy
+    {
+        public object[] Array { get; set; }
+    }
+    [Fact]
+    public void NormalArrayAccessOnDotThing()
+    {
+        var m = new Motor(RCaronRunner.Parse("$h1 = $obj.Array[1];"));
+        m.GlobalScope.SetVariable("obj", new NormalArrayAccessOnDotThingDummy()
+        {
+            Array = new object[]{0L, 1L, 2L, 3L, 4L, 5L}
+        });
+        m.Run();
+        m.AssertVariableEquals("h1", (long)1);
+    }
 }

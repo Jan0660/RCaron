@@ -116,14 +116,17 @@ public class Motor
 
     public RunLineResult RunLine(Line baseLine)
     {
-        Debug.WriteLine(baseLine is TokenLine tokenLine ? Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End] : (
-            baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
+        Debug.WriteLine(baseLine is TokenLine tokenLine
+            ? Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End]
+            : (
+                baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
         if (baseLine is CodeBlockLine codeBlockLine)
         {
             BlockStack.Push(new(false, false, null));
             RunCodeBlock(codeBlockLine.Token);
             return RunLineResult.Nothing;
         }
+
         if (baseLine is not TokenLine line)
             return RunLineResult.Exit;
         switch (line.Type)
@@ -143,6 +146,7 @@ public class Motor
                     BlockStack.Push(new(false, false, null));
                     RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                 }
+
                 curIndex += 1;
                 break;
             }
@@ -153,6 +157,7 @@ public class Motor
                     BlockStack.Push(new StackThing(true, false, null));
                     RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                 }
+
                 curIndex++;
                 break;
             }
@@ -163,6 +168,7 @@ public class Motor
                     BlockStack.Push(new StackThing(true, false, null));
                     RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                 } while (SimpleEvaluateBool(callToken.Arguments[0]));
+
                 curIndex++;
                 break;
             }
@@ -182,7 +188,7 @@ public class Motor
             case LineType.BlockStuff:
                 if (line.Tokens[0] is { Type: TokenType.BlockEnd })
                 {
-                    if(!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                    if (!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? false)
                         BlockStack.Pop();
                     return RunLineResult.Exit;
                 }
@@ -196,6 +202,7 @@ public class Motor
                     BlockStack.Push(new StackThing(true, false, null));
                     RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                 }
+
                 curIndex++;
                 break;
             case LineType.ForLoop when line.Tokens[0] is CallLikePosToken callToken:
@@ -209,6 +216,7 @@ public class Motor
                     falseI = 0;
                     RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 }
+
                 curIndex++;
                 break;
             }
@@ -233,8 +241,8 @@ public class Motor
                 }
                 else
                     name = line.Tokens[1].ToString(Raw);
-                
-                Functions[name] = new Function(((CodeBlockLine)Lines[curIndex +1]).Token, arguments);
+
+                Functions[name] = new Function(((CodeBlockLine)Lines[curIndex + 1]).Token, arguments);
                 curIndex++;
                 break;
             }
@@ -605,12 +613,43 @@ public class Motor
         if (val == null)
             throw RCaronException.NullInTokens(instanceTokens, Raw, 0);
         var type = val.GetType();
-        for (int i = 2; i < instanceTokens.Length; i++)
+        for (int i = 1; i < instanceTokens.Length; i++)
         {
             if (instanceTokens[i].Type == TokenType.Dot)
                 continue;
             if (i != instanceTokens.Length && val == null)
                 throw RCaronException.NullInTokens(instanceTokens, Raw, i);
+            if (instanceTokens[i] is ArrayAccessorToken arrayAccessorToken)
+            {
+                if (val is IDictionary dict)
+                {
+                    var args = type.GetGenericArguments();
+                    var keyType = args[0];
+                    val = dict[Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens.ToArray()), keyType)!];
+                    type = val?.GetType();
+                    continue;
+                }
+                // todo(perf)
+                var asInt = Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens.ToArray()), typeof(int));
+                if (asInt != null)
+                {
+                    var intIndex = (int)asInt;
+                    if (val is IList list)
+                    {
+                        val = list[intIndex];
+                        type = val?.GetType();
+                        continue;
+                    }
+                    
+                    if (val is Array array)
+                    {
+                        val = array.GetValue(intIndex);
+                        type = val?.GetType();
+                        continue;
+                    }
+                }
+                continue;
+            }
             var str = instanceTokens[i].ToString(Raw);
             var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
@@ -638,19 +677,21 @@ public class Motor
                 continue;
             }
 
-            var partIsInt = int.TryParse(str, out var partIntValue);
-            if (val is Array array && partIsInt)
+            if (int.TryParse(str, out var partIntValue))
             {
-                val = array.GetValue(partIntValue);
-                type = val?.GetType();
-                continue;
-            }
+                if (val is Array array)
+                {
+                    val = array.GetValue(partIntValue);
+                    type = val?.GetType();
+                    continue;
+                }
 
-            if (val is IList list && partIsInt)
-            {
-                val = list[partIntValue];
-                type = val?.GetType();
-                continue;
+                if (val is IList list)
+                {
+                    val = list[partIntValue];
+                    type = val?.GetType();
+                    continue;
+                }
             }
 
             throw new RCaronException(
@@ -738,6 +779,10 @@ public class Motor
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0])!;
+        if (tokens[1] is ArrayAccessorToken)
+        {
+            
+        }
         while (index < tokens.Count - 1)
         {
             var op = tokens[index + 1].ToString(Raw);

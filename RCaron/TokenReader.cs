@@ -132,6 +132,18 @@ public class TokenReader
             position++;
             return new PosToken(TokenType.Dot, (initialPosition, position));
         }
+        // normal array accesser start
+        else if (txt[position] == '[')
+        {
+            position++;
+            return new BlockPosToken(TokenType.ArrayAccessorStart, (initialPosition, position));
+        }
+        // normal array accesser end
+        else if (txt[position] == ']')
+        {
+            position++;
+            return new BlockPosToken(TokenType.ArrayAccessorEnd, (initialPosition, position));
+        }
         // operation
         else
         {

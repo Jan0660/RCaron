@@ -26,7 +26,10 @@ public enum TokenType : byte
     ArrayLiteralStart,
     Dot,
     DotGroup,
-    CodeBlock
+    CodeBlock,
+    ArrayAccessorStart,
+    ArrayAccessorEnd,
+    ArrayAccessor,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -59,6 +62,7 @@ public class PosToken
             TokenType.VariableIdentifier => true,
             TokenType.Keyword => true,
             TokenType.KeywordCall => true,
+            TokenType.ArrayAccessor => true,
             _ => false,
         };
 }
@@ -133,6 +137,15 @@ public class DotGroupPosToken : PosToken
 
     public DotGroupPosToken(TokenType type, (int Start, int End) position, PosToken[] tokens) : base(type,
         position)
+    {
+        Tokens = tokens;
+    }
+}
+
+public class ArrayAccessorToken : PosToken
+{
+    public List<PosToken> Tokens { get; }
+    public ArrayAccessorToken(List<PosToken> tokens) : base(TokenType.ArrayAccessor, (tokens[0].Position.Start, tokens[^1].Position.End))
     {
         Tokens = tokens;
     }

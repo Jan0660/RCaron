@@ -59,13 +59,13 @@ public static class RCaronRunner
             {
                 switch (posToken)
                 {
-                    case BlockPosToken { Type: TokenType.BlockStart or TokenType.SimpleBlockStart } blockPosToken:
+                    case BlockPosToken { Type: TokenType.BlockStart or TokenType.SimpleBlockStart or TokenType.ArrayAccessorStart } blockPosToken:
                         blockDepth++;
                         blockNumber++;
                         blockPosToken.Depth = blockDepth;
                         blockPosToken.Number = blockNumber;
                         break;
-                    case BlockPosToken { Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd } blockPosToken:
+                    case BlockPosToken { Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd or TokenType.ArrayAccessorEnd } blockPosToken:
                         blockPosToken.Depth = blockDepth;
                         blockPosToken.Number =
                             ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
@@ -171,33 +171,43 @@ public static class RCaronRunner
                     }
                 }
 
+                if (token is BlockPosToken{Type: TokenType.ArrayAccessorEnd} ace)
+                {
+                    var number = ace.Number;
+                    var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
+                    var range = tokens.GetRange((acs+1)..);
+                    tokens.RemoveFrom(acs);
+                    tokens.Add(new ArrayAccessorToken(range));
+                    goto afterAdd;
+                }
+
                 (int index, PosToken[] tokens) BackwardsCollectDotThing()
                 {
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot } || tokens[i - 1] is { Type: TokenType.Dot }))
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor } || tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
                         //       )
                         i--;
-                    if ((tokens.Count - i) % 2 == 0 || tokens.Count - i == 1)
+                    if (tokens.Count - i == 1)
                         return (-1, Array.Empty<PosToken>());
                     return (i, tokens.Take(i..).ToArray());
                 }
 
                 if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && tokens[^1].Type != TokenType.Dot &&
-                    !posToken.IsDotJoinableSomething()
+                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart
                    )
                 {
                     // todo(perf): it gets here when array literal
                     var h = BackwardsCollectDotThing();
-                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
+                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
                     {
                         // may not be needed?
-                        if (h.tokens[1].Type != TokenType.Dot)
-                            goto beforeAdd;
+                        // if (h.tokens[1].Type != TokenType.Dot)
+                        //     goto beforeAdd;
                         // AAAAAA
                         // remove those replace with fucking imposter thing
                         var rem = h.index;
@@ -255,7 +265,7 @@ public static class RCaronRunner
             Console.Out.Flush();
         }
 
-// find lines
+        // find lines
         var lines = new List<Line>();
         // todo
         var t = tokens.ToArray();
