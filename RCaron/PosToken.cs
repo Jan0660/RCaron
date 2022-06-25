@@ -73,7 +73,7 @@ public class BlockPosToken : PosToken
     }
 }
 
-public class CodeBlockToken : PosToken
+public class CodeBlockToken : ValuePosToken
 {
     public List<Line> Lines;
 

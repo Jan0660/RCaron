@@ -720,6 +720,9 @@ public class Motor
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.GetName(Raw), callToken: callToken,
                     instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
+            case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
+                BlockStack.Push(new(false, true, null));
+                return RunCodeBlock(codeBlockToken);
             case TokenType.Keyword:
                 return token.ToString(Raw);
             case TokenType.DotGroup:
