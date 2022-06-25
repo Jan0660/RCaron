@@ -21,6 +21,7 @@ public enum RCaronInsideEnum : byte
 
     // todo(current): use everywhere instead of null
     NoReturnValue,
+    Breaked,
 }
 
 public class MotorOptions
@@ -38,32 +39,25 @@ public class Motor
     //     Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope);
     public class StackThing
     {
-        public StackThing(int lineIndex, bool isBreakWorthy, bool isReturnWorthy,
-            Conditional? conditional, int previousLineIndex, LocalScope? scope)
+        public StackThing(bool isBreakWorthy, bool isReturnWorthy,
+            LocalScope? scope)
         {
-            this.LineIndex = lineIndex;
             this.IsBreakWorthy = isBreakWorthy;
             this.IsReturnWorthy = isReturnWorthy;
-            this.Conditional = conditional;
-            this.PreviousLineIndex = previousLineIndex;
             this.Scope = scope;
         }
 
-        public int LineIndex { get; init; }
         public bool IsBreakWorthy { get; init; }
         public bool IsReturnWorthy { get; init; }
-        public Conditional? Conditional { get; init; }
-        public int PreviousLineIndex { get; init; }
         public LocalScope? Scope { get; set; }
     }
 
     public Stack<StackThing> BlockStack { get; set; } = new();
     public FileScope FileScope { get; set; } = new();
-    public Conditional? LastConditional { get; set; }
     public MotorOptions Options { get; }
     public List<IRCaronModule> Modules { get; set; }
 
-    public record Function(int StartLineIndex, int EndLineIndex, FunctionArgument[]? Arguments);
+    public record Function(CodeBlockToken CodeBlock, FunctionArgument[]? Arguments);
 
     public class FunctionArgument
     {
@@ -79,47 +73,6 @@ public class Motor
     public Dictionary<string, Function> Functions { get; set; } = new();
     public LocalScope GlobalScope { get; set; } = new();
     public object? ReturnValue = null;
-
-    public class Conditional
-    {
-        public Conditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[]? evalTokens)
-        {
-            LineIndex = lineIndex;
-            IsOnce = isOnce;
-            IsTrue = isTrue;
-            IsBreakWorthy = isBreakWorthy;
-            EvaluateTokens = evalTokens;
-        }
-
-        public int LineIndex { get; set; }
-
-        // is once run
-        public bool IsOnce { get; set; }
-        public bool IsTrue { get; set; }
-        public bool IsBreakWorthy { get; set; }
-        public PosToken[]? EvaluateTokens { get; set; }
-
-        public virtual bool Evaluate(Motor m)
-            // todo: handle null
-            => m.SimpleEvaluateBool(EvaluateTokens);
-    }
-
-    public class ForLoopConditional : Conditional
-    {
-        public Line LastExecute { get; }
-
-        public ForLoopConditional(int lineIndex, bool isOnce, bool isTrue, bool isBreakWorthy, PosToken[] evalTokens,
-            Line lastExec) : base(lineIndex, isOnce, isTrue, isBreakWorthy, evalTokens)
-        {
-            LastExecute = lastExec;
-        }
-
-        public override bool Evaluate(Motor m)
-        {
-            m.RunLine(LastExecute);
-            return m.SimpleEvaluateBool(EvaluateTokens!);
-        }
-    }
 
 #pragma warning disable CS8618
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
@@ -161,8 +114,18 @@ public class Motor
         Exit = 1,
     }
 
-    public RunLineResult RunLine(Line line)
+    public RunLineResult RunLine(Line baseLine)
     {
+        Debug.WriteLine(baseLine is TokenLine tokenLine ? Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End] : (
+            baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
+        if (baseLine is CodeBlockLine codeBlockLine)
+        {
+            BlockStack.Push(new(false, false, null));
+            RunCodeBlock(codeBlockLine.Token);
+            return RunLineResult.Nothing;
+        }
+        if (baseLine is not TokenLine line)
+            return RunLineResult.Exit;
         switch (line.Type)
         {
             case LineType.VariableAssignment:
@@ -170,26 +133,37 @@ public class Motor
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
                 var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..));
                 SetVar(variableName, obj);
-                // Console.Debug($"variable '{variableName}' set to '{obj}'");
+                Debug.WriteLine($"variable '{variableName}' set to '{obj}'");
                 break;
             }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
-                LastConditional = new Conditional(lineIndex: curIndex, isOnce: true,
-                    isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: false, evalTokens: null);
+                if (SimpleEvaluateBool(callToken.Arguments[0]))
+                {
+                    BlockStack.Push(new(false, false, null));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                }
+                curIndex += 1;
                 break;
             }
             case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
-                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
-                    isTrue: SimpleEvaluateBool(callToken.Arguments[0]), isBreakWorthy: true,
-                    evalTokens: callToken.Arguments[0]);
+                while (SimpleEvaluateBool(callToken.Arguments[0]))
+                {
+                    BlockStack.Push(new StackThing(true, false, null));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                }
+                curIndex++;
                 break;
             }
             case LineType.DoWhileLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
-                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
-                    isTrue: true, isBreakWorthy: true, evalTokens: callToken.Arguments[0]);
+                do
+                {
+                    BlockStack.Push(new StackThing(true, false, null));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                } while (SimpleEvaluateBool(callToken.Arguments[0]));
+                curIndex++;
                 break;
             }
             case LineType.UnaryOperation:
@@ -206,63 +180,40 @@ public class Motor
                 break;
             }
             case LineType.BlockStuff:
-                if (line.Tokens[0] is BlockPosToken { Type: TokenType.BlockStart } bpt)
+                if (line.Tokens[0] is { Type: TokenType.BlockEnd })
                 {
-                    if (LastConditional is { IsTrue: true })
-                        BlockStack.Push(new StackThing(curIndex, LastConditional.IsBreakWorthy, false,
-                            LastConditional, curIndex, null));
-                    else
-                    {
-                        curIndex = ListEx.FindIndex(Lines,
-                            l => l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bpt2 &&
-                                 bpt2.Depth == bpt.Depth && bpt2.Number == bpt.Number);
-                        return RunLineResult.Nothing;
-                    }
-                }
-                else if (line.Tokens[0] is { Type: TokenType.BlockEnd })
-                {
-                    var curBlock = BlockStack.Peek();
-                    if (curBlock.Conditional is { IsTrue: true, IsOnce: true })
+                    if(!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? false)
                         BlockStack.Pop();
-                    else if (curBlock.Conditional is { IsOnce: false })
-                    {
-                        if (curBlock.Conditional.EvaluateTokens == null)
-                            curIndex = curBlock.LineIndex;
-                        else
-                        {
-                            var evaluated = curBlock.Conditional.Evaluate(this);
-                            curBlock.Conditional.IsTrue = evaluated;
-                            if (evaluated)
-                                curIndex = curBlock.LineIndex;
-                            else
-                                BlockStack.Pop();
-                        }
-                    }
-                    else if (curBlock.Conditional == null)
-                    {
-                        BlockStack.Pop();
-                        curIndex = curBlock.PreviousLineIndex;
-                    }
+                    return RunLineResult.Exit;
                 }
 
                 break;
             case LineType.LoopLoop:
-                LastConditional = new Conditional(lineIndex: curIndex, isOnce: false,
-                    isTrue: true, isBreakWorthy: true, null);
+                // todo(safety): check elsewhere when ReturnValue is used that it is then set to null or something idk
+                ReturnValue = null;
+                while (!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? true)
+                {
+                    BlockStack.Push(new StackThing(true, false, null));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                }
+                curIndex++;
                 break;
             case LineType.ForLoop when line.Tokens[0] is CallLikePosToken callToken:
+            {
                 var falseI = 0;
                 RunLine(RCaronRunner.GetLine(callToken.Arguments[0], ref falseI, Raw));
-                falseI = 0;
-                LastConditional = new ForLoopConditional(lineIndex: curIndex, isOnce: false,
-                    isTrue: true, isBreakWorthy: true, callToken.Arguments[1],
-                    RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
+                while (SimpleEvaluateBool(callToken.Arguments[1]))
+                {
+                    BlockStack.Push(new StackThing(true, false, null));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    falseI = 0;
+                    RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
+                }
+                curIndex++;
                 break;
+            }
             case LineType.Function:
             {
-                var start = (BlockPosToken)Lines[curIndex + 1].Tokens[0];
-                var end = ListEx.IndexOf(Lines, (l) =>
-                    l.Tokens[0] is BlockPosToken { Type: TokenType.BlockEnd } bp && bp.Number == start.Number);
                 string name;
                 FunctionArgument[]? arguments = null;
                 if (line.Tokens[1] is CallLikePosToken callToken)
@@ -282,8 +233,9 @@ public class Motor
                 }
                 else
                     name = line.Tokens[1].ToString(Raw);
-
-                Functions[name] = new Function(curIndex + 1, end, arguments);
+                
+                Functions[name] = new Function(((CodeBlockLine)Lines[curIndex +1]).Token, arguments);
+                curIndex++;
                 break;
             }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
@@ -307,10 +259,8 @@ public class Motor
                         var g = BlockStack.Pop();
                         while (!g.IsBreakWorthy)
                             g = BlockStack.Pop();
-                        curIndex = ListEx.FindIndex(Lines,
-                            l => l.Type == LineType.BlockStuff
-                                 && l.Tokens[0].Type == TokenType.BlockEnd) + 1;
-                        return RunLineResult.Nothing;
+                        ReturnValue = RCaronInsideEnum.Breaked;
+                        return RunLineResult.Exit;
                     }
                     case "return":
                     {
@@ -318,7 +268,6 @@ public class Motor
                         var g = BlockStack.Pop();
                         while (!g.IsReturnWorthy)
                             g = BlockStack.Pop();
-                        curIndex = g.PreviousLineIndex;
                         return RunLineResult.Exit;
                     }
                 }
@@ -361,6 +310,19 @@ public class Motor
         }
 
         return RunLineResult.Nothing;
+    }
+
+    public object? RunCodeBlock(CodeBlockToken codeBlock)
+    {
+        var prevIndex = curIndex;
+        var prevLines = Lines;
+        curIndex = 0;
+        Lines = codeBlock.Lines;
+        ReturnValue = RCaronInsideEnum.NoReturnValue;
+        Run();
+        curIndex = prevIndex;
+        Lines = prevLines;
+        return ReturnValue;
     }
 
     public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null,
@@ -814,9 +776,6 @@ public class Motor
 
     public object? FunctionPlainCall(Function function, ReadOnlySpan<PosToken> argumentTokens)
     {
-        // var name = tokens[0].ToString(Raw);
-        // if (!Functions.TryGetValue(name, out var function))
-        //     throw new RCaronException($"function '{name}' not found", ExceptionCode.FunctionNotFound);
         LocalScope scope = null;
         if (function.Arguments != null)
         {
@@ -878,9 +837,8 @@ public class Motor
             }
         }
 
-        BlockStack.Push(new StackThing(function.StartLineIndex, false, true, null,
-            curIndex, scope));
-        Run(function.StartLineIndex + 1);
+        BlockStack.Push(new StackThing(false, true, scope));
+        RunCodeBlock(function.CodeBlock);
         return ReturnValue;
     }
 

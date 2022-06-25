@@ -63,7 +63,11 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-warn 'warning';
+func sus {
+    println 'balls';
+}
+
+sus;
 ";
 // $g = @(1, 2).Length;
 // print $g;

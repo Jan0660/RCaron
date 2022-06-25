@@ -26,6 +26,7 @@ public enum TokenType : byte
     ArrayLiteralStart,
     Dot,
     DotGroup,
+    CodeBlock
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -72,6 +73,17 @@ public class BlockPosToken : PosToken
     }
 }
 
+public class CodeBlockToken : PosToken
+{
+    public List<Line> Lines;
+
+    public CodeBlockToken(List<Line> lines) : base(TokenType.CodeBlock,
+        (((TokenLine)lines[0]).Tokens[0].Position.Start, ((TokenLine)lines[^1]).Tokens[^1].Position.End))
+    {
+        Lines = lines;
+    }
+}
+
 public class ValuePosToken : PosToken
 {
     public ValuePosToken(TokenType type, (int Start, int End) position) : base(type, position)
@@ -96,7 +108,8 @@ public class CallLikePosToken : ValuePosToken
     public int NameEndIndex { get; }
     public PosToken OriginalToken;
 
-    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, PosToken originalToken) :
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex,
+        PosToken originalToken) :
         base(type, position)
     {
         Arguments = arguments;

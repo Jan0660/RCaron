@@ -21,6 +21,27 @@ public static class RCaronRunner
         var token = reader.Read();
         var blockDepth = -1;
         var blockNumber = -1;
+
+        // todo(perf): this is absolutely horrendous
+        void DoCodeBlockToken()
+        {
+            if(tokens.Count < 2)
+                return;
+            if(tokens[^1] is not BlockPosToken{Type: TokenType.BlockEnd} endingBpt)
+                return;
+            var number = endingBpt.Number;
+            var ind = tokens.FindIndex(t =>
+                t is BlockPosToken { Type: TokenType.BlockStart } bpt && bpt.Number == number);
+            var range = tokens.GetRange(ind..).ToArray();
+            tokens.RemoveFrom(ind);
+            var codeBlockLines = new List<Line>();
+            for (int i = 0; i < range.Length; i++)
+            {
+                codeBlockLines.Add(GetLine(range, ref i, text));
+            }
+            tokens.Add(new CodeBlockToken(codeBlockLines));
+        }
+
         while (token != null)
         {
             if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment)
@@ -30,6 +51,8 @@ public static class RCaronRunner
                 token = reader.Read();
                 continue;
             }
+
+            DoCodeBlockToken();
 
             // for some reason, when not doing this, there is literally more memory allocated
             if (token is PosToken posToken)
@@ -163,7 +186,7 @@ public static class RCaronRunner
                         return (-1, Array.Empty<PosToken>());
                     return (i, tokens.Take(i..).ToArray());
                 }
-                
+
                 if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && tokens[^1].Type != TokenType.Dot &&
                     !posToken.IsDotJoinableSomething()
                    )
@@ -223,6 +246,8 @@ public static class RCaronRunner
             token = reader.Read();
         }
 
+        DoCodeBlockToken();
+
         if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
         {
             Console.WriteLine();
@@ -239,18 +264,6 @@ public static class RCaronRunner
             lines.Add(GetLine(t, ref i, text));
         }
 
-        if (GlobalLog.HasFlag(RCaronRunnerLog.Lines))
-        {
-            Console.WriteLine();
-            Console.ResetColor();
-
-            for (var i = 0; i < lines.Count; i++)
-            {
-                Console.WriteLine(
-                    $"{i}({lines[i].Type}) {text[lines[i].Tokens[0].Position.Start..lines[i].Tokens.Last().Position.End]}");
-            }
-        }
-
         return new RCaronRunnerContext(text, lines);
     }
 
@@ -265,49 +278,49 @@ public static class RCaronRunner
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
                 endingIndex = tokens.Length;
-            res = new Line(tokens[i..(endingIndex)], LineType.VariableAssignment);
+            res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
         // unary operation
         else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
         {
-            res = new Line(tokens[i..(i + 2)], LineType.UnaryOperation);
+            res = new TokenLine(tokens[i..(i + 2)], LineType.UnaryOperation);
             i += 2;
         }
         // if statement
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "if"))
         {
-            return new Line(new[] { tokens[i] }, LineType.IfStatement);
+            return new TokenLine(new[] { tokens[i] }, LineType.IfStatement);
         }
         // loop loop
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "loop"))
         {
-            return new Line(new[] { tokens[i] }, LineType.LoopLoop);
+            return new TokenLine(new[] { tokens[i] }, LineType.LoopLoop);
         }
         // while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "while"))
         {
-            return new Line(new[] { tokens[i] }, LineType.WhileLoop);
+            return new TokenLine(new[] { tokens[i] }, LineType.WhileLoop);
         }
         // do while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "dowhile"))
         {
-            return new Line(new[] { tokens[i] }, LineType.DoWhileLoop);
+            return new TokenLine(new[] { tokens[i] }, LineType.DoWhileLoop);
         }
         // for loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
-            return new Line(new[] { tokens[i] }, LineType.ForLoop);
+            return new TokenLine(new[] { tokens[i] }, LineType.ForLoop);
         }
         // function
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
-            res = new Line(tokens[i..(i + 2)], LineType.Function);
+            res = new TokenLine(tokens[i..(i + 2)], LineType.Function);
             i += 1;
         }
         else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
         {
-            res = new Line(new[] { tokens[i] }, LineType.BlockStuff);
+            res = new TokenLine(new[] { tokens[i] }, LineType.BlockStuff);
         }
         // keyword plain call
         else if (tokens[i].Type == TokenType.Keyword)
@@ -316,14 +329,19 @@ public static class RCaronRunner
             // if (tokens[i].ToString(text) == "loop")
             //     continue;
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
-            res = new Line(
+            res = new TokenLine(
                 tokens[i..(endingIndex)],
                 LineType.KeywordPlainCall);
             i = endingIndex;
         }
+        // code block
+        else if (tokens[i] is CodeBlockToken{Type: TokenType.CodeBlock} cbt)
+        {
+            res = new CodeBlockLine(cbt);
+        }
         else if (callToken is not null)
         {
-            res = new Line(new[] { tokens[i] }, LineType.KeywordCall);
+            res = new TokenLine(new[] { tokens[i] }, LineType.KeywordCall);
             i++;
         }
         // invalid line
@@ -340,7 +358,7 @@ public static class RCaronRunner
             throw new RCaronException($"invalid line at line {lineNumber}", RCaronExceptionCode.ParseInvalidLine);
         }
 
-        return res.Value;
+        return res;
     }
 }
 
@@ -352,5 +370,4 @@ public enum RCaronRunnerLog
     None = 0,
     FunnyColors = 1 << 0,
     FunnyColorsBrackets = 1 << 1,
-    Lines = 1 << 2,
 }
