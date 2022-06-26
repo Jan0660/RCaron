@@ -103,4 +103,34 @@ $h2 = $arr[$h];");
         m.Run();
         m.AssertVariableEquals("h1", (long)1);
     }
+    [Fact]
+    public void AssignerAssignments()
+    {
+        var m = RCaronRunner.Run(@"$arr = @(1, 2, 3, 4, 5);
+$arr[1] = 22;
+$h = $arr[1];");
+        m.AssertVariableEquals("h", (long)22);
+        m = RCaronRunner.Run(@"#RCaron.Tests.StaticDummy.Field = 1;
+#RCaron.Tests.StaticDummy.Property = 1;");
+        Assert.Equal(1, StaticDummy.Field);
+        Assert.Equal(1, StaticDummy.Property);
+    }
+
+    [Fact]
+    public void StaticGet()
+    {
+        StaticDummy.Field = 2;
+        StaticDummy.Property = 2;
+        var m = RCaronRunner.Run(@"open 'RCaron.Tests';
+$field = #StaticDummy.Field;
+$property = #StaticDummy.Property;");
+        m.AssertVariableEquals("field", (long)2);
+        m.AssertVariableEquals("property", (long)2);
+    }
+}
+
+public static class StaticDummy
+{
+    public static long Field;
+    public static long Property { get; set; }
 }

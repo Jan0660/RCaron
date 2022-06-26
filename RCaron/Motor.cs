@@ -139,6 +139,20 @@ public class Motor
                 Debug.WriteLine($"variable '{variableName}' set to '{obj}'");
                 break;
             }
+            case LineType.AssignerAssignment:
+            {
+                IAssigner assigner = null;
+                if (line.Tokens[0] is DotGroupPosToken dotGroup)
+                {
+                    assigner = GetAssigner(dotGroup.Tokens);
+                }
+                else
+                {
+                    assigner = GetAssigner(MemoryMarshal.CreateSpan(ref line.Tokens[0], 1));
+                }
+                assigner.Assign(SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..)));
+                break;
+            }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
                 if (SimpleEvaluateBool(callToken.Arguments[0]))
@@ -605,6 +619,59 @@ public class Motor
         throw new RCaronException($"method '{name}' not found", ExceptionCode.MethodNotFound);
     }
 
+    public IAssigner GetAssigner(Span<PosToken> tokens)
+    {
+        object? val;
+        Type type;
+        if (tokens.Length != 1)
+        {
+            val = EvaluateDotThings(tokens[..^1]);
+            type = val.GetType();
+        }
+        else
+        {
+            val = null;
+            var name = tokens[0].ToSpan(Raw);
+            var d = name[1..(name.LastIndexOf('.'))].ToString();
+            type = TypeResolver.FindType(d, FileScope)!;
+            if (type == null)
+                throw RCaronException.TypeNotFound(d);
+        }
+        var last = tokens[^1];
+        if (last.Type == TokenType.Keyword || (tokens.Length == 1 && tokens[0].Type == TokenType.ExternThing))
+        {
+            string str;
+            if (last.Type == TokenType.Keyword)
+            {
+                str = last.ToString(Raw);
+            }
+            else if (tokens[0].Type == TokenType.ExternThing)
+            {
+                var name = tokens[0].ToSpan(Raw);
+                str = name[(name.LastIndexOf('.')+1)..].ToString();
+            }
+            else
+            {
+                throw new();
+            }
+            var p = type!.GetProperty(str,
+                BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
+            if (p != null)
+                return new PropertyAssigner(p, val);
+
+            var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
+            if (f != null)
+                return new FieldAssigner(f, val);
+        }
+
+        if (val is IList iList && last is ArrayAccessorToken arrayAccessorToken)
+        {
+            return new InterfaceListAssigner(iList, arrayAccessorToken, this);
+        }
+
+        throw new Exception("unsupported stuff for GetAssigner");
+    }
+
     public object? EvaluateDotThings(Span<PosToken> instanceTokens)
     {
         if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
@@ -733,13 +800,16 @@ public class Motor
         switch (token.Type)
         {
             case TokenType.VariableIdentifier:
+            {
                 var name = token.ToString(Raw)[1..];
                 return EvaluateVariable(name);
+            }
             case TokenType.Number:
                 return Int64.Parse(token.ToSpan(Raw));
             case TokenType.DecimalNumber:
                 return Decimal.Parse(token.ToSpan(Raw));
             case TokenType.String:
+            {
                 var s = token.ToSpan(Raw)[1..^1];
                 Span<char> g = stackalloc char[s.Length];
                 var str = new SpanStringBuilder(ref g);
@@ -756,6 +826,7 @@ public class Motor
                 }
 
                 return str.ToString();
+            }
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
@@ -768,6 +839,25 @@ public class Motor
                 return token.ToString(Raw);
             case TokenType.DotGroup:
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
+            case TokenType.ExternThing:
+            {
+                Type type;
+                var name = token.ToSpan(Raw);
+                var d = name[1..(name.LastIndexOf('.'))].ToString();
+                type = TypeResolver.FindType(d, FileScope)!;;
+                var str = name[(name.LastIndexOf('.')+1)..].ToString();
+                if (type == null)
+                    throw RCaronException.TypeNotFound(d);
+                var p = type!.GetProperty(str,
+                    BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Static);
+                if (p != null)
+                    return p.GetValue(null);
+
+                var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Static);
+                if (f != null)
+                    return f.GetValue(null);
+                throw new("Can not");
+            }
         }
 
         throw new Exception("yo wtf");

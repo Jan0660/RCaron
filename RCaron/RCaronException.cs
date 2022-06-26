@@ -16,7 +16,8 @@ public enum RCaronExceptionCode
     TypeMismatch,
     ExternalTypeNotFound,
     NullInDotThing,
-    CannotResolveInDotThing
+    CannotResolveInDotThing,
+    TypeNotFound,
 }
 
 public class RCaronException : Exception
@@ -45,4 +46,7 @@ public class RCaronException : Exception
 
     public static RCaronException ArgumentsLeftUnassigned()
         => new("required arguments left unassigned", ExceptionCode.ArgumentsLeftUnassigned);
+
+    public static RCaronException TypeNotFound(string name)
+        => new($"type '{name}' not found", RCaronExceptionCode.TypeNotFound);
 }

@@ -44,4 +44,5 @@ public enum LineType : byte
     ForLoop,
     UnaryOperation,
     CodeBlock,
+    AssignerAssignment,
 }

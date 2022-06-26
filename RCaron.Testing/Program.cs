@@ -63,11 +63,8 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-func sus {
-    println 'balls';
-}
-
-sus;
+#RCaron.Testing.StaticDummy.Field = 1;
+print #RCaron.Testing.StaticDummy.Field;
 ";
 // $g = @(1, 2).Length;
 // print $g;
@@ -76,32 +73,3 @@ Console.WriteLine("===============================");
 bruh: ;
 RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
 var m = RCaronRunner.Run(text, opt);
-// while (true)
-// {
-//     stopwatch = Stopwatch.StartNew();
-//     RCaronRunner.Run(text);
-//     Console.WriteLine(stopwatch.ElapsedMilliseconds + "ms");
-//     Console.Out.Flush();
-// }
-// Console.WriteLine(runtime.ElapsedMilliseconds);
-// while (true)
-// {
-//     text = Console.ReadLine() + ";";
-//     goto bruh;
-// }
-
-
-// namespace RCaron
-// {
-//     public enum EnumBlockType : byte
-//     {
-//         Normal,
-//     }
-// }
-
-// ref struct FunnySpanReader
-// {
-//     public ReadOnlySpan<char> Span;
-//     public FunnySpanReader(ReadOnlySpan<char> span) => Span = span;
-//     public void Skip(int count) => Span = Span.Slice(count);
-// }

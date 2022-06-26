@@ -17,6 +17,8 @@ public static class TypeResolver
         // Type? endingMatch =  null;
         foreach (var ass in assemblies)
         {
+            if(ass.IsDynamic)
+                continue;
             foreach (var type in ass.ExportedTypes)
             {
                 // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)

@@ -291,6 +291,17 @@ public static class RCaronRunner
             res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
+        // assigner assignment
+        else if (tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
+            && tokens[i + 1].Type == TokenType.Operation
+            && tokens[i + 1].EqualsString(text, "="))
+        {
+            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
+            if (endingIndex == -1)
+                endingIndex = tokens.Length;
+            res = new TokenLine(tokens[i..(endingIndex)], LineType.AssignerAssignment);
+            i = endingIndex;
+        }
         // unary operation
         else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
         {
