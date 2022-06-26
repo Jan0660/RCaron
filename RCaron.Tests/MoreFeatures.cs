@@ -1,4 +1,6 @@
-﻿namespace RCaron.Tests;
+﻿using System.Text;
+
+namespace RCaron.Tests;
 
 public class MoreFeatures
 {
@@ -88,5 +90,13 @@ foreach($num in 0..10){
 }");
         m.AssertVariableEquals("count", 10L);
         m.AssertVariableEquals("last", 9L);
+    }
+
+    [Fact]
+    public void ConstructorNew()
+    {
+        var m = RCaronRunner.Run(@"$h = #System.Text.StringBuilder.New(int32(20));");
+        var str = (StringBuilder)m.GlobalScope.GetVariable("h");
+        Assert.Equal(20, str.Capacity);
     }
 }

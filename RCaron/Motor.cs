@@ -517,12 +517,24 @@ public class Motor
 
             methodName = name[(name.LastIndexOf('.') + 1)..];
             resolveMethod: ;
-            var methods = type.GetMethods()
+            var methods = (MethodBase[])type.GetMethods()
                 .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            // constructors
+            if (methodName.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+            {
+                var foundMethods = methods.ToList();
+                foreach (var constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+                {
+                    foundMethods.Add(constructor);
+                }
+
+                methods = foundMethods.ToArray();
+            }
             if (methods.Length == 0)
             {
+                var foundMethods = new List<MethodBase>();
+                // extension methods
                 args = args.Prepend(variable!).ToArray();
-                var extensionMethods = new List<MethodInfo>();
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 // Type? endingMatch =  null;
                 foreach (var ass in assemblies)
@@ -542,13 +554,13 @@ public class Motor
                                 (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
                                  false))
                             {
-                                extensionMethods.Add(method);
+                                foundMethods.Add(method);
                             }
                         }
                     }
                 }
 
-                methods = extensionMethods.ToArray();
+                methods = foundMethods.ToArray();
             }
 
             Span<uint> scores = stackalloc uint[methods.Length];
@@ -637,6 +649,10 @@ public class Motor
                 }
             }
 
+            if (methods[bestIndex] is ConstructorInfo constructorInfo)
+            {
+                return constructorInfo.Invoke(args);
+            }
             return methods[bestIndex].Invoke(target, args);
         }
 
