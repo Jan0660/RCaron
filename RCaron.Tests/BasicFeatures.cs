@@ -217,4 +217,20 @@ $i5 = $a.5;");
         var m = RCaronRunner.Run(@"$h = 1 + {return 2;};");
         m.AssertVariableEquals("h", (long)3);
     }
+
+    [Fact]
+    public void ForeachLoop()
+    {
+        var m = new Motor(RCaronRunner.Parse(@"$arr = @(0, 1, 2, 3, 4, 5);
+foreach($item in $arr)
+{
+    $list.Add($item);
+}
+"));
+        m.GlobalScope.SetVariable("list", new System.Collections.ArrayList());
+        m.Run();
+        var list = (System.Collections.ArrayList)m.GlobalScope.GetVariable("list");
+        Assert.Equal(6, list.Count);
+        Assert.Equal(2L, list[2]);
+    }
 }

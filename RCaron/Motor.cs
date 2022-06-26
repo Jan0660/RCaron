@@ -186,6 +186,20 @@ public class Motor
                 curIndex++;
                 break;
             }
+            case LineType.ForeachLoop when line.Tokens[0] is CallLikePosToken callToken:
+            {
+                var varName = Raw[(callToken.Arguments[0][0].Position.Start + 1)..callToken.Arguments[0][0].Position.End];
+                foreach(var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
+                {
+                    var scope = new LocalScope();
+                    scope.SetVariable(varName, item);
+                    BlockStack.Push(new StackThing(true, false, scope));
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                }
+
+                curIndex++;
+                break;
+            }
             case LineType.UnaryOperation:
             {
                 var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
@@ -262,7 +276,8 @@ public class Motor
             }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
-                MethodCall(callToken.GetName(Raw), callToken: callToken);
+                MethodCall(callToken.GetName(Raw), callToken: callToken,
+                    instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
                 break;
             }
             case LineType.KeywordPlainCall:
@@ -841,10 +856,9 @@ public class Motor
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
             case TokenType.ExternThing:
             {
-                Type type;
                 var name = token.ToSpan(Raw);
                 var d = name[1..(name.LastIndexOf('.'))].ToString();
-                type = TypeResolver.FindType(d, FileScope)!;;
+                var type = TypeResolver.FindType(d, FileScope)!;;
                 var str = name[(name.LastIndexOf('.')+1)..].ToString();
                 if (type == null)
                     throw RCaronException.TypeNotFound(d);

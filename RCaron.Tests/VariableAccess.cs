@@ -61,7 +61,8 @@ public class VariableAccess
     [Fact]
     public void MethodOnVariable()
     {
-        var m = new Motor(RCaronRunner.Parse(@"$h = $array.0.ToString();"));
+        var m = new Motor(RCaronRunner.Parse(@"$h = $array.0.ToString();
+$array.0.ToString();"));
         m.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
         m.Run();
         m.AssertVariableEquals("h", "0");

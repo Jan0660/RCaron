@@ -333,6 +333,11 @@ public static class RCaronRunner
         {
             return new TokenLine(new[] { tokens[i] }, LineType.ForLoop);
         }
+        // foreach loop
+        else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "foreach"))
+        {
+            return new TokenLine(new[] { tokens[i] }, LineType.ForeachLoop);
+        }
         // function
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
