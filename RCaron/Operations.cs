@@ -19,4 +19,6 @@ public static class Operations
     public const string MultiplyOp = "*";
     public const string DivideOp = "/";
     public const string ModuloOp = "%";
+
+    public const string RangeOp = "..";
 }

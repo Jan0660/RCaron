@@ -64,7 +64,7 @@ var opt = new MotorOptions()
 // }";
 var text = @"
 #RCaron.Testing.StaticDummy.Field = 1;
-print #RCaron.Testing.StaticDummy.Field;
+print 'f' #RCaron.Testing.StaticDummy.Field;
 ";
 // $g = @(1, 2).Length;
 // print $g;
@@ -73,3 +73,8 @@ Console.WriteLine("===============================");
 bruh: ;
 RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
 var m = RCaronRunner.Run(text, opt);
+var range = new RCaronRange(0, 10);
+foreach (var num in range)
+{
+    Console.WriteLine(num);
+}

@@ -126,6 +126,12 @@ public class TokenReader
             position++;
             return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
         }
+        // range operator
+        else if (txt[position] == '.' && txt[position + 1] == '.' && txt[position + 2] != '.')
+        {
+            position += 2;
+            return new PosToken(TokenType.Operator, (initialPosition, position));
+        }
         // dot
         else if (txt[position] == '.')
         {
@@ -266,7 +272,6 @@ public class TokenReader
             return (1, TokenType.Operator);
         if (IsMatch(in span, Operations.ModuloOp))
             return (1, TokenType.Operator);
-
         return (0, 0);
     }
 }

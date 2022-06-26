@@ -890,7 +890,7 @@ public class Motor
             }
         }
 
-        throw new Exception("yo wtf");
+        throw new Exception($"invalid tokentype to evaluate: {token.Type}");
     }
 
     [CollectionAccess(CollectionAccessType.Read)]
@@ -924,6 +924,17 @@ public class Motor
                 case Operations.ModuloOp:
                     value = Horrors.Modulo(value, second);
                     break;
+                case Operations.RangeOp:
+                {
+                    var long1 = value as long?;
+                    var long2 = second as long?;
+                    if (!long1.HasValue)
+                        long1 = Convert.ToInt64(value);
+                    if (!long2.HasValue)
+                        long2 = Convert.ToInt64(second);
+                    value = new RCaronRange(long1.Value, long2.Value);
+                    break;
+                }
             }
 
             index += 2;
@@ -1069,7 +1080,7 @@ public class Motor
             {
                 ref object? reference = ref el.Scope.GetVariableRef(name);
                 if (Unsafe.IsNullRef(ref reference))
-                    return ref Unsafe.NullRef<object?>();
+                    continue;
                 return ref reference;
             }
 
