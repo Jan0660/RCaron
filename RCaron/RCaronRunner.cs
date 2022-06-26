@@ -177,7 +177,7 @@ public static class RCaronRunner
                     var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
                     var range = tokens.GetRange((acs+1)..);
                     tokens.RemoveFrom(acs);
-                    tokens.Add(new ArrayAccessorToken(range));
+                    tokens.Add(new ArrayAccessorToken(range.ToArray()));
                     goto afterAdd;
                 }
 

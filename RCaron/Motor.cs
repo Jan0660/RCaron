@@ -723,12 +723,11 @@ public class Motor
                 {
                     var args = type.GetGenericArguments();
                     var keyType = args[0];
-                    val = dict[Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens.ToArray()), keyType)!];
+                    val = dict[Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens), keyType)!];
                     type = val?.GetType();
                     continue;
                 }
-                // todo(perf)
-                var asInt = Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens.ToArray()), typeof(int));
+                var asInt = Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens), typeof(int));
                 if (asInt != null)
                 {
                     var intIndex = (int)asInt;

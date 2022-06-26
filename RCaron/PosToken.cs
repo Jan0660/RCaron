@@ -144,8 +144,8 @@ public class DotGroupPosToken : PosToken
 
 public class ArrayAccessorToken : PosToken
 {
-    public List<PosToken> Tokens { get; }
-    public ArrayAccessorToken(List<PosToken> tokens) : base(TokenType.ArrayAccessor, (tokens[0].Position.Start, tokens[^1].Position.End))
+    public PosToken[] Tokens { get; }
+    public ArrayAccessorToken(PosToken[] tokens) : base(TokenType.ArrayAccessor, (tokens[0].Position.Start, tokens[^1].Position.End))
     {
         Tokens = tokens;
     }
