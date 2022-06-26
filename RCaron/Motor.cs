@@ -248,6 +248,22 @@ public class Motor
                 curIndex++;
                 break;
             }
+            case LineType.QuickForLoop when line.Tokens[0] is CallLikePosToken callToken:
+            {
+                var falseI = 0;
+                RunLine(RCaronRunner.GetLine(callToken.Arguments[0], ref falseI, Raw));
+                var scope = new StackThing(true, false, null);
+                while (SimpleEvaluateBool(callToken.Arguments[1]))
+                {
+                    BlockStack.Push(scope);
+                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    falseI = 0;
+                    RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
+                }
+
+                curIndex++;
+                break;
+            }
             case LineType.Function:
             {
                 string name;

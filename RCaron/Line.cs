@@ -46,4 +46,5 @@ public enum LineType : byte
     CodeBlock,
     AssignerAssignment,
     ForeachLoop,
+    QuickForLoop,
 }

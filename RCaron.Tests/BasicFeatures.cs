@@ -164,6 +164,14 @@ $h = v();
     }
 
     [Fact]
+    public void QuickFor()
+    {
+        var m = RCaronRunner.Run(@"$l = 0; qfor($h = 0, $h < 10, $h = $h + 1){$l = $h;}");
+        m.AssertVariableEquals("l", (long)9);
+        m.AssertVariableEquals("h", (long)10);
+    }
+
+    [Fact]
     public void UnaryOperations()
     {
         var m = RCaronRunner.Run(@"$h = 3;
