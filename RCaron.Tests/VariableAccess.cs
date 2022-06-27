@@ -6,6 +6,7 @@ public class VariableAccess
     {
         public string Value => "VALUE";
     }
+
     [Fact]
     public void VariablePropertyAccess()
     {
@@ -20,6 +21,7 @@ public class VariableAccess
     {
         public string Value = "VALUE";
     }
+
     [Fact]
     public void VariableFieldAccess()
     {
@@ -51,7 +53,7 @@ public class VariableAccess
             ["zero"] = "0",
             ["one"] = "1",
             ["two"] = "2",
-            ["nested"] = new Dictionary<string, string>{["woo"] = "WOOO"}
+            ["nested"] = new Dictionary<string, string> { ["woo"] = "WOOO" }
         });
         m.Run();
         m.AssertVariableEquals("zero", "0");
@@ -66,7 +68,8 @@ $array.0.ToString();"));
         m.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
         m.Run();
         m.AssertVariableEquals("h", "0");
-        ExtraAssert.ThrowsCode(() => m.RunWithCode("$h = $array.0.NonExistentMethod();"), RCaronExceptionCode.MethodNoSuitableMatch);
+        ExtraAssert.ThrowsCode(() => m.RunWithCode("$h = $array.0.NonExistentMethod();"),
+            RCaronExceptionCode.MethodNoSuitableMatch);
     }
 
     [Fact]
@@ -93,17 +96,19 @@ $h2 = $arr[$h];");
     {
         public object[] Array { get; set; }
     }
+
     [Fact]
     public void NormalArrayAccessOnDotThing()
     {
         var m = new Motor(RCaronRunner.Parse("$h1 = $obj.Array[1];"));
         m.GlobalScope.SetVariable("obj", new NormalArrayAccessOnDotThingDummy()
         {
-            Array = new object[]{0L, 1L, 2L, 3L, 4L, 5L}
+            Array = new object[] { 0L, 1L, 2L, 3L, 4L, 5L }
         });
         m.Run();
         m.AssertVariableEquals("h1", (long)1);
     }
+
     [Fact]
     public void AssignerAssignments()
     {
@@ -111,8 +116,8 @@ $h2 = $arr[$h];");
 $arr[1] = 22;
 $h = $arr[1];");
         m.AssertVariableEquals("h", (long)22);
-        m = RCaronRunner.Run(@"#RCaron.Tests.StaticDummy.Field = 1;
-#RCaron.Tests.StaticDummy.Property = 1;");
+        m = RCaronRunner.Run(@"#RCaron.Tests.StaticDummy:Field = 1;
+#RCaron.Tests.StaticDummy:Property = 1;");
         Assert.Equal(1, StaticDummy.Field);
         Assert.Equal(1, StaticDummy.Property);
     }
@@ -123,10 +128,12 @@ $h = $arr[1];");
         StaticDummy.Field = 2;
         StaticDummy.Property = 2;
         var m = RCaronRunner.Run(@"open 'RCaron.Tests';
-$field = #StaticDummy.Field;
-$property = #StaticDummy.Property;");
+$field = #StaticDummy:Field;
+$property = #StaticDummy:Property;
+$nested = #StaticDummy:InstanceDummy.Property;");
         m.AssertVariableEquals("field", (long)2);
         m.AssertVariableEquals("property", (long)2);
+        m.AssertVariableEquals("nested", 3L);
     }
 }
 
@@ -134,4 +141,10 @@ public static class StaticDummy
 {
     public static long Field;
     public static long Property { get; set; }
+    public static readonly InstanceDummy InstanceDummy = new();
+}
+
+public class InstanceDummy
+{
+    public long Property => 3;
 }

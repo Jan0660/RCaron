@@ -193,9 +193,9 @@ $h = 1;
     [Fact]
     public void ExternalMethods()
     {
-        var m = RCaronRunner.Run(@"$h1 = #System.MathF.Sqrt(float(9));
+        var m = RCaronRunner.Run(@"$h1 = #System.MathF:Sqrt(float(9));
 open 'System';
-$h2 = #MathF.Sqrt(float(9));");
+$h2 = #MathF:Sqrt(float(9));");
         m.AssertVariableEquals("h1", (float)3);
         m.AssertVariableEquals("h2", (float)3);
     }

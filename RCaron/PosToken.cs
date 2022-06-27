@@ -30,6 +30,7 @@ public enum TokenType : byte
     ArrayAccessorStart,
     ArrayAccessorEnd,
     ArrayAccessor,
+    Colon,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -63,6 +64,8 @@ public class PosToken
             TokenType.Keyword => true,
             TokenType.KeywordCall => true,
             TokenType.ArrayAccessor => true,
+            TokenType.Colon => true,
+            TokenType.ExternThing => true,
             _ => false,
         };
 }

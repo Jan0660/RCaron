@@ -186,7 +186,8 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor } || tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor }))
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon} ||
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
@@ -197,7 +198,7 @@ public static class RCaronRunner
                     return (i, tokens.Take(i..).ToArray());
                 }
 
-                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && tokens[^1].Type != TokenType.Dot &&
+                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
                     !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart
                    )
                 {

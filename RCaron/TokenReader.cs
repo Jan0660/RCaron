@@ -150,6 +150,12 @@ public class TokenReader
             position++;
             return new BlockPosToken(TokenType.ArrayAccessorEnd, (initialPosition, position));
         }
+        // colon
+        else if (txt[position] == ':')
+        {
+            position++;
+            return new PosToken(TokenType.Colon, (initialPosition, position));
+        }
         // operation
         else
         {

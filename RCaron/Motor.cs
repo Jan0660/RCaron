@@ -150,6 +150,7 @@ public class Motor
                 {
                     assigner = GetAssigner(MemoryMarshal.CreateSpan(ref line.Tokens[0], 1));
                 }
+
                 assigner.Assign(SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..)));
                 break;
             }
@@ -188,8 +189,9 @@ public class Motor
             }
             case LineType.ForeachLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
-                var varName = Raw[(callToken.Arguments[0][0].Position.Start + 1)..callToken.Arguments[0][0].Position.End];
-                foreach(var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
+                var varName =
+                    Raw[(callToken.Arguments[0][0].Position.Start + 1)..callToken.Arguments[0][0].Position.End];
+                foreach (var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
                 {
                     var scope = new LocalScope();
                     scope.SetVariable(varName, item);
@@ -482,23 +484,29 @@ public class Motor
         if (name[0] == '#' || instanceTokens.Length != 0)
         {
             var args = All(in argumentTokens);
-            Type? type;
+            Type? type = null;
             string methodName;
             object? target = null;
             object? variable = null;
-            if (instanceTokens.Length != 0 && instanceTokens[0].Type != TokenType.ExternThing)
+            if (instanceTokens.Length != 0)
             {
                 Span<PosToken> given = instanceTokens;
                 if (instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
                 {
-                    given = dotGroupPosToken.Tokens[..^2];
+                    given = dotGroupPosToken.Tokens.AsSpan()[..^2];
                     instanceTokens = dotGroupPosToken.Tokens;
                 }
 
                 var obj = EvaluateDotThings(given);
                 variable = obj;
-                target = obj;
-                type = obj.GetType();
+                if (obj is RCaronType rCaronType)
+                    type = rCaronType.Type;
+                else
+                {
+                    target = obj;
+                    type = obj.GetType();
+                }
+
                 // var i = name.Length - 1;
                 // while (name[i] != '.')
                 //     i--;
@@ -508,12 +516,12 @@ public class Motor
                 goto resolveMethod;
             }
 
-            var d = name[1..(name.LastIndexOf('.'))];
-            type = TypeResolver.FindType(d, FileScope);
-
-            if (type == null)
-                throw new RCaronException($"cannot find type '{d}' for external method call",
-                    RCaronExceptionCode.ExternalTypeNotFound);
+            // var d = name[1..(name.LastIndexOf('.'))];
+            // type = TypeResolver.FindType(d, FileScope);
+            //
+            // if (type == null)
+            //     throw new RCaronException($"cannot find type '{d}' for external method call",
+            //         RCaronExceptionCode.ExternalTypeNotFound);
 
             methodName = name[(name.LastIndexOf('.') + 1)..];
             resolveMethod: ;
@@ -530,6 +538,7 @@ public class Motor
 
                 methods = foundMethods.ToArray();
             }
+
             if (methods.Length == 0)
             {
                 var foundMethods = new List<MethodBase>();
@@ -653,6 +662,7 @@ public class Motor
             {
                 return constructorInfo.Invoke(args);
             }
+
             return methods[bestIndex].Invoke(target, args);
         }
 
@@ -668,22 +678,26 @@ public class Motor
 
     public IAssigner GetAssigner(Span<PosToken> tokens)
     {
-        object? val;
-        Type type;
+        object? val = null;
+        Type type = null;
         if (tokens.Length != 1)
         {
             val = EvaluateDotThings(tokens[..^1]);
             type = val.GetType();
         }
-        else
-        {
-            val = null;
-            var name = tokens[0].ToSpan(Raw);
-            var d = name[1..(name.LastIndexOf('.'))].ToString();
-            type = TypeResolver.FindType(d, FileScope)!;
-            if (type == null)
-                throw RCaronException.TypeNotFound(d);
-        }
+        // else
+        // {
+        //     val = null;
+        //     var name = tokens[0].ToSpan(Raw);
+        //     var d = name[1..(name.LastIndexOf('.'))].ToString();
+        //     type = TypeResolver.FindType(d, FileScope)!;
+        //     if (type == null)
+        //         throw RCaronException.TypeNotFound(d);
+        // }
+
+        if (val is RCaronType rCaronType)
+            type = rCaronType.Type;
+
         var last = tokens[^1];
         if (last.Type == TokenType.Keyword || (tokens.Length == 1 && tokens[0].Type == TokenType.ExternThing))
         {
@@ -695,18 +709,20 @@ public class Motor
             else if (tokens[0].Type == TokenType.ExternThing)
             {
                 var name = tokens[0].ToSpan(Raw);
-                str = name[(name.LastIndexOf('.')+1)..].ToString();
+                str = name[(name.LastIndexOf('.') + 1)..].ToString();
             }
             else
             {
                 throw new();
             }
+
             var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
             if (p != null)
                 return new PropertyAssigner(p, val);
 
-            var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
+            var f = type.GetField(str,
+                BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
             if (f != null)
                 return new FieldAssigner(f, val);
         }
@@ -726,12 +742,21 @@ public class Motor
         var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
         if (val == null)
             throw RCaronException.NullInTokens(instanceTokens, Raw, 0);
-        var type = val.GetType();
+        Type type;
+        if (val is RCaronType rCaronType)
+        {
+            type = rCaronType.Type;
+        }
+        else
+        {
+            type = val.GetType();
+        }
+
         for (int i = 1; i < instanceTokens.Length; i++)
         {
-            if (instanceTokens[i].Type == TokenType.Dot)
+            if (instanceTokens[i].Type == TokenType.Dot || instanceTokens[i].Type == TokenType.Colon)
                 continue;
-            if (i != instanceTokens.Length && val == null)
+            if (i != instanceTokens.Length - 1 && val == null)
                 throw RCaronException.NullInTokens(instanceTokens, Raw, i);
             if (instanceTokens[i] is ArrayAccessorToken arrayAccessorToken)
             {
@@ -743,6 +768,7 @@ public class Motor
                     type = val?.GetType();
                     continue;
                 }
+
                 var asInt = Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens), typeof(int));
                 if (asInt != null)
                 {
@@ -753,7 +779,7 @@ public class Motor
                         type = val?.GetType();
                         continue;
                     }
-                    
+
                     if (val is Array array)
                     {
                         val = array.GetValue(intIndex);
@@ -761,11 +787,14 @@ public class Motor
                         continue;
                     }
                 }
+
                 continue;
             }
+
             var str = instanceTokens[i].ToString(Raw);
+            var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
-                BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+                BindingFlags.Public | BindingFlags.IgnoreCase | instanceOrStatic);
             if (p != null)
             {
                 val = p.GetValue(val);
@@ -773,7 +802,7 @@ public class Motor
                 continue;
             }
 
-            var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance);
+            var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | instanceOrStatic);
             if (f != null)
             {
                 val = f.GetValue(val);
@@ -887,21 +916,12 @@ public class Motor
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
             case TokenType.ExternThing:
             {
-                var name = token.ToSpan(Raw);
-                var d = name[1..(name.LastIndexOf('.'))].ToString();
-                var type = TypeResolver.FindType(d, FileScope)!;;
-                var str = name[(name.LastIndexOf('.')+1)..].ToString();
+                var d = token.ToSpan(Raw)[1..].ToString();
+                var type = TypeResolver.FindType(d, FileScope)!;
+                ;
                 if (type == null)
                     throw RCaronException.TypeNotFound(d);
-                var p = type!.GetProperty(str,
-                    BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Static);
-                if (p != null)
-                    return p.GetValue(null);
-
-                var f = type.GetField(str, BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Static);
-                if (f != null)
-                    return f.GetValue(null);
-                throw new("Can not");
+                return new RCaronType(type);
             }
         }
 
@@ -916,8 +936,8 @@ public class Motor
         object value = SimpleEvaluateExpressionSingle(tokens[0])!;
         if (tokens[1] is ArrayAccessorToken)
         {
-            
         }
+
         while (index < tokens.Count - 1)
         {
             var op = tokens[index + 1].ToString(Raw);

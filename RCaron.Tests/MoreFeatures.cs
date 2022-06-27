@@ -95,7 +95,7 @@ foreach($num in 0..10){
     [Fact]
     public void ConstructorNew()
     {
-        var m = RCaronRunner.Run(@"$h = #System.Text.StringBuilder.New(int32(20));");
+        var m = RCaronRunner.Run(@"$h = #System.Text.StringBuilder:New(int32(20));");
         var str = (StringBuilder)m.GlobalScope.GetVariable("h");
         Assert.Equal(20, str.Capacity);
     }
