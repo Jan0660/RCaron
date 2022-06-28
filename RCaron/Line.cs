@@ -47,4 +47,5 @@ public enum LineType : byte
     AssignerAssignment,
     ForeachLoop,
     QuickForLoop,
+    DotGroupCall,
 }

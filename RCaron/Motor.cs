@@ -294,8 +294,14 @@ public class Motor
             }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
-                MethodCall(callToken.GetName(Raw), callToken: callToken,
-                    instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
+                MethodCall(callToken.GetName(Raw), callToken: callToken, instance: null
+                    // instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1)
+                    );
+                break;
+            }
+            case LineType.DotGroupCall:
+            {
+                EvaluateDotThings(((DotGroupPosToken)line.Tokens[0]).Tokens);
                 break;
             }
             case LineType.KeywordPlainCall:
@@ -380,8 +386,10 @@ public class Motor
         return ReturnValue;
     }
 
-    public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null,
-        Span<PosToken> instanceTokens = default)
+    public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null
+        // , Span<PosToken> instanceTokens = default
+        , object? instance = null
+        )
     {
         // lowercase the string if not all characters are lowercase
         for (var i = 0; i < name.Length; i++)
@@ -415,7 +423,7 @@ public class Motor
             return EvaluateMultipleValues(tokens);
         }
 
-        if (callToken?.OriginalToken.Type == TokenType.ArrayLiteralStart)
+        if (callToken?.Name == "@")
             return All(in argumentTokens);
 
         switch (name.ToLowerInvariant())
@@ -481,23 +489,24 @@ public class Motor
             return FunctionPlainCall(func, argumentTokens);
         }
 
-        if (name[0] == '#' || instanceTokens.Length != 0)
+        if (name[0] == '#' || instance != null)
         {
             var args = All(in argumentTokens);
             Type? type = null;
             string methodName;
             object? target = null;
             object? variable = null;
-            if (instanceTokens.Length != 0)
+            if (instance != null)
             {
-                Span<PosToken> given = instanceTokens;
-                if (instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
-                {
-                    given = dotGroupPosToken.Tokens.AsSpan()[..^2];
-                    instanceTokens = dotGroupPosToken.Tokens;
-                }
+                // Span<PosToken> given = instanceTokens;
+                // if (instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
+                // {
+                //     given = dotGroupPosToken.Tokens.AsSpan()[..^2];
+                //     instanceTokens = dotGroupPosToken.Tokens;
+                // }
 
-                var obj = EvaluateDotThings(given);
+                // var obj = EvaluateDotThings(given);
+                var obj = instance;
                 variable = obj;
                 if (obj is RCaronType rCaronType)
                     type = rCaronType.Type;
@@ -512,7 +521,7 @@ public class Motor
                 //     i--;
                 // i++;
                 // todo(perf): just steal it from name var? -- fix name var first lol maybe
-                methodName = instanceTokens[^1].ToString(Raw);
+                // methodName = instanceTokens[^1].ToString(Raw);
                 goto resolveMethod;
             }
 
@@ -523,12 +532,11 @@ public class Motor
             //     throw new RCaronException($"cannot find type '{d}' for external method call",
             //         RCaronExceptionCode.ExternalTypeNotFound);
 
-            methodName = name[(name.LastIndexOf('.') + 1)..];
             resolveMethod: ;
             var methods = (MethodBase[])type.GetMethods()
-                .Where(m => m.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+                .Where(m => m.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToArray();
             // constructors
-            if (methodName.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+            if (name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
             {
                 var foundMethods = methods.ToList();
                 foreach (var constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
@@ -559,7 +567,7 @@ public class Motor
                         // exact match
                         foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                         {
-                            if (method.Name.Equals(methodName, StringComparison.InvariantCultureIgnoreCase) &&
+                            if (method.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
                                 (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
                                  false))
                             {
@@ -623,7 +631,7 @@ public class Motor
 
 
             if (best == 0)
-                throw new RCaronException($"cannot find a match for method '{methodName}'",
+                throw new RCaronException($"cannot find a match for method '{name}'",
                     ExceptionCode.MethodNoSuitableMatch);
 
             // mismatch count arguments -> equate it out with default values
@@ -791,6 +799,14 @@ public class Motor
                 continue;
             }
 
+            if (instanceTokens[i] is CallLikePosToken callLikePosToken)
+            {
+                var d = MethodCall(callLikePosToken.GetName(Raw), callToken: callLikePosToken, instance: val);
+                val = d;
+                type = val?.GetType();
+                continue;
+            }
+
             var str = instanceTokens[i].ToString(Raw);
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
@@ -905,8 +921,7 @@ public class Motor
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
-                return MethodCall(callToken.GetName(Raw), callToken: callToken,
-                    instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1));
+                return MethodCall(callToken.GetName(Raw), callToken: callToken);
             case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
                 BlockStack.Push(new(false, true, null));
                 return RunCodeBlock(codeBlockToken);

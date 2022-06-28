@@ -1,4 +1,5 @@
-﻿using RCaron.LibrarySourceGenerator;
+﻿using System.Reflection;
+using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.BaseLibrary;
 
@@ -11,12 +12,21 @@ public partial class LoggingModule : IRCaronModule
         Console.WriteLine("Hello, ř!");
         return RCaronInsideEnum.NoReturnValue;
     }
+    [Method("Error")]
+    public static void Error(Motor motor, object value)
+        => Log73.Console.Error(value.ToString());
 
     [Method("Warn")]
-    public static void Warn(Motor motor, string value)
-    {
-        Log73.Console.Warn(value);
-    }
+    public static void Warn(Motor motor, object value)
+        => Log73.Console.Warn(value.ToString());
+
+    [Method("Info")]
+    public static void Info(Motor motor, object value)
+        => Log73.Console.Info(value.ToString());
+
+    [Method("Debug")]
+    public static void Debug(Motor motor, object value)
+        => Log73.Console.Debug(value.ToString());
 
     [Method("ForUnitTests")]
     public static long ForUnitTests(Motor motor, long a, long b = 1)

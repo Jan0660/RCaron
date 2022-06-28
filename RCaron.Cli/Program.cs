@@ -47,18 +47,18 @@ rootCommand.Description = "RCaron.Cli";
 rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
-    Motor? motor = null;
+    Motor motor = new(new(null!, null!));
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
-        motor = RCaronRunner.Run(File.ReadAllText(f.FullName), new MotorOptions());
+        motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName)));
+        motor.Run();
     }
 
     RCaronRunner.GlobalLog = 0;
 
     if (interactive)
     {
-        motor ??= new(new(null!, null!));
         var input = Console.ReadLine();
         while (input != null)
         {

@@ -73,6 +73,55 @@ public static class RCaronRunner
                         break;
                 }
 
+                (int index, PosToken[] tokens) BackwardsCollectDotThing()
+                {
+                    var i = tokens.Count - 1;
+                    while ((i != 0 && i != -1) &&
+                           tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon} ||
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon }))
+                        // while ((i != 0 && i != -1) && 
+                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
+                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
+                        //       )
+                        i--;
+                    if (tokens.Count - i == 1)
+                        return (-1, Array.Empty<PosToken>());
+                    return (i, tokens.Take(i..).ToArray());
+                }
+
+                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
+                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart && posToken.Type != TokenType.SimpleBlockStart
+                   )
+                {
+                    // todo(perf): it gets here when array literal
+                    var h = BackwardsCollectDotThing();
+                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
+                    {
+                        // may not be needed?
+                        // if (h.tokens[1].Type != TokenType.Dot)
+                        //     goto beforeAdd;
+                        // AAAAAA
+                        // remove those replace with fucking imposter thing
+                        var rem = h.index;
+                        // if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
+                        //     posToken.Type != TokenType.SimpleBlockEnd)
+                        //     rem += 1;
+                        // if (!tokens[rem - 1].IsDotJoinableSomething() &&
+                        //     tokens[rem] is not ValuePosToken)
+                        //     goto beforeAdd;
+                        tokens.RemoveFrom(rem);
+                        tokens.Add(new DotGroupPosToken(TokenType.DotGroup,
+                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                        // goto beforeAdd;
+                    }
+                    else
+                    {
+                        // if (h.index != -1)
+                        //     Debugger.Break();
+                    }
+                }
+
                 if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } blockToken)
                 {
                     var startIndex = tokens.FindIndex(
@@ -80,8 +129,7 @@ public static class RCaronRunner
                              bpt.Number == blockToken.Number);
                     if (tokens[startIndex - 1] is
                         {
-                            Type: TokenType.Keyword or TokenType.ExternThing or TokenType.VariableIdentifier
-                            or TokenType.ArrayLiteralStart or TokenType.DotGroup
+                            Type: TokenType.Keyword or TokenType.ArrayLiteralStart
                         }
                         || tokens[startIndex - 1].IsDotJoinableSomething())
                     {
@@ -116,7 +164,8 @@ public static class RCaronRunner
                             // {
                             //     tokens.GetRange((startIndex + 1)..).ToArray()
                             // }
-                            tokens[startIndex - 1].Position.End, tokens[startIndex - 1]);
+                            tokens[startIndex - 1].Position.End, tokens[startIndex - 1].ToString(text)
+                            );
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
                         goto afterAdd;
@@ -179,55 +228,6 @@ public static class RCaronRunner
                     tokens.RemoveFrom(acs);
                     tokens.Add(new ArrayAccessorToken(range.ToArray()));
                     goto afterAdd;
-                }
-
-                (int index, PosToken[] tokens) BackwardsCollectDotThing()
-                {
-                    var i = tokens.Count - 1;
-                    while ((i != 0 && i != -1) &&
-                           tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon} ||
-                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon }))
-                        // while ((i != 0 && i != -1) && 
-                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
-                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
-                        //       )
-                        i--;
-                    if (tokens.Count - i == 1)
-                        return (-1, Array.Empty<PosToken>());
-                    return (i, tokens.Take(i..).ToArray());
-                }
-
-                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
-                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart
-                   )
-                {
-                    // todo(perf): it gets here when array literal
-                    var h = BackwardsCollectDotThing();
-                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
-                    {
-                        // may not be needed?
-                        // if (h.tokens[1].Type != TokenType.Dot)
-                        //     goto beforeAdd;
-                        // AAAAAA
-                        // remove those replace with fucking imposter thing
-                        var rem = h.index;
-                        // if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
-                        //     posToken.Type != TokenType.SimpleBlockEnd)
-                        //     rem += 1;
-                        // if (!tokens[rem - 1].IsDotJoinableSomething() &&
-                        //     tokens[rem] is not ValuePosToken)
-                        //     goto beforeAdd;
-                        tokens.RemoveFrom(rem);
-                        tokens.Add(new DotGroupPosToken(TokenType.DotGroup,
-                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
-                        goto beforeAdd;
-                    }
-                    else
-                    {
-                        // if (h.index != -1)
-                        //     Debugger.Break();
-                    }
                 }
 
                 beforeAdd: ;
@@ -374,6 +374,11 @@ public static class RCaronRunner
         else if (callToken is not null)
         {
             res = new TokenLine(new[] { tokens[i] }, LineType.KeywordCall);
+            i++;
+        }
+        else if (tokens[i] is DotGroupPosToken)
+        {
+            res = new TokenLine(new[] { tokens[i] }, LineType.DotGroupCall);
             i++;
         }
         // invalid line

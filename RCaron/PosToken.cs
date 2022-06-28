@@ -113,15 +113,18 @@ public class CallLikePosToken : ValuePosToken
 {
     public PosToken[][] Arguments { get; set; }
     public int NameEndIndex { get; }
-    public PosToken OriginalToken;
+    /// <summary>
+    /// lower-cased
+    /// </summary>
+    public string Name { get; }
 
-    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex,
-        PosToken originalToken) :
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, string name
+        ) :
         base(type, position)
     {
         Arguments = arguments;
         NameEndIndex = nameEndIndex;
-        OriginalToken = originalToken;
+        Name = name;
     }
 
     public string GetName(string text)
