@@ -4,6 +4,7 @@ using System.IO;
 using Log73;
 using Log73.LogPres;
 using RCaron;
+using RCaron.FunLibrary;
 using Console = System.Console;
 
 var logger = new Log73Logger();
@@ -35,19 +36,24 @@ interactiveOption.AddAlias("-i");
 var lintOption = new Option<bool>("--lint",
     "Print code funny colored.");
 lintOption.AddAlias("-l");
+var funOption = new Option<bool>("--fun",
+    "Add experimental stuff module.");
 
 // Add the options to a root command:
 var rootCommand = new RootCommand();
 rootCommand.AddArgument(fileArgument);
 rootCommand.AddOption(interactiveOption);
 rootCommand.AddOption(lintOption);
+rootCommand.AddOption(funOption);
 
 rootCommand.Description = "RCaron.Cli";
 
-rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
+rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!));
+    if(fun)
+        motor.Modules.Add(new FunModule());
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
@@ -76,7 +82,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint) =>
             input = Console.ReadLine();
         }
     }
-}, fileArgument, interactiveOption, lintOption);
+}, fileArgument, interactiveOption, lintOption, funOption);
 
 // Parse the incoming args and invoke the handler
 return rootCommand.Invoke(args);

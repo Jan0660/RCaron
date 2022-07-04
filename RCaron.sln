@@ -10,6 +10,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Cli", "RCaron.Cli\RC
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.LibrarySourceGenerator", "RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj", "{A8D49984-CC2D-428E-A9E7-476D20DEB899}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.FunLibrary", "RCaron.FunLibrary\RCaron.FunLibrary.csproj", "{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -36,5 +38,9 @@ Global
 		{A8D49984-CC2D-428E-A9E7-476D20DEB899}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{A8D49984-CC2D-428E-A9E7-476D20DEB899}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{A8D49984-CC2D-428E-A9E7-476D20DEB899}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

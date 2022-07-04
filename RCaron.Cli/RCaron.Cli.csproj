@@ -13,6 +13,7 @@
     </ItemGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\RCaron.FunLibrary\RCaron.FunLibrary.csproj" />
       <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 

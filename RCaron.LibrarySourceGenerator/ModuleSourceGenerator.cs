@@ -61,6 +61,27 @@ public partial class {classSymbol.Name}{{");
                 source.AppendLine(
                     @"public object? RCaronModuleRun(string name, Motor motor, in ReadOnlySpan<PosToken> arguments){
 switch(name){");
+
+                void AppendArgumentThing(bool isPositional, IParameterSymbol param)
+                {
+                    bool InheritsPosToken(ITypeSymbol typeSymbol)
+                    {
+                        if (typeSymbol.BaseType == null)
+                            return false;
+                        var str = typeSymbol.BaseType.ToDisplayString();
+                        if (str == "RCaron.PosToken")
+                            return true;
+                        if (str == "System.Object")
+                            return false;
+                        return InheritsPosToken(typeSymbol.BaseType);
+                    }
+
+                    var g = isPositional ? string.Empty : " + 2";
+                    if(InheritsPosToken(param.Type))
+                        source.AppendLine($"arguments[i{g}];");
+                    else
+                        source.AppendLine($"motor.SimpleEvaluateExpressionSingle(arguments[i{g}]);");
+                }
                 foreach (var member in classSymbol.GetMembers())
                 {
                     if (member is not IMethodSymbol methodSymbol)
@@ -100,6 +121,7 @@ switch(name){");
                                         true), param.Locations.FirstOrDefault()));
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
                             source.Append($"{param.Type.ToDisplayString()} {param.Name} = ");
+                            
                             if (param.HasExplicitDefaultValue)
                             {
                                 if (param.ExplicitDefaultValue is string str)
@@ -128,8 +150,9 @@ switch(name){");
                                 $@"if(argName.Equals(""{param.Name.ToLowerInvariant()}"", StringComparison.InvariantCultureIgnoreCase))
 {{");
                             source.AppendLine($"{param.Name}_hasValue = true;");
-                            source.AppendLine(
-                                $"{param.Name} = ({param.Type.ToDisplayString()})motor.SimpleEvaluateExpressionSingle(arguments[i + 2]);");
+
+                            source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
+                            AppendArgumentThing(false, param);
                             source.AppendLine("i += 2;");
                             source.AppendLine("}");
                         }
@@ -149,9 +172,10 @@ switch(name){");
                                 var param = parameters[i];
                                 if (i != 0)
                                     source.Append("else ");
-                                source.AppendLine($@"if(!{param.Name}_hasValue){{
-{param.Name} = ({param.Type.ToDisplayString()})motor.SimpleEvaluateExpressionSingle(arguments[i]);
-{param.Name}_hasValue = true;
+                                source.AppendLine($"if(!{param.Name}_hasValue){{");
+                                source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
+                                AppendArgumentThing(true, param);
+                                source.AppendLine($@"{param.Name}_hasValue = true;
 }}");
                             }
 
