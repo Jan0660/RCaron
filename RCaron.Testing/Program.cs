@@ -18,11 +18,16 @@ Log.Configure.EnableVirtualTerminalProcessing();
 // BenchmarkRunner.Run<TypeResolverBenchmarks>();
 // return;
 
-// for (var i = 0; i < 10_000_000; i++)
+for (var i = 0; i < 5_000_000; i++)
+{
+    RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
+}
+// Debugger.Break();
+// for (var i = 0; i < 1_000_000; i++)
 // {
 //     RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
 // }
-// return;
+return;
 
 Console.WriteLine("Hello, World!");
 var stopwatch = Stopwatch.StartNew();

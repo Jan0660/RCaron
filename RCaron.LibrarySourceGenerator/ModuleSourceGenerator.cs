@@ -59,7 +59,7 @@ namespace {classSymbol.ContainingNamespace.ToDisplayString()};
 
 public partial class {classSymbol.Name}{{");
                 source.AppendLine(
-                    @"public object? RCaronModuleRun(string name, Motor motor, in ReadOnlySpan<PosToken> arguments){
+                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ReadOnlySpan<PosToken> arguments){
 switch(name){");
 
                 void AppendArgumentThing(bool isPositional, IParameterSymbol param)

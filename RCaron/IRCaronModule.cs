@@ -2,5 +2,5 @@
 
 public interface IRCaronModule
 {
-    public object? RCaronModuleRun(string name, Motor motor, in ReadOnlySpan<PosToken> arguments);
+    public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ReadOnlySpan<PosToken> arguments);
 }

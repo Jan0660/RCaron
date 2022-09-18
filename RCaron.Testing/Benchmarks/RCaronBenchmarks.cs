@@ -10,12 +10,8 @@ public class RCaronBenchmarks
     public const string FibbonaciCode = @"
 $a = 0; $b = 1; $c = 0;
 
-func DoMath{
-    $c = $a + $b;
-}
-
 for($i = 0, $i < 2, $i++) {
-    DoMath;
+    $c = $a + $b;
     $a = $b;
     $b = $c;
 }

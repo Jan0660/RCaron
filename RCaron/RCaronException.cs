@@ -29,7 +29,7 @@ public class RCaronException : Exception
         Code = exceptionCode;
     }
     
-    public static RCaronException VariableNotFound(string name)
+    public static RCaronException VariableNotFound(ReadOnlySpan<char> name)
         => new($"variable '{name}' does not exist in this scope", ExceptionCode.VariableNotFound);
     
     public static RCaronException NullInTokens(in Span<PosToken> tokens, string raw, int index)

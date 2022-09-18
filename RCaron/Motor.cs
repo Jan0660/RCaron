@@ -296,7 +296,7 @@ public class Motor
             {
                 MethodCall(callToken.GetName(Raw), callToken: callToken, instance: null
                     // instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1)
-                    );
+                );
                 break;
             }
             case LineType.DotGroupCall:
@@ -307,7 +307,7 @@ public class Motor
             case LineType.KeywordPlainCall:
             {
                 var keyword = line.Tokens[0];
-                var keywordString = keyword.ToString(Raw);
+                var keywordString = keyword.ToSpan(Raw);
                 var args = line.Tokens.AsSpan()[1..];
 
                 ArraySegment<PosToken> ArgsArray()
@@ -359,7 +359,8 @@ public class Motor
                             return RunLineResult.Nothing;
                     }
 
-                if (Functions.TryGetValue(keywordString, out var func))
+                // todo: may not have to do this
+                if (Functions.TryGetValue(keywordString.ToString(), out var func))
                 {
                     FunctionPlainCall(func, line.Tokens.Segment(1..));
                     return RunLineResult.Nothing;
@@ -386,20 +387,22 @@ public class Motor
         return ReturnValue;
     }
 
-    public object? MethodCall(string name, Span<PosToken> argumentTokens = default, CallLikePosToken? callToken = null
+    public object? MethodCall(ReadOnlySpan<char> nameArg, Span<PosToken> argumentTokens = default,
+        CallLikePosToken? callToken = null
         // , Span<PosToken> instanceTokens = default
         , object? instance = null
-        )
+    )
     {
-        // lowercase the string if not all characters are lowercase
-        for (var i = 0; i < name.Length; i++)
-        {
-            if (!char.IsLower(name[i]))
-            {
-                name = name.ToLowerInvariant();
-                break;
-            }
-        }
+        // // lowercase the string if not all characters are lowercase
+        // for (var i = 0; i < name.Length; i++)
+        // {
+        //     if (!char.IsLower(name[i]))
+        //     {
+        Span<char> name = stackalloc char[nameArg.Length];
+        nameArg.ToLowerInvariant(name);
+        //         break;
+        //     }
+        // }
 
         object? At(in Span<PosToken> tokens, int index)
         {
@@ -426,7 +429,7 @@ public class Motor
         if (callToken?.Name == "@")
             return All(in argumentTokens);
 
-        switch (name.ToLowerInvariant())
+        switch (name)
         {
             #region conversions
 
@@ -484,7 +487,8 @@ public class Motor
                 return RCaronInsideEnum.NoReturnValue;
         }
 
-        if (Functions.TryGetValue(name, out var func))
+        // todo: dont
+        if (Functions.TryGetValue(name.ToString(), out var func))
         {
             return FunctionPlainCall(func, argumentTokens);
         }
@@ -533,10 +537,20 @@ public class Motor
             //         RCaronExceptionCode.ExternalTypeNotFound);
 
             resolveMethod: ;
-            var methods = (MethodBase[])type.GetMethods()
-                .Where(m => m.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase)).ToArray();
+            var methodsOrg = type.GetMethods()!;
+            var arr = new MethodBase[methodsOrg.Length];
+            var count = 0;
+            for (var i = 0; i < methodsOrg.Length; i++)
+            {
+                var method = methodsOrg[i];
+                if (!MemoryExtensions.Equals(method.Name, name, StringComparison.InvariantCultureIgnoreCase))
+                    continue;
+                arr[count++] = method;
+            }
+            
+            var methods = arr.Segment(..count);
             // constructors
-            if (name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+            if (MemoryExtensions.Equals(name, "new", StringComparison.InvariantCultureIgnoreCase))
             {
                 var foundMethods = methods.ToList();
                 foreach (var constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
@@ -547,7 +561,7 @@ public class Motor
                 methods = foundMethods.ToArray();
             }
 
-            if (methods.Length == 0)
+            if (methods.Count == 0)
             {
                 var foundMethods = new List<MethodBase>();
                 // extension methods
@@ -567,7 +581,8 @@ public class Motor
                         // exact match
                         foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                         {
-                            if (method.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
+                            if (MemoryExtensions.Equals(method.Name, name,
+                                    StringComparison.InvariantCultureIgnoreCase) &&
                                 (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
                                  false))
                             {
@@ -580,8 +595,8 @@ public class Motor
                 methods = foundMethods.ToArray();
             }
 
-            Span<uint> scores = stackalloc uint[methods.Length];
-            for (var i = 0; i < methods.Length; i++)
+            Span<uint> scores = stackalloc uint[methods.Count];
+            for (var i = 0; i < methods.Count; i++)
             {
                 uint score = 0;
                 var method = methods[i];
@@ -868,7 +883,7 @@ public class Motor
         return objs;
     }
 
-    public object? EvaluateVariable(string name)
+    public object? EvaluateVariable(ReadOnlySpan<char> name)
     {
         switch (name)
         {
@@ -892,7 +907,7 @@ public class Motor
         {
             case TokenType.VariableIdentifier:
             {
-                var name = token.ToString(Raw)[1..];
+                var name = token.ToSpan(Raw)[1..];
                 return EvaluateVariable(name);
             }
             case TokenType.Number:
@@ -955,7 +970,7 @@ public class Motor
 
         while (index < tokens.Count - 1)
         {
-            var op = tokens[index + 1].ToString(Raw);
+            var op = tokens[index + 1].ToSpan(Raw);
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
             switch (op)
             {
@@ -1080,8 +1095,7 @@ public class Motor
                 return b;
         }
 
-        // todo: cant switch case with a Span yet -- rider doesnt support
-        var op = tokens[1].ToString(Raw);
+        var op = tokens[1].ToSpan(Raw);
         var val2 = SimpleEvaluateExpressionSingle(tokens[2])!;
         switch (op)
         {
@@ -1102,12 +1116,14 @@ public class Motor
         }
     }
 
-    public object? GetVar(string name)
+    public object? GetVar(ReadOnlySpan<char> name)
     {
+        // todo: do not
+        var nameStr = name.ToString();
         for (var i = 0; i < BlockStack.Count; i++)
         {
             var el = BlockStack.ElementAt(^(i + 1));
-            if (el.Scope != null && el.Scope.TryGetVariable(name, out var value))
+            if (el.Scope != null && el.Scope.TryGetVariable(nameStr, out var value))
             {
                 return value;
             }
@@ -1116,7 +1132,7 @@ public class Motor
                 return RCaronInsideEnum.VariableNotFound;
         }
 
-        if (GlobalScope.TryGetVariable(name, out var value2))
+        if (GlobalScope.TryGetVariable(nameStr, out var value2))
             return value2;
         return RCaronInsideEnum.VariableNotFound;
     }

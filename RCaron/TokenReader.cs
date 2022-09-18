@@ -5,11 +5,14 @@ public class TokenReader
 {
     int position;
     string text;
+    public bool ReturnIgnored { get; set; }
+    public static readonly PosToken IgnorePosToken = new(TokenType.Ignore, (0, 0));
 
-    public TokenReader(string text)
+    public TokenReader(string text, bool returnIgnored = false)
     {
         this.text = text;
         this.position = 0;
+        ReturnIgnored = returnIgnored;
     }
 
     public PosToken? Read()
@@ -54,6 +57,8 @@ public class TokenReader
             position++;
             while (position < txt.Length && char.IsWhiteSpace(txt[position]))
                 ++position;
+            if (!ReturnIgnored)
+                return IgnorePosToken;
             return new PosToken(TokenType.Whitespace, (initialPosition, position));
         }
         // comma
@@ -102,6 +107,8 @@ public class TokenReader
             position += 2;
             while (position < txt.Length && txt[position] != '\n')
                 position++;
+            if (!ReturnIgnored)
+                return IgnorePosToken;
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
         // multiline line comment
@@ -111,6 +118,8 @@ public class TokenReader
             while (txt[position] != '*' && txt[position + 1] != '/')
                 position++;
             position+=3;
+            if (!ReturnIgnored)
+                return IgnorePosToken;
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
         // extern thing

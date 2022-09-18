@@ -50,6 +50,7 @@ rootCommand.Description = "RCaron.Cli";
 
 rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
 {
+    // todo: lint wont show comments since TokenReader new property
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!));
     if(fun)

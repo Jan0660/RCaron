@@ -31,6 +31,7 @@ public enum TokenType : byte
     ArrayAccessorEnd,
     ArrayAccessor,
     Colon,
+    Ignore,
 }
 
 [DebuggerDisplay("Type = {Type}")]

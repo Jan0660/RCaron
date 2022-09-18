@@ -44,7 +44,7 @@ public static class RCaronRunner
 
         while (token != null)
         {
-            if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment)
+            if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                     Console.Write(token.ToString(text));
