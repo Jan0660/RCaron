@@ -2,7 +2,7 @@
 using BenchmarkDotNet.Configs;
 using BenchmarkDotNet.Jobs;
 
-namespace RCaron.Benchmarks;
+namespace RCaron.Benchmarks.Benchmarks;
 
 [MemoryDiagnoser]
 [Config(typeof(StringBenchmarks.Config))]

@@ -2,32 +2,25 @@
 
 
 using System.Diagnostics;
-using BenchmarkDotNet.Configs;
-using BenchmarkDotNet.Running;
 using Log73;
 using RCaron;
-using RCaron.Benchmarks;
 using Log = Log73.Console;
 using Console = System.Console;
 
 // Log.Options.LogLevel = LogLevel.Debug;
 Log.Configure.EnableVirtualTerminalProcessing();
 
-// BenchmarkRunner.Run<LineNumberBenchmark>();
-// BenchmarkRunner.Run<RCaronBenchmarks>();
-// BenchmarkRunner.Run<TypeResolverBenchmarks>();
-// return;
 
-for (var i = 0; i < 5_000_000; i++)
-{
-    RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
-}
+// for (var i = 0; i < 5_000_000; i++)
+// {
+//     RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
+// }
 // Debugger.Break();
 // for (var i = 0; i < 1_000_000; i++)
 // {
 //     RCaronRunner.Parse(@"$h = 2 * (2 + 3);");
 // }
-return;
+// return;
 
 Console.WriteLine("Hello, World!");
 var stopwatch = Stopwatch.StartNew();

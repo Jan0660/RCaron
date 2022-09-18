@@ -1,6 +1,6 @@
 ﻿using BenchmarkDotNet.Attributes;
 
-namespace RCaron.Benchmarks;
+namespace RCaron.Benchmarks.Benchmarks;
 
 [MemoryDiagnoser]
 [Config(typeof(StringBenchmarks.Config))]

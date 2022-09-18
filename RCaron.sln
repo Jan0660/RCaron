@@ -12,6 +12,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.LibrarySourceGenerat
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.FunLibrary", "RCaron.FunLibrary\RCaron.FunLibrary.csproj", "{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Benchmarks", "RCaron.Benchmarks\RCaron.Benchmarks.csproj", "{1B7694A5-4A45-4B01-A953-56E3F7DBB422}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -42,5 +44,9 @@ Global
 		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C5F6FE5F-D3C6-42F0-B5E0-8240C96E093B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{1B7694A5-4A45-4B01-A953-56E3F7DBB422}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{1B7694A5-4A45-4B01-A953-56E3F7DBB422}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{1B7694A5-4A45-4B01-A953-56E3F7DBB422}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{1B7694A5-4A45-4B01-A953-56E3F7DBB422}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal
