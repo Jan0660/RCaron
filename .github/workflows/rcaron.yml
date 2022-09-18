@@ -26,9 +26,9 @@ jobs:
         with:
           dotnet-version: 7.0.x
           include-prerelease: true
-      - name: restore tests
+      - name: restore
         run: dotnet restore RCaron.Tests
-      - name: build tests
+      - name: build
         run: dotnet build RCaron.Tests --no-restore
       - name: test
         run: dotnet test RCaron.Tests --no-build
@@ -36,7 +36,13 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - name: restore cli
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 7.0.x
+          include-prerelease: true
+      - name: restore
         run: dotnet restore RCaron.Cli
-      - name: build cli
+      - name: build
         run: dotnet build RCaron.Cli --no-restore
