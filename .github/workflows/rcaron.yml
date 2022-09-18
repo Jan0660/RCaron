@@ -61,4 +61,4 @@ jobs:
       - name: build
         run: dotnet build RCaron.Benchmarks --no-restore
       - name: check
-        run: dotnet run RCaron.Benchmarks --no-build -- checkAllWork
+        run: dotnet run --project RCaron.Benchmarks --no-build -- checkAllWork
