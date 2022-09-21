@@ -14,6 +14,14 @@ static class ListEx
         return list.GetRange(start, length);
     }
 
+    internal static T[] GetRangeAsArray<T>(this List<T> list, Range range)
+    {
+        var (start, length) = range.GetOffsetAndLength(list.Count);
+        var arr = new T[length];
+        list.CopyTo(start, arr, 0, length);
+        return arr;
+    }
+
     internal static ArraySegment<T> Segment<T>(this T[] array, Range range)
     {
         var (start, length) = range.GetOffsetAndLength(array.Length);

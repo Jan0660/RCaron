@@ -32,7 +32,7 @@ public static class RCaronRunner
             var number = endingBpt.Number;
             var ind = tokens.FindIndex(t =>
                 t is BlockPosToken { Type: TokenType.BlockStart } bpt && bpt.Number == number);
-            var range = tokens.GetRange(ind..).ToArray();
+            var range = tokens.GetRangeAsArray(ind..);
             tokens.RemoveFrom(ind);
             var codeBlockLines = new List<Line>();
             for (int i = 0; i < range.Length; i++)
@@ -224,9 +224,9 @@ public static class RCaronRunner
                 {
                     var number = ace.Number;
                     var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
-                    var range = tokens.GetRange((acs+1)..);
+                    var range = tokens.GetRangeAsArray((acs+1)..);
                     tokens.RemoveFrom(acs);
-                    tokens.Add(new ArrayAccessorToken(range.ToArray()));
+                    tokens.Add(new ArrayAccessorToken(range));
                     goto afterAdd;
                 }
 
