@@ -20,6 +20,15 @@ public class TokenLine : Line
         Tokens = tokens;
     }
 }
+public class SingleTokenLine : Line
+{
+    public PosToken Token { get; set; }
+
+    public SingleTokenLine(PosToken token, LineType type) : base(type)
+    {
+        Token = token;
+    }
+}
 
 public class CodeBlockLine : Line
 {
@@ -48,4 +57,5 @@ public enum LineType : byte
     ForeachLoop,
     QuickForLoop,
     DotGroupCall,
+    PropertyWithoutInitializer,
 }

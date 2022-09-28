@@ -735,9 +735,10 @@ public class Motor
                     if (classInstance.PropertyValues == null)
                         throw new RCaronException("Class has no properties", RCaronExceptionCode.ClassNoProperties);
                     var i = classInstance.GetPropertyIndex(last.ToSpan(Raw));
-                    if(i != -1)
+                    if (i != -1)
                         return new ClassAssigner(classInstance, i);
-                    throw new RCaronException($"Class property of name '{last.ToSpan(Raw)}' not found", RCaronExceptionCode.ClassPropertyNotFound);
+                    throw new RCaronException($"Class property of name '{last.ToSpan(Raw)}' not found",
+                        RCaronExceptionCode.ClassPropertyNotFound);
                 }
 
                 str = last.ToString(Raw);
@@ -827,13 +828,19 @@ public class Motor
 
             if (instanceTokens[i] is CallLikePosToken callLikePosToken)
             {
-                if (val is ClassDefinition classDefinition && callLikePosToken.Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+                if (val is ClassDefinition classDefinition &&
+                    callLikePosToken.Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
                 {
                     var classInstance = new ClassInstance(classDefinition);
                     val = classInstance;
                     if (classDefinition.PropertyInitializers != null)
                         for (var j = 0; j < classDefinition.PropertyInitializers.Length; j++)
-                            classInstance.PropertyValues![j] = SimpleEvaluateExpressionHigh(classDefinition.PropertyInitializers[j]);
+                        {
+                            if (classDefinition.PropertyInitializers[j] != null)
+                                classInstance.PropertyValues![j] =
+                                    SimpleEvaluateExpressionHigh(classDefinition.PropertyInitializers[j]!);
+                        }
+
                     type = null;
                     continue;
                 }
@@ -841,12 +848,14 @@ public class Motor
                 {
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)
-                        throw new RCaronException($"Class function '{callLikePosToken.Name}' not found", RCaronExceptionCode.ClassFunctionNotFound);
+                        throw new RCaronException($"Class function '{callLikePosToken.Name}' not found",
+                            RCaronExceptionCode.ClassFunctionNotFound);
                     BlockStack.Push(new StackThing(false, true, new ClassFunctionScope(classInstance)));
                     val = RunCodeBlock(func);
                     type = val?.GetType();
                     continue;
                 }
+
                 var d = MethodCall(callLikePosToken.GetName(Raw), callToken: callLikePosToken, instance: val);
                 val = d;
                 type = val?.GetType();
@@ -859,7 +868,7 @@ public class Motor
                 type = val?.GetType();
                 continue;
             }
-            
+
             var str = instanceTokens[i].ToString(Raw);
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,

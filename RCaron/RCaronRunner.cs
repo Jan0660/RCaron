@@ -280,12 +280,11 @@ public static class RCaronRunner
                 Dictionary<string, CodeBlockToken> functions = null;
                 // todo: use array
                 List<string>? propertyNames = null;
-                List<PosToken[]>? propertyInitializers = null;
+                List<PosToken[]?>? propertyInitializers = null;
                 // get properties and functions
                 var body = (CodeBlockToken)t[i + 2];
                 for (var j = 1; j < body.Lines.Count-1; j++)
                 {
-                    // todo: property & property with default value
                     if (body.Lines[j].Type == LineType.Function)
                     {
                         var funcName = ((CallLikePosToken)((TokenLine)body.Lines[j]).Tokens[1]).Name;
@@ -299,8 +298,15 @@ public static class RCaronRunner
                         propertyInitializers ??= new();
                         var tokenLine = (TokenLine)body.Lines[j];
                         propertyNames.Add(tokenLine.Tokens[0].ToSpan(text)[1..].ToString());
-                        // todo(feat): property without initializer
                         propertyInitializers.Add(tokenLine.Tokens[2..]);
+                    }
+                    else if (body.Lines[j].Type == LineType.PropertyWithoutInitializer)
+                    {
+                        propertyNames ??= new();
+                        propertyInitializers ??= new();
+                        var tokenLine = (SingleTokenLine)body.Lines[j];
+                        propertyNames.Add(tokenLine.Token.ToSpan(text)[1..].ToString());
+                        propertyInitializers.Add(null);
                     }
                 }
                 i += 2;
@@ -327,6 +333,12 @@ public static class RCaronRunner
                 endingIndex = tokens.Length;
             res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
+        }
+        // property without initializer in class
+        else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.LineEnding)
+        {
+            res = new SingleTokenLine(tokens[i], LineType.PropertyWithoutInitializer);
+            i++;
         }
         // assigner assignment
         else if (tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup

@@ -2,7 +2,7 @@
 
 public static class AssertionExtensions
 {
-    public static void AssertVariableEquals<T>(this Motor motor, string variableName, T expected)
+    public static void AssertVariableEquals<T>(this Motor motor, string variableName, T? expected)
     {
         Assert.Equal(expected, motor.GlobalScope.GetVariable(variableName));
     }

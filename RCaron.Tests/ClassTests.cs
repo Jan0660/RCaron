@@ -29,6 +29,18 @@ $f.prop = 5;
 ");
         Assert.Equal(((ClassInstance)m.GlobalScope.Variables!["f"]!).PropertyValues![0], 5L);
     }
+    [Fact]
+    public void PropertyWithoutInitializer()
+    {
+        var m = RCaronRunner.Run(@"
+class Funny {
+    $prop;
+}
+
+$h = #Funny:New().prop;
+");
+        m.AssertVariableEquals("h", (object)null);
+    }
 
     [Fact]
     public void Function()
