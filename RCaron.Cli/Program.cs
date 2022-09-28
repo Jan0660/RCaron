@@ -50,7 +50,6 @@ rootCommand.Description = "RCaron.Cli";
 
 rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
 {
-    // todo: lint wont show comments since TokenReader new property
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!));
     if(fun)
@@ -58,7 +57,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
-        motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName)));
+        motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
         motor.Run();
     }
 
@@ -69,7 +68,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
         var input = Console.ReadLine();
         while (input != null)
         {
-            var ctx = RCaronRunner.Parse(input);
+            var ctx = RCaronRunner.Parse(input, returnIgnored: lint);
             motor.UseContext(ctx);
             try
             {

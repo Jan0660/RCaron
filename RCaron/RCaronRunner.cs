@@ -14,10 +14,10 @@ public static class RCaronRunner
         return motor;
     }
 
-    public static RCaronRunnerContext Parse(string text)
+    public static RCaronRunnerContext Parse(string text, bool returnIgnored = false)
     {
         var tokens = new List<PosToken>();
-        var reader = new TokenReader(text);
+        var reader = new TokenReader(text, returnIgnored);
         var token = reader.Read();
         var blockDepth = -1;
         var blockNumber = -1;
