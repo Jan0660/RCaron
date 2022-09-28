@@ -1,4 +1,6 @@
-﻿namespace RCaron;
+﻿using RCaron.Classes;
+
+namespace RCaron;
 
 public static class TypeResolver
 {

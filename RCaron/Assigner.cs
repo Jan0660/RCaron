@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Reflection;
+using RCaron.Classes;
 
 namespace RCaron;
 
@@ -60,5 +61,21 @@ public class InterfaceListAssigner : IAssigner
         var g = _motor.SimpleEvaluateExpressionHigh(_arrayAccessorToken.Tokens.ToArray());
         var asInt = (int)Convert.ChangeType(g, typeof(int));
         _list[asInt] = value;
+    }
+}
+
+public class ClassAssigner : IAssigner
+{
+    private readonly ClassInstance _classInstance;
+    private readonly int _propertyIndex;
+
+    public ClassAssigner(ClassInstance classInstance, int propertyIndex)
+    {
+        (_classInstance, _propertyIndex) = (classInstance, propertyIndex);
+    }
+
+    public void Assign(object? value)
+    {
+        _classInstance.PropertyValues![_propertyIndex] = value;
     }
 }

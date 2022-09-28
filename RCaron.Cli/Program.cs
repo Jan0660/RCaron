@@ -51,7 +51,7 @@ rootCommand.Description = "RCaron.Cli";
 rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
-    Motor motor = new(new(null!, null!));
+    Motor motor = new(new(null!, null!, null));
     if(fun)
         motor.Modules.Add(new FunModule());
     if (f is not null)

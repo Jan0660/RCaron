@@ -1,4 +1,5 @@
 ﻿using System.Runtime.InteropServices;
+using RCaron.Classes;
 
 namespace RCaron;
 
@@ -268,14 +269,49 @@ public static class RCaronRunner
 
         // find lines
         var lines = new List<Line>();
-        // todo
+        List<ClassDefinition> classDefinitions = null;
         var t = tokens.ToArray();
         for (var i = 0; i < tokens.Count; i++)
         {
-            lines.Add(GetLine(t, ref i, text));
+            // class definition
+            if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
+            {
+                var name = t[i + 1].ToString(text);
+                Dictionary<string, CodeBlockToken> functions = null;
+                // todo: use array
+                List<string>? propertyNames = null;
+                List<PosToken[]>? propertyInitializers = null;
+                // get properties and functions
+                var body = (CodeBlockToken)t[i + 2];
+                for (var j = 1; j < body.Lines.Count-1; j++)
+                {
+                    // todo: property & property with default value
+                    if (body.Lines[j].Type == LineType.Function)
+                    {
+                        var funcName = ((CallLikePosToken)((TokenLine)body.Lines[j]).Tokens[1]).Name;
+                        functions ??= new(StringComparer.InvariantCultureIgnoreCase);
+                        functions[funcName] = ((CodeBlockLine)body.Lines[j + 1]).Token;
+                        j++;
+                    }
+                    else if (body.Lines[j].Type == LineType.VariableAssignment)
+                    {
+                        propertyNames ??= new();
+                        propertyInitializers ??= new();
+                        var tokenLine = (TokenLine)body.Lines[j];
+                        propertyNames.Add(tokenLine.Tokens[0].ToSpan(text)[1..].ToString());
+                        // todo(feat): property without initializer
+                        propertyInitializers.Add(tokenLine.Tokens[2..]);
+                    }
+                }
+                i += 2;
+                classDefinitions ??= new();
+                classDefinitions.Add(new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray()) { Functions = functions });
+            }
+            else
+                lines.Add(GetLine(t, ref i, text));
         }
 
-        return new RCaronRunnerContext(text, lines);
+        return new RCaronRunnerContext(text, lines, classDefinitions);
     }
 
     public static Line GetLine(PosToken[] tokens, ref int i, in string text)
@@ -399,7 +435,7 @@ public static class RCaronRunner
     }
 }
 
-public record RCaronRunnerContext(string Code, IList<Line> Lines);
+public record RCaronRunnerContext(string Code, IList<Line> Lines, List<ClassDefinition>? ClassDefinitions);
 
 [Flags]
 public enum RCaronRunnerLog

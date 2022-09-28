@@ -61,8 +61,20 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-#RCaron.Testing.StaticDummy.Field = 1;
-print 'f' #RCaron.Testing.StaticDummy.Field;
+class Funny {
+    $prop = 1 + 2;
+
+    func Function(){
+        $prop = 7;
+        print 'hello' $prop;
+    }
+}
+
+$f = #Funny:New();
+$f.Function();
+print 'prop is' $f.prop;
+$f.prop = 5;
+print 'prop is now' $f.prop;
 ";
 // $g = @(1, 2).Length;
 // print $g;
@@ -70,7 +82,10 @@ Console.WriteLine(text);
 Console.WriteLine("===============================");
 bruh: ;
 RCaronRunner.GlobalLog = RCaronRunnerLog.FunnyColors;
-var m = RCaronRunner.Run(text, opt);
+var context = RCaronRunner.Parse(text, true);
+var m = new Motor(context, opt);
+m.Run();
+return;
 var range = new RCaronRange(0, 10);
 foreach (var num in range)
 {

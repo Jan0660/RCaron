@@ -18,6 +18,9 @@ public enum RCaronExceptionCode
     NullInDotThing,
     CannotResolveInDotThing,
     TypeNotFound,
+    ClassFunctionNotFound,
+    ClassNoProperties,
+    ClassPropertyNotFound,
 }
 
 public class RCaronException : Exception

@@ -1,3 +1,4 @@
+using System.Collections;
 using System.Diagnostics;
 
 namespace RCaron;
@@ -51,6 +52,9 @@ public class PosToken
 
     public bool EqualsString(in string text, in string b)
         => text.AsSpan()[Position.Start..Position.End].SequenceEqual(b);
+
+    public bool EqualsStringCaseInsensitive(in string text, in string b)
+        => text.AsSpan()[Position.Start..Position.End].Equals(b, StringComparison.InvariantCultureIgnoreCase);
 
     // the span doesnt seem to work for some reason?
     public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)

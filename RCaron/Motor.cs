@@ -7,6 +7,7 @@ using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
 using RCaron.BaseLibrary;
+using RCaron.Classes;
 using Console = Log73.Console;
 using ExceptionCode = RCaron.RCaronExceptionCode;
 
@@ -72,6 +73,7 @@ public class Motor
 
     public Dictionary<string, Function> Functions { get; set; } = new();
     public LocalScope GlobalScope { get; set; } = new();
+    public List<ClassDefinition>? ClassDefinitions { get; set; }
     public object? ReturnValue = null;
 
 #pragma warning disable CS8618
@@ -87,6 +89,7 @@ public class Motor
     {
         Lines = runnerContext.Lines;
         Raw = runnerContext.Code;
+        ClassDefinitions = runnerContext.ClassDefinitions;
     }
 
     /// <summary>
@@ -547,7 +550,7 @@ public class Motor
                     continue;
                 arr[count++] = method;
             }
-            
+
             var methods = arr.Segment(..count);
             // constructors
             if (MemoryExtensions.Equals(name, "new", StringComparison.InvariantCultureIgnoreCase))
@@ -727,6 +730,16 @@ public class Motor
             string str;
             if (last.Type == TokenType.Keyword)
             {
+                if (val is ClassInstance classInstance)
+                {
+                    if (classInstance.PropertyValues == null)
+                        throw new RCaronException("Class has no properties", RCaronExceptionCode.ClassNoProperties);
+                    var i = classInstance.GetPropertyIndex(last.ToSpan(Raw));
+                    if(i != -1)
+                        return new ClassAssigner(classInstance, i);
+                    throw new RCaronException($"Class property of name '{last.ToSpan(Raw)}' not found", RCaronExceptionCode.ClassPropertyNotFound);
+                }
+
                 str = last.ToString(Raw);
             }
             else if (tokens[0].Type == TokenType.ExternThing)
@@ -765,15 +778,13 @@ public class Motor
         var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
         if (val == null)
             throw RCaronException.NullInTokens(instanceTokens, Raw, 0);
-        Type type;
+        Type? type;
         if (val is RCaronType rCaronType)
-        {
             type = rCaronType.Type;
-        }
+        else if (val is ClassDefinition)
+            type = null;
         else
-        {
             type = val.GetType();
-        }
 
         for (int i = 1; i < instanceTokens.Length; i++)
         {
@@ -816,12 +827,39 @@ public class Motor
 
             if (instanceTokens[i] is CallLikePosToken callLikePosToken)
             {
+                if (val is ClassDefinition classDefinition && callLikePosToken.Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+                {
+                    var classInstance = new ClassInstance(classDefinition);
+                    val = classInstance;
+                    if (classDefinition.PropertyInitializers != null)
+                        for (var j = 0; j < classDefinition.PropertyInitializers.Length; j++)
+                            classInstance.PropertyValues![j] = SimpleEvaluateExpressionHigh(classDefinition.PropertyInitializers[j]);
+                    type = null;
+                    continue;
+                }
+                else if (val is ClassInstance classInstance)
+                {
+                    var func = classInstance.Definition.Functions?[callLikePosToken.Name];
+                    if (func == null)
+                        throw new RCaronException($"Class function '{callLikePosToken.Name}' not found", RCaronExceptionCode.ClassFunctionNotFound);
+                    BlockStack.Push(new StackThing(false, true, new ClassFunctionScope(classInstance)));
+                    val = RunCodeBlock(func);
+                    type = val?.GetType();
+                    continue;
+                }
                 var d = MethodCall(callLikePosToken.GetName(Raw), callToken: callLikePosToken, instance: val);
                 val = d;
                 type = val?.GetType();
                 continue;
             }
 
+            if (val is ClassInstance classInstance1)
+            {
+                val = classInstance1.PropertyValues[classInstance1.GetPropertyIndex(instanceTokens[i].ToSpan(Raw))];
+                type = val?.GetType();
+                continue;
+            }
+            
             var str = instanceTokens[i].ToString(Raw);
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
@@ -946,11 +984,18 @@ public class Motor
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
             case TokenType.ExternThing:
             {
-                var d = token.ToSpan(Raw)[1..].ToString();
-                var type = TypeResolver.FindType(d, FileScope)!;
-                ;
+                var nameSpan = token.ToSpan(Raw)[1..];
+                // try RCaron ClassDefinition
+                if (ClassDefinitions != null)
+                    for (var i = 0; i < ClassDefinitions.Count; i++)
+                        if (nameSpan.Equals(ClassDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
+                            return ClassDefinitions[i];
+
+                // get Type via TypeResolver
+                var nameString = nameSpan.ToString();
+                var type = TypeResolver.FindType(nameString, FileScope)!;
                 if (type == null)
-                    throw RCaronException.TypeNotFound(d);
+                    throw RCaronException.TypeNotFound(nameString);
                 return new RCaronType(type);
             }
         }
