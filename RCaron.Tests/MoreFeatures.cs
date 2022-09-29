@@ -105,4 +105,12 @@ foreach($num in 0..10){
         var str = (StringBuilder)m.GlobalScope.GetVariable("h");
         Assert.Equal(20, str.Capacity);
     }
+
+    [Fact]
+    public void AllowShebang()
+    {
+        var m = RCaronRunner.Run(@"#! me when the
+$h = 1;");
+        m.AssertVariableEquals("h", 1L);
+    }
 }

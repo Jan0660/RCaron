@@ -41,6 +41,17 @@ public class TokenReader
             position += index;
             return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
         }
+        // shebang
+        else if (txt[position] == '#' && txt[position + 1] == '!')
+        {
+            position+=2;
+            // collect until line ending
+            while (position != txt.Length && txt[position] != '\n')
+                position++;
+            if (!ReturnIgnored)
+                return IgnorePosToken;
+            return new PosToken(TokenType.Ignore, (initialPosition, position));
+        }
         // string
         else if (txt[position] == '\'')
         {
