@@ -26,9 +26,9 @@ public static class RCaronRunner
         // todo(perf): this is absolutely horrendous
         void DoCodeBlockToken()
         {
-            if(tokens.Count < 2)
+            if (tokens.Count < 2)
                 return;
-            if(tokens[^1] is not BlockPosToken{Type: TokenType.BlockEnd} endingBpt)
+            if (tokens[^1] is not BlockPosToken { Type: TokenType.BlockEnd } endingBpt)
                 return;
             var number = endingBpt.Number;
             var ind = tokens.FindIndex(t =>
@@ -40,6 +40,7 @@ public static class RCaronRunner
             {
                 codeBlockLines.Add(GetLine(range, ref i, text));
             }
+
             tokens.Add(new CodeBlockToken(codeBlockLines));
         }
 
@@ -60,13 +61,19 @@ public static class RCaronRunner
             {
                 switch (posToken)
                 {
-                    case BlockPosToken { Type: TokenType.BlockStart or TokenType.SimpleBlockStart or TokenType.ArrayAccessorStart } blockPosToken:
+                    case BlockPosToken
+                    {
+                        Type: TokenType.BlockStart or TokenType.SimpleBlockStart or TokenType.ArrayAccessorStart
+                    } blockPosToken:
                         blockDepth++;
                         blockNumber++;
                         blockPosToken.Depth = blockDepth;
                         blockPosToken.Number = blockNumber;
                         break;
-                    case BlockPosToken { Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd or TokenType.ArrayAccessorEnd } blockPosToken:
+                    case BlockPosToken
+                    {
+                        Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd or TokenType.ArrayAccessorEnd
+                    } blockPosToken:
                         blockPosToken.Depth = blockDepth;
                         blockPosToken.Number =
                             ((BlockPosToken)tokens.Last(t => t is BlockPosToken bpt && bpt.Depth == blockDepth)).Number;
@@ -79,7 +86,7 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon} ||
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon } ||
                             tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
@@ -91,8 +98,10 @@ public static class RCaronRunner
                     return (i, tokens.Take(i..).ToArray());
                 }
 
-                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() && (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
-                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart && posToken.Type != TokenType.SimpleBlockStart
+                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() &&
+                    (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
+                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart &&
+                    posToken.Type != TokenType.SimpleBlockStart
                    )
                 {
                     // todo(perf): it gets here when array literal
@@ -143,6 +152,8 @@ public static class RCaronRunner
                             if (tks[i].Type == TokenType.Comma) c++;
                         }
 
+                        if (tks.Length == 0)
+                            c = 0;
                         var args = new PosToken[c][];
                         for (byte i = 0; i < c; i++)
                         {
@@ -166,7 +177,7 @@ public static class RCaronRunner
                             //     tokens.GetRange((startIndex + 1)..).ToArray()
                             // }
                             tokens[startIndex - 1].Position.End, tokens[startIndex - 1].ToString(text)
-                            );
+                        );
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
                         goto afterAdd;
@@ -221,11 +232,11 @@ public static class RCaronRunner
                     }
                 }
 
-                if (token is BlockPosToken{Type: TokenType.ArrayAccessorEnd} ace)
+                if (token is BlockPosToken { Type: TokenType.ArrayAccessorEnd } ace)
                 {
                     var number = ace.Number;
                     var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
-                    var range = tokens.GetRangeAsArray((acs+1)..);
+                    var range = tokens.GetRangeAsArray((acs + 1)..);
                     tokens.RemoveFrom(acs);
                     tokens.Add(new ArrayAccessorToken(range));
                     goto afterAdd;
@@ -283,7 +294,7 @@ public static class RCaronRunner
                 List<PosToken[]?>? propertyInitializers = null;
                 // get properties and functions
                 var body = (CodeBlockToken)t[i + 2];
-                for (var j = 1; j < body.Lines.Count-1; j++)
+                for (var j = 1; j < body.Lines.Count - 1; j++)
                 {
                     if (body.Lines[j].Type == LineType.Function)
                     {
@@ -309,9 +320,12 @@ public static class RCaronRunner
                         propertyInitializers.Add(null);
                     }
                 }
+
                 i += 2;
                 classDefinitions ??= new();
-                classDefinitions.Add(new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray()) { Functions = functions });
+                classDefinitions.Add(
+                    new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray())
+                        { Functions = functions });
             }
             else
                 lines.Add(GetLine(t, ref i, text));
@@ -342,8 +356,8 @@ public static class RCaronRunner
         }
         // assigner assignment
         else if (tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
-            && tokens[i + 1].Type == TokenType.Operation
-            && tokens[i + 1].EqualsString(text, "="))
+                 && tokens[i + 1].Type == TokenType.Operation
+                 && tokens[i + 1].EqualsString(text, "="))
         {
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
@@ -415,7 +429,7 @@ public static class RCaronRunner
             i = endingIndex;
         }
         // code block
-        else if (tokens[i] is CodeBlockToken{Type: TokenType.CodeBlock} cbt)
+        else if (tokens[i] is CodeBlockToken { Type: TokenType.CodeBlock } cbt)
         {
             res = new CodeBlockLine(cbt);
         }

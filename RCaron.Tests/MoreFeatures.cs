@@ -53,6 +53,12 @@ $h = Funny 2 -OptArg 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
     }
 
     [Fact]
+    public void FunctionNoParameters()
+    {
+        RCaronRunner.Run(@"func NoParameters(){}");
+    }
+
+    [Fact]
     public void ModuleMethodCall()
     {
         var m = RCaronRunner.Run(@$"
