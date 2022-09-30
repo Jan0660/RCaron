@@ -38,6 +38,8 @@ var lintOption = new Option<bool>("--lint",
 lintOption.AddAlias("-l");
 var funOption = new Option<bool>("--fun",
     "Add experimental stuff module.");
+var argsArgument = new Argument<string[]>("arguments", "Arguments to pass to the file");
+argsArgument.SetDefaultValue(Array.Empty<string>());
 
 // Add the options to a root command:
 var rootCommand = new RootCommand();
@@ -45,10 +47,11 @@ rootCommand.AddArgument(fileArgument);
 rootCommand.AddOption(interactiveOption);
 rootCommand.AddOption(lintOption);
 rootCommand.AddOption(funOption);
+rootCommand.AddArgument(argsArgument);
 
 rootCommand.Description = "RCaron.Cli";
 
-rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
+rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, string[] arguments) =>
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!, null));
@@ -57,6 +60,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
+        motor.SetVar("args", arguments);
         motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
         motor.Run();
     }
@@ -82,7 +86,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun) =>
             input = Console.ReadLine();
         }
     }
-}, fileArgument, interactiveOption, lintOption, funOption);
+}, fileArgument, interactiveOption, lintOption, funOption, argsArgument);
 
 // Parse the incoming args and invoke the handler
 return rootCommand.Invoke(args);
