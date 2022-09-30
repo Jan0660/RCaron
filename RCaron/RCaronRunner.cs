@@ -348,6 +348,18 @@ public static class RCaronRunner
             res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
+        else if (callToken != null && callToken.NameEquals(text, "switch"))
+        {
+            res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchStatement);
+            i++;
+        }
+        else if ((tokens[i].IsLiteral() || //tokens[i].Type == TokenType.CodeBlock ||
+                  (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsStringCaseInsensitive(text, "default"))) &&
+                 tokens[i + 1].Type == TokenType.CodeBlock)
+        {
+            res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchCase);
+            i++;
+        }
         // property without initializer in class
         else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.LineEnding)
         {

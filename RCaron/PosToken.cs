@@ -53,6 +53,9 @@ public class PosToken
     public bool EqualsString(in string text, in string b)
         => text.AsSpan()[Position.Start..Position.End].SequenceEqual(b);
 
+    public bool IsKeyword(in string raw, in string b)
+        => Type == TokenType.Keyword && EqualsStringCaseInsensitive(raw, "default");
+
     public bool EqualsStringCaseInsensitive(in string text, in string b)
         => text.AsSpan()[Position.Start..Position.End].Equals(b, StringComparison.InvariantCultureIgnoreCase);
 
@@ -71,6 +74,15 @@ public class PosToken
             TokenType.ArrayAccessor => true,
             TokenType.Colon => true,
             TokenType.ExternThing => true,
+            _ => false,
+        };
+
+    public bool IsLiteral()
+        => Type switch
+        {
+            TokenType.Number => true,
+            TokenType.DecimalNumber => true,
+            TokenType.String => true,
             _ => false,
         };
 }

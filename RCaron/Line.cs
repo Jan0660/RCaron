@@ -58,4 +58,6 @@ public enum LineType : byte
     QuickForLoop,
     DotGroupCall,
     PropertyWithoutInitializer,
+    SwitchStatement,
+    SwitchCase,
 }

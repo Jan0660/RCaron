@@ -1,4 +1,5 @@
-﻿using System.Text;
+﻿using System.Collections;
+using System.Text;
 
 namespace RCaron.Tests;
 
@@ -112,5 +113,25 @@ foreach($num in 0..10){
         var m = RCaronRunner.Run(@"#! me when the
 $h = 1;");
         m.AssertVariableEquals("h", 1L);
+    }
+
+    [Fact]
+    public void SwitchStatement()
+    {
+        var m = RCaronRunner.Run(@"
+$ls = #System.Collections.ArrayList:New();
+for ($h = 0, $h < 4, $h++) {
+    switch($h) {
+        0 { $ls.Add('zero');  }
+        1 { $ls.Add('one'); }
+        default { $ls.Add('default ' + $h); }
+    }
+}");
+        var ls = (ArrayList)m.GlobalScope.Variables!["ls"]!;
+        Assert.Equal("zero", ls[0]);
+        Assert.Equal("one", ls[1]);
+        Assert.Equal("default 2", ls[2]);
+        Assert.Equal("default 3", ls[3]);
+        Assert.Equal(4, ls.Count);
     }
 }

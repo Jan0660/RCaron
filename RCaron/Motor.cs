@@ -307,6 +307,29 @@ public class Motor
                 EvaluateDotThings(((DotGroupPosToken)line.Tokens[0]).Tokens);
                 break;
             }
+            case LineType.SwitchStatement:
+            {
+                var switchValue = SimpleEvaluateExpressionHigh(((CallLikePosToken)line.Tokens[0]).Arguments[0]);
+                var cases = (CodeBlockToken)line.Tokens[1];
+                for (var i = 1; i < cases.Lines.Count - 1; i++)
+                {
+                    var caseLine = ((TokenLine)cases.Lines[i]);
+                    /*if (caseLine.Tokens[0].Type == TokenType.Keyword &&
+                        caseLine.Tokens[0].EqualsStringCaseInsensitive(Raw, "default"))
+                    {
+                        BlockStack.Push(new(true, false, null));
+                        RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
+                        BlockStack.Pop();
+                    }*/
+                    var value = SimpleEvaluateExpressionSingle(caseLine.Tokens[0]);
+                    if (!caseLine.Tokens[0].IsKeyword(Raw, "default") && ((switchValue == null && value == null) || (!switchValue?.Equals(value) ?? false))) continue;
+                    BlockStack.Push(new(true, false, null));
+                    RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
+                    break;
+                }
+
+                break;
+            }
             case LineType.KeywordPlainCall:
             {
                 var keyword = line.Tokens[0];

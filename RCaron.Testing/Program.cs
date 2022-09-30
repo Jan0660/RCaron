@@ -61,20 +61,14 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-class Funny {
-    $prop = 1 + 2;
-
-    func Function(){
-        $prop = 7;
-        print 'hello' $prop;
+for ($h = 0, $h < 5, $h++) {
+    print $h;
+    switch($h) {
+        0 { print 'zero';  }
+        1 { print 'one'; }
+        default { print 'default' $h; }
     }
 }
-
-$f = #Funny:New();
-$f.Function();
-print 'prop is' $f.prop;
-$f.prop = 5;
-print 'prop is now' $f.prop;
 ";
 // $g = @(1, 2).Length;
 // print $g;
