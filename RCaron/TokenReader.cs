@@ -44,7 +44,7 @@ public class TokenReader
         // shebang
         else if (txt[position] == '#' && txt[position + 1] == '!')
         {
-            position+=2;
+            position += 2;
             // collect until line ending
             while (position != txt.Length && txt[position] != '\n')
                 position++;
@@ -113,7 +113,7 @@ public class TokenReader
                 (initialPosition, position));
         }
         // single line comment
-        else if (txt[position] == '/' && txt[position+1] == '/')
+        else if (txt[position] == '/' && txt[position + 1] == '/')
         {
             position += 2;
             while (position < txt.Length && txt[position] != '\n')
@@ -123,12 +123,12 @@ public class TokenReader
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
         // multiline line comment
-        else if (txt[position] == '/' && txt[position+1] == '*')
+        else if (txt[position] == '/' && txt[position + 1] == '*')
         {
             position += 2;
             while (txt[position] != '*' && txt[position + 1] != '/')
                 position++;
-            position+=3;
+            position += 3;
             if (!ReturnIgnored)
                 return IgnorePosToken;
             return new PosToken(TokenType.Comment, (initialPosition, position));
@@ -183,7 +183,7 @@ public class TokenReader
             // collect a keyword e.g. "println"
             if (index == 0)
             {
-                index = CollectAlphaNumericAndSome(txt[position..]);
+                index = CollectAlphaNumericAndSomeAndDash(txt[position..]);
                 position += index;
                 return new PosToken(TokenType.Keyword, (initialPosition, position));
             }
@@ -203,7 +203,7 @@ public class TokenReader
         var isDecimal = false;
         while (char.IsDigit(span[index]) || span[index] == '.')
         {
-            if (span[index] == '.' && char.IsDigit(span[index+1]))
+            if (span[index] == '.' && char.IsDigit(span[index + 1]))
                 isDecimal = true;
             else if (span[index] == '.')
                 return (index, isDecimal);
@@ -226,7 +226,16 @@ public class TokenReader
     {
         var index = 0;
         while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_'))
+               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_')
+            index++;
+        return index;
+    }
+
+    public int CollectAlphaNumericAndSomeAndDash(in ReadOnlySpan<char> span)
+    {
+        var index = 0;
+        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
+               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' || span[index] == '-')
             index++;
         return index;
     }
