@@ -126,6 +126,8 @@ switch(name){");
                             {
                                 if (param.ExplicitDefaultValue is string str)
                                     source.Append('"' + str + '"');
+                                if (param.ExplicitDefaultValue is bool boolean)
+                                    source.Append(boolean.ToString().ToLowerInvariant());
                                 else
                                     source.Append(param.ExplicitDefaultValue?.ToString() ?? "default");
                             }
