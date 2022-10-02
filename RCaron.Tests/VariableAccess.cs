@@ -35,13 +35,13 @@ public class VariableAccess
     [Fact]
     public void VariableArrayIndexAccess()
     {
-        var m = new Motor(RCaronRunner.Parse("$i0 = $array.0; $i2 = $array.2;"));
+        var m = new Motor(RCaronRunner.Parse("$i0 = $array[0]; $i2 = $array[2];"));
         m.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
         m.Run();
         m.AssertVariableEquals("i0", 0);
         m.AssertVariableEquals("i2", 2);
         // todo(error clarity): throw a RCaronException when index is out of bounds
-        Assert.Throws<IndexOutOfRangeException>(() => m.RunWithCode("$i10 = $array.10;"));
+        Assert.Throws<IndexOutOfRangeException>(() => m.RunWithCode("$i10 = $array[10];"));
     }
 
     [Fact]
@@ -63,12 +63,12 @@ public class VariableAccess
     [Fact]
     public void MethodOnVariable()
     {
-        var m = new Motor(RCaronRunner.Parse(@"$h = $array.0.ToString();
-$array.0.ToString();"));
+        var m = new Motor(RCaronRunner.Parse(@"$h = $array[0].ToString();
+$array[0].ToString();"));
         m.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
         m.Run();
         m.AssertVariableEquals("h", "0");
-        ExtraAssert.ThrowsCode(() => m.RunWithCode("$h = $array.0.NonExistentMethod();"),
+        ExtraAssert.ThrowsCode(() => m.RunWithCode("$h = $array[0].NonExistentMethod();"),
             RCaronExceptionCode.MethodNoSuitableMatch);
     }
 

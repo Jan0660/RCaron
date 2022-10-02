@@ -213,8 +213,8 @@ $h = 1;
     public void Arrays()
     {
         var m = RCaronRunner.Run(@"$a = @(0, 1, 2, 3, 4, 5);
-$i0 = $a.0;
-$i5 = $a.5;");
+$i0 = $a[0];
+$i5 = $a[5];");
         m.AssertVariableEquals("i0", (long)0);
         m.AssertVariableEquals("i5", (long)5);
     }
