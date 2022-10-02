@@ -950,23 +950,6 @@ public class Motor
                 continue;
             }
 
-            // if (int.TryParse(str, out var partIntValue))
-            // {
-            //     if (val is Array array)
-            //     {
-            //         val = array.GetValue(partIntValue);
-            //         type = val?.GetType();
-            //         continue;
-            //     }
-            //
-            //     if (val is IList list)
-            //     {
-            //         val = list[partIntValue];
-            //         type = val?.GetType();
-            //         continue;
-            //     }
-            // }
-
             throw new RCaronException(
                 $"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
                 ExceptionCode.CannotResolveInDotThing);
