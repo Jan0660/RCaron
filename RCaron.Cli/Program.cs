@@ -55,8 +55,11 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!, null));
-    if(fun)
+    if (fun)
+    {
         motor.Modules.Add(new FunModule());
+        motor.Modules.Add(new JsonModule());
+    }
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
