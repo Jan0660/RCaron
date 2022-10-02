@@ -92,6 +92,12 @@ $h2 = $arr[$h];");
         m.AssertVariableEquals("h2", (long)2);
     }
 
+    [Fact]
+    public void NoArrayAccessor()
+    {
+        ExtraAssert.ThrowsCode(() =>RCaronRunner.Run(@"$arr = 1; $h = $arr[1];"), RCaronExceptionCode.NoArrayAccessor);
+    }
+
     public class NormalArrayAccessOnDotThingDummy
     {
         public object[] Array { get; set; }

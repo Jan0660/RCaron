@@ -846,7 +846,7 @@ public class Motor
                     }
                 }
 
-                continue;
+                throw new RCaronException("could not get array accessor", RCaronExceptionCode.NoArrayAccessor);
             }
 
             if (instanceTokens[i] is CallLikePosToken callLikePosToken)
