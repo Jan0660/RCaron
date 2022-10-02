@@ -63,7 +63,7 @@ public static class RCaronRunner
                 {
                     case BlockPosToken
                     {
-                        Type: TokenType.BlockStart or TokenType.SimpleBlockStart or TokenType.ArrayAccessorStart
+                        Type: TokenType.BlockStart or TokenType.SimpleBlockStart or TokenType.IndexerStart
                     } blockPosToken:
                         blockDepth++;
                         blockNumber++;
@@ -72,7 +72,7 @@ public static class RCaronRunner
                         break;
                     case BlockPosToken
                     {
-                        Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd or TokenType.ArrayAccessorEnd
+                        Type: TokenType.BlockEnd or TokenType.SimpleBlockEnd or TokenType.IndexerEnd
                     } blockPosToken:
                         blockPosToken.Depth = blockDepth;
                         blockPosToken.Number =
@@ -86,8 +86,8 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon } ||
-                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.ArrayAccessor or TokenType.Colon }))
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Colon } ||
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Colon }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
@@ -100,7 +100,7 @@ public static class RCaronRunner
 
                 if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() &&
                     (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
-                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.ArrayAccessorStart &&
+                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.IndexerStart &&
                     posToken.Type != TokenType.SimpleBlockStart
                    )
                 {
@@ -232,13 +232,13 @@ public static class RCaronRunner
                     }
                 }
 
-                if (token is BlockPosToken { Type: TokenType.ArrayAccessorEnd } ace)
+                if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
                 {
                     var number = ace.Number;
                     var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
                     var range = tokens.GetRangeAsArray((acs + 1)..);
                     tokens.RemoveFrom(acs);
-                    tokens.Add(new ArrayAccessorToken(range));
+                    tokens.Add(new IndexerToken(range));
                     goto afterAdd;
                 }
 

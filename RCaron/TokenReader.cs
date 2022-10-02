@@ -162,13 +162,13 @@ public class TokenReader
         else if (txt[position] == '[')
         {
             position++;
-            return new BlockPosToken(TokenType.ArrayAccessorStart, (initialPosition, position));
+            return new BlockPosToken(TokenType.IndexerStart, (initialPosition, position));
         }
         // normal array accesser end
         else if (txt[position] == ']')
         {
             position++;
-            return new BlockPosToken(TokenType.ArrayAccessorEnd, (initialPosition, position));
+            return new BlockPosToken(TokenType.IndexerEnd, (initialPosition, position));
         }
         // colon
         else if (txt[position] == ':')

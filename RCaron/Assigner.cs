@@ -46,19 +46,19 @@ public class FieldAssigner : IAssigner
 public class InterfaceListAssigner : IAssigner
 {
     private readonly IList _list;
-    private readonly ArrayAccessorToken _arrayAccessorToken;
+    private readonly IndexerToken _indexerToken;
     private readonly Motor _motor;
 
-    public InterfaceListAssigner(IList list, ArrayAccessorToken arrayAccessorToken, Motor motor)
+    public InterfaceListAssigner(IList list, IndexerToken indexerToken, Motor motor)
     {
         _list = list;
-        _arrayAccessorToken = arrayAccessorToken;
+        _indexerToken = indexerToken;
         _motor = motor;
     }
 
     public void Assign(object? value)
     {
-        var g = _motor.SimpleEvaluateExpressionHigh(_arrayAccessorToken.Tokens.ToArray());
+        var g = _motor.SimpleEvaluateExpressionHigh(_indexerToken.Tokens.ToArray());
         var asInt = (int)Convert.ChangeType(g, typeof(int));
         _list[asInt] = value;
     }

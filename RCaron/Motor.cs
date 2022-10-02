@@ -322,7 +322,9 @@ public class Motor
                         BlockStack.Pop();
                     }*/
                     var value = SimpleEvaluateExpressionSingle(caseLine.Tokens[0]);
-                    if (!caseLine.Tokens[0].IsKeyword(Raw, "default") && ((switchValue == null && value == null) || (!switchValue?.Equals(value) ?? false))) continue;
+                    if (!caseLine.Tokens[0].IsKeyword(Raw, "default") && ((switchValue == null && value == null) ||
+                                                                          (!switchValue?.Equals(value) ?? false)))
+                        continue;
                     BlockStack.Push(new(true, false, null));
                     RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
                     break;
@@ -787,7 +789,7 @@ public class Motor
                 return new FieldAssigner(f, val);
         }
 
-        if (val is IList iList && last is ArrayAccessorToken arrayAccessorToken)
+        if (val is IList iList && last is IndexerToken arrayAccessorToken)
         {
             return new InterfaceListAssigner(iList, arrayAccessorToken, this);
         }
@@ -816,18 +818,29 @@ public class Motor
                 continue;
             if (i != instanceTokens.Length - 1 && val == null)
                 throw RCaronException.NullInTokens(instanceTokens, Raw, i);
-            if (instanceTokens[i] is ArrayAccessorToken arrayAccessorToken)
+            if (instanceTokens[i] is IndexerToken arrayAccessorToken)
             {
+                var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
                 if (val is IDictionary dict)
                 {
                     var args = type.GetGenericArguments();
                     var keyType = args[0];
-                    val = dict[Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens), keyType)!];
+                    val = dict[Convert.ChangeType(evaluated, keyType)!];
                     type = val?.GetType();
                     continue;
                 }
 
-                var asInt = Convert.ChangeType(SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens), typeof(int));
+                // todo(perf): for some reason non-throwing Convert methods don't exist
+                object? asInt;
+                try
+                {
+                    asInt = Convert.ChangeType(evaluated, typeof(int));
+                }
+                catch (FormatException)
+                {
+                    asInt = null;
+                }
+
                 if (asInt != null)
                 {
                     var intIndex = (int)asInt;
@@ -846,7 +859,24 @@ public class Motor
                     }
                 }
 
-                throw new RCaronException("could not get array accessor", RCaronExceptionCode.NoArrayAccessor);
+                if (FileScope.IndexerImplementations != null)
+                {
+                    var broke = false;
+                    for (var j = 0; j < FileScope.IndexerImplementations.Count; j++)
+                    {
+                        if (FileScope.IndexerImplementations[j].Do(evaluated, ref val, ref type))
+                        {
+                            broke = true;
+                            break;
+                        }
+                    }
+
+                    if (broke)
+                        continue;
+                }
+
+                throw new RCaronException("could not get array accessor",
+                    RCaronExceptionCode.NoSuitableIndexerImplementation);
             }
 
             if (instanceTokens[i] is CallLikePosToken callLikePosToken)
@@ -1041,7 +1071,7 @@ public class Motor
         // repeat action something math
         var index = 0;
         object value = SimpleEvaluateExpressionSingle(tokens[0])!;
-        if (tokens[1] is ArrayAccessorToken)
+        if (tokens[1] is IndexerToken)
         {
         }
 

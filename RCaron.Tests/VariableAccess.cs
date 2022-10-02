@@ -93,12 +93,38 @@ $h2 = $arr[$h];");
     }
 
     [Fact]
-    public void NoArrayAccessor()
+    public void NoIndexerImplementation()
     {
-        ExtraAssert.ThrowsCode(() =>RCaronRunner.Run(@"$arr = 1; $h = $arr[1];"), RCaronExceptionCode.NoArrayAccessor);
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"$arr = 1; $h = $arr[1];"),
+            RCaronExceptionCode.NoSuitableIndexerImplementation);
     }
 
-    public class NormalArrayAccessOnDotThingDummy
+    private class CustomIndexerImplementationClass : IIndexerImplementation
+    {
+        public bool Do(object? indexerValue, ref object? value, ref Type? type)
+        {
+            if (value is long a && indexerValue is long b)
+            {
+                value = a * b;
+                type = typeof(long);
+                return true;
+            }
+
+            return false;
+        }
+    }
+    
+    [Fact]
+    public void CustomIndexerImplementation()
+    {
+        var m = new Motor(RCaronRunner.Parse(@"$v = 2; $h = $v[3];"));
+        m.FileScope.IndexerImplementations ??= new();
+        m.FileScope.IndexerImplementations.Add(new CustomIndexerImplementationClass());
+        m.Run();
+        m.AssertVariableEquals("h", 6L);
+    }
+
+    public class NormalIndexerOnDotThingDummy
     {
         public object[] Array { get; set; }
     }
@@ -107,7 +133,7 @@ $h2 = $arr[$h];");
     public void NormalArrayAccessOnDotThing()
     {
         var m = new Motor(RCaronRunner.Parse("$h1 = $obj.Array[1];"));
-        m.GlobalScope.SetVariable("obj", new NormalArrayAccessOnDotThingDummy()
+        m.GlobalScope.SetVariable("obj", new NormalIndexerOnDotThingDummy()
         {
             Array = new object[] { 0L, 1L, 2L, 3L, 4L, 5L }
         });

@@ -28,9 +28,9 @@ public enum TokenType : byte
     Dot,
     DotGroup,
     CodeBlock,
-    ArrayAccessorStart,
-    ArrayAccessorEnd,
-    ArrayAccessor,
+    IndexerStart,
+    IndexerEnd,
+    Indexer,
     Colon,
     Ignore,
 }
@@ -71,7 +71,7 @@ public class PosToken
             TokenType.VariableIdentifier => true,
             TokenType.Keyword => true,
             TokenType.KeywordCall => true,
-            TokenType.ArrayAccessor => true,
+            TokenType.Indexer => true,
             TokenType.Colon => true,
             TokenType.ExternThing => true,
             _ => false,
@@ -165,10 +165,10 @@ public class DotGroupPosToken : PosToken
     }
 }
 
-public class ArrayAccessorToken : PosToken
+public class IndexerToken : PosToken
 {
     public PosToken[] Tokens { get; }
-    public ArrayAccessorToken(PosToken[] tokens) : base(TokenType.ArrayAccessor, (tokens[0].Position.Start, tokens[^1].Position.End))
+    public IndexerToken(PosToken[] tokens) : base(TokenType.Indexer, (tokens[0].Position.Start, tokens[^1].Position.End))
     {
         Tokens = tokens;
     }

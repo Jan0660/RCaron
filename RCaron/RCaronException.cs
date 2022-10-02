@@ -21,7 +21,7 @@ public enum RCaronExceptionCode
     ClassFunctionNotFound,
     ClassNoProperties,
     ClassPropertyNotFound,
-    NoArrayAccessor,
+    NoSuitableIndexerImplementation,
 }
 
 public class RCaronException : Exception
