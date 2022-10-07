@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
@@ -994,9 +995,9 @@ public class Motor
                 return EvaluateVariable(name);
             }
             case TokenType.Number:
-                return Int64.Parse(token.ToSpan(Raw));
+                return Int64.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
             case TokenType.DecimalNumber:
-                return Decimal.Parse(token.ToSpan(Raw));
+                return Decimal.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
             case TokenType.String:
             {
                 var s = token.ToSpan(Raw)[1..^1];
