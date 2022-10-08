@@ -54,7 +54,7 @@ public class Motor
         public LocalScope? Scope { get; set; }
     }
 
-    public Stack<StackThing> BlockStack { get; set; } = new();
+    public NiceStack<StackThing> BlockStack { get; set; } = new();
     public FileScope FileScope { get; set; } = new();
     public MotorOptions Options { get; }
     public List<IRCaronModule> Modules { get; set; }
@@ -1213,7 +1213,7 @@ public class Motor
         var nameStr = name.ToString();
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i + 1));
+            var el = BlockStack.At(^(i + 1));
             if (el.Scope != null && el.Scope.TryGetVariable(nameStr, out var value))
             {
                 return value;
@@ -1232,7 +1232,7 @@ public class Motor
     {
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i + 1));
+            var el = BlockStack.At(^(i + 1));
             if (el.Scope != null)
             {
                 ref object? reference = ref el.Scope.GetVariableRef(name);
@@ -1256,7 +1256,7 @@ public class Motor
         var hasReturnWorthy = false;
         for (var i = 0; i < BlockStack.Count; i++)
         {
-            var el = BlockStack.ElementAt(^(i + 1));
+            var el = BlockStack.At(^(i + 1));
             if (el.Scope != null && el.Scope.VariableExists(name))
             {
                 el.Scope.SetVariable(name, value);

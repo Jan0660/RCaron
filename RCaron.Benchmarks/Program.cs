@@ -3,6 +3,15 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using RCaron.Benchmarks.Benchmarks;
 
+{
+    var benchmark = new RCaronBenchmarks();
+    benchmark.GlobalSetup();
+    for(var i = 0; i < 100_000_000; i++)
+    {
+        benchmark.FibbonaciParsed();
+    }
+}
+
 switch (args[0])
 {
     case "checkAllWork":
