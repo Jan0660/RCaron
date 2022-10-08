@@ -3,15 +3,6 @@ using BenchmarkDotNet.Attributes;
 using BenchmarkDotNet.Running;
 using RCaron.Benchmarks.Benchmarks;
 
-{
-    var benchmark = new RCaronBenchmarks();
-    benchmark.GlobalSetup();
-    for(var i = 0; i < 100_000_000; i++)
-    {
-        benchmark.FibbonaciParsed();
-    }
-}
-
 switch (args[0])
 {
     case "checkAllWork":
@@ -22,25 +13,38 @@ switch (args[0])
             foreach (var type in types)
             {
                 var methods = type.GetMethods().Where(m => m.GetCustomAttribute(typeof(BenchmarkAttribute)) != null);
-                foreach(var method in methods)
+                foreach (var method in methods)
                 {
                     var instance = Activator.CreateInstance(type);
-                    var setup = type.GetMethods().FirstOrDefault(m => m.GetCustomAttribute(typeof(GlobalSetupAttribute)) != null);
+                    var setup = type.GetMethods()
+                        .FirstOrDefault(m => m.GetCustomAttribute(typeof(GlobalSetupAttribute)) != null);
                     setup?.Invoke(instance, null);
                     method.Invoke(instance, Array.Empty<object>());
                 }
             }
         }
-        catch(Exception e)
+        catch (Exception e)
         {
             Console.WriteLine(e);
             return 1;
         }
+
         break;
     }
     case "rcaron":
         BenchmarkRunner.Run<RCaronBenchmarks>();
         break;
+    case "dotTraceFibbonaciParsedRun":
+    {
+        var benchmark = new RCaronBenchmarks();
+        benchmark.GlobalSetup();
+        for (var i = 0; i < 100_000_000; i++)
+        {
+            benchmark.FibbonaciParsed();
+        }
+
+        break;
+    }
     default:
         return 420;
 }
