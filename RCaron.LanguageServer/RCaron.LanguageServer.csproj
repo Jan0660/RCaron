@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <IsPackable>false</IsPackable>
+        <TargetFramework>net7.0</TargetFramework>
+        <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+        <LangVersion>latest</LangVersion>
+        <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    </PropertyGroup>
+
+    <ItemGroup>
+<!--        <ProjectReference Include="../../src/Server/Server.csproj" />-->
+        <PackageReference Include="Log73.Extensions.Logging" Version="0.7.0" />
+        <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.5" />
+        <PackageReference Include="Serilog.Extensions.Logging" Version="3.1.0" />
+        <PackageReference Include="Serilog.Sinks.File" Version="5.0.0" />
+<!--        <PackageReference Include="System.IO.FileSystem.Primitives" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="System.IO" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="System.Runtime.Handles" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="System.Text.Encoding" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="System.Text.Encoding.Extensions" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="System.Threading.Tasks" VersionOverride="4.3.0" />-->
+<!--        <PackageReference Include="Nerdbank.Streams" />-->
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\RCaron\RCaron.csproj" />
+<!--        <ProjectReference Include="C:\Users\Jan\source\csharp-language-server-protocol\src\Server\Server.csproj" />-->
+    </ItemGroup>
+
+</Project>
