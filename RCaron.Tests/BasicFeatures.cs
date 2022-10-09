@@ -99,8 +99,8 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     [Fact]
     public void Strings()
     {
-        var m = RCaronRunner.Run("$h = 'when the string is escaped == \\'kool!!!\\'';");
-        m.AssertVariableEquals("h", "when the string is escaped == 'kool!!!'");
+        var m = RCaronRunner.Run(@"$h = 'when the string is escaped == \'kool!!!\' \\';");
+        m.AssertVariableEquals("h", @"when the string is escaped == 'kool!!!' \");
     }
 
     [Fact]

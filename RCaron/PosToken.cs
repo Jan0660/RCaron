@@ -87,6 +87,15 @@ public class PosToken
         };
 }
 
+public class StringValuePosToken : ValuePosToken
+{
+    public string String { get; }
+    public StringValuePosToken(TokenType type, (int Start, int End) position, string str) : base(type, position)
+    {
+        String = str;
+    }
+}
+
 public class BlockPosToken : PosToken
 {
     public int Depth { get; set; } = -1;

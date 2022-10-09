@@ -998,25 +998,8 @@ public class Motor
                 return Int64.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
             case TokenType.DecimalNumber:
                 return Decimal.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
-            case TokenType.String:
-            {
-                var s = token.ToSpan(Raw)[1..^1];
-                Span<char> g = stackalloc char[s.Length];
-                var str = new SpanStringBuilder(ref g);
-                for (var i = 0; i < s.Length; i++)
-                {
-                    var ch = s[i];
-                    if (ch == '\\')
-                    {
-                        str.Append(s[++i]);
-                        continue;
-                    }
-
-                    str.Append(s[i]);
-                }
-
-                return str.ToString();
-            }
+            case TokenType.String when token is StringValuePosToken rawStringPosToken:
+                return rawStringPosToken.String;
             case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:

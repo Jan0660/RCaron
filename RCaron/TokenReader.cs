@@ -1,3 +1,6 @@
+using System.Diagnostics;
+using Log73;
+
 namespace RCaron;
 
 // todo(perf): could be a struct so that it is kept on the stack?
@@ -56,11 +59,11 @@ public class TokenReader
         else if (txt[position] == '\'')
         {
             Skip(1);
-            var index = CollectString(txt[position..]);
+            var (index, str) = CollectString(txt[position..]);
             if (index == 0)
                 return null;
             position += index;
-            return new ValuePosToken(TokenType.String, (initialPosition, position));
+            return new StringValuePosToken(TokenType.String, (initialPosition, position), str);
         }
         // whitespace
         else if (char.IsWhiteSpace(txt[position]))
@@ -249,7 +252,7 @@ public class TokenReader
         return index;
     }
 
-    public int CollectString(in ReadOnlySpan<char> span)
+    public (int endIndex, string value) CollectString(in ReadOnlySpan<char> span)
     {
         // get index of unescaped ending '
         var index = 0;
@@ -261,7 +264,53 @@ public class TokenReader
         }
 
         index++;
-        return index;
+        // assemble the string
+        Span<char> g = stackalloc char[span.Length];
+        var str = new SpanStringBuilder(ref g);
+        for (var i = 0; i < index-1; i++)
+        {
+            if (span[i] == '\\')
+            {
+                i++;
+                // single quote
+                if(span[i] == '\'')
+                    str.Append('\'');
+                // backslash
+                else if(span[i] == '\\')
+                    str.Append('\\');
+                // null
+                else if(span[i] == '0')
+                    str.Append('\0');
+                // alert
+                else if(span[i] == 'a')
+                    str.Append('\a');
+                // backspace
+                else if(span[i] == 'b')
+                    str.Append('\b');
+                // form feed
+                else if(span[i] == 'f')
+                    str.Append('\f');
+                // new line
+                else if(span[i] == 'n')
+                    str.Append('\n');
+                // carriage return
+                else if(span[i] == 'r')
+                    str.Append('\r');
+                // horizontal tab
+                else if(span[i] == 't')
+                    str.Append('\t');
+                // vertical tab
+                else if(span[i] == 'v')
+                    str.Append('\v');
+                else
+                    throw new RCaronException($"invalid character to escape: {span[i]}", RCaronExceptionCode.InvalidEscape);
+                continue;
+            }
+
+            str.Append(span[i]);
+        }
+
+        return (index, str.ToString());
     }
 
     public bool IsMatch(in ReadOnlySpan<char> span, ReadOnlySpan<char> toMatch)

@@ -22,6 +22,7 @@ public enum RCaronExceptionCode
     ClassNoProperties,
     ClassPropertyNotFound,
     NoSuitableIndexerImplementation,
+    InvalidEscape,
 }
 
 public class RCaronException : Exception
