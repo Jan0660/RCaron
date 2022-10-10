@@ -130,13 +130,49 @@ for($i = 0, $i < 3, $i++){
     [Fact]
     public void FunctionReturnValue()
     {
-        var m = RCaronRunner.Run(@"func v{
+        var m = RCaronRunner.Run(@"func v(){
     $g = 2;
-    return $g;
+    if ($true) {
+        return $g;
+    }
+    return 'wrong way';
 }
 $h = v();
 ");
         m.AssertVariableEquals("h", (long)2);
+    }
+
+    [Fact(Timeout = 20_000)]
+    public void ReturnsCorrectly()
+    {
+        var bodies = new Dictionary<string, string>
+        {
+            ["if"] = @"if($true) { return 1; } return 0;",
+            ["while"] = @"while($true) { return 1; } return 0;",
+            ["just a code block"] = @"{ return 1; } return 0;",
+            ["dowhile"] = @"dowhile($true) { return 1; } return 0;",
+            ["foreach"] = @"foreach($z in 0..10) { return 1; } return 0;",
+            ["loop"] = @"loop { return 1; } return 0;",
+            ["for"] = @"for($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
+            ["qfor"] = @"qfor($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
+            ["switch"] = @"switch (1) { 1 { return 1; } } return 0;",
+        };
+        foreach(var test in bodies)
+        {
+            try
+            {
+                var m = RCaronRunner.Run(@"func v(){
+    " + test.Value + @"
+}
+$h = v();
+");
+                m.AssertVariableEquals("h", (long)1);
+            }
+            catch (Exception exc)
+            {
+                throw new($"Thrown at test '{test.Key}'", exc);
+            }
+        }
     }
 
     [Fact]

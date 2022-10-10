@@ -127,7 +127,11 @@ public class Motor
         if (baseLine is CodeBlockLine codeBlockLine)
         {
             BlockStack.Push(new(false, false, null));
-            RunCodeBlock(codeBlockLine.Token);
+            var res = RunCodeBlock(codeBlockLine.Token);
+            if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+            {
+                return RunLineResult.Exit;
+            }
             return RunLineResult.Nothing;
         }
 
@@ -163,7 +167,11 @@ public class Motor
                 if (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
                     BlockStack.Push(new(false, false, null));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                 }
 
                 curIndex += 1;
@@ -174,7 +182,11 @@ public class Motor
                 while (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                 }
 
                 curIndex++;
@@ -185,7 +197,11 @@ public class Motor
                 do
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                 } while (SimpleEvaluateBool(callToken.Arguments[0]));
 
                 curIndex++;
@@ -200,7 +216,11 @@ public class Motor
                     var scope = new LocalScope();
                     scope.SetVariable(varName, item);
                     BlockStack.Push(new StackThing(true, false, scope));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                 }
 
                 curIndex++;
@@ -234,7 +254,11 @@ public class Motor
                 while (!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? true)
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                 }
 
                 curIndex++;
@@ -246,7 +270,11 @@ public class Motor
                 while (SimpleEvaluateBool(callToken.Arguments[1]))
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                     falseI = 0;
                     RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 }
@@ -262,7 +290,11 @@ public class Motor
                 while (SimpleEvaluateBool(callToken.Arguments[1]))
                 {
                     BlockStack.Push(scope);
-                    RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                     falseI = 0;
                     RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 }
@@ -327,7 +359,11 @@ public class Motor
                                                                           (!switchValue?.Equals(value) ?? false)))
                         continue;
                     BlockStack.Push(new(true, false, null));
-                    RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
+                    var res = RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
                     break;
                 }
 
