@@ -60,4 +60,6 @@ public enum LineType : byte
     PropertyWithoutInitializer,
     SwitchStatement,
     SwitchCase,
+    ElseIfStatement,
+    ElseStatement,
 }

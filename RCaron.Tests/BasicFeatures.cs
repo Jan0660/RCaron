@@ -14,7 +14,7 @@ public class BasicFeatures
     {
         var m = RCaronRunner.Run(@"$h = 2;
 $h2 = 0;
-if ($h == 2){ $h = 1; }
+if ($h == 2){ $h = $h - 1; }
 if ($true){ $h2 = 1; }");
         m.AssertVariableEquals("h", (long)1);
         m.AssertVariableEquals("h2", (long)1);
@@ -156,6 +156,8 @@ $h = v();
             ["for"] = @"for($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
             ["qfor"] = @"qfor($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
             ["switch"] = @"switch (1) { 1 { return 1; } } return 0;",
+            ["else if"] = @"if($false) { return 0; } else if ($true) { return 1; }",
+            ["else"] = @"if($false) { return 0; } else { return 1; }",
         };
         foreach(var test in bodies)
         {

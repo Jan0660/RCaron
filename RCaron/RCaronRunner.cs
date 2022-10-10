@@ -389,6 +389,17 @@ public static class RCaronRunner
         {
             return new TokenLine(new[] { tokens[i] }, LineType.IfStatement);
         }
+        // else if statement
+        else if (tokens[i].EqualsString(text, "else") && tokens[i+1] is CallLikePosToken ifCallToken && ifCallToken.NameEquals(text, "if"))
+        {
+            res = new TokenLine(new[] { tokens[i], tokens[i+1] }, LineType.ElseIfStatement);
+            i++;
+        }
+        // else statement
+        else if (tokens[i].EqualsString(text, "else"))
+        {
+            return new TokenLine(new[] { tokens[i] }, LineType.ElseStatement);
+        }
         // loop loop
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "loop"))
         {

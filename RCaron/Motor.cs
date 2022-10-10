@@ -58,6 +58,10 @@ public class Motor
     public FileScope FileScope { get; set; } = new();
     public MotorOptions Options { get; }
     public List<IRCaronModule> Modules { get; set; }
+    /// <summary>
+    /// If true and meets an else(if), it will be skipped.
+    /// </summary>
+    public bool ElseState { get; set; } = false;
 
     public record Function(CodeBlockToken CodeBlock, FunctionArgument[]? Arguments);
 
@@ -164,8 +168,42 @@ public class Motor
             }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
+                ElseState = false;
                 if (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
+                    ElseState = true;
+                    BlockStack.Push(new(false, false, null));
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
+                }
+
+                curIndex += 1;
+                break;
+            }
+            case LineType.ElseIfStatement when line.Tokens[1] is CallLikePosToken callToken:
+            {
+                if (!ElseState && SimpleEvaluateBool(callToken.Arguments[0]))
+                {
+                    ElseState = true;
+                    BlockStack.Push(new(false, false, null));
+                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        return RunLineResult.Exit;
+                    }
+                }
+
+                curIndex += 1;
+                break;
+            }
+            case LineType.ElseStatement:
+            {
+                if (!ElseState)
+                {
+                    ElseState = true;
                     BlockStack.Push(new(false, false, null));
                     var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)

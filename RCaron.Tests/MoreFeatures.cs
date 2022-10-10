@@ -134,4 +134,26 @@ for ($h = 0, $h < 4, $h++) {
         Assert.Equal("default 3", ls[3]);
         Assert.Equal(4, ls.Count);
     }
+    
+    [Fact]
+    public void ElseIfStatement()
+    {
+        var m = RCaronRunner.Run(@"
+$h = 0;
+if ($true) { $h = 1; }
+else if ($true) { $h = 2; }
+");
+        m.AssertVariableEquals("h", 1L);
+    }
+    
+    [Fact]
+    public void ElseStatement()
+    {
+        var m = RCaronRunner.Run(@"
+$h = 0;
+if ($false) { $h = 1; }
+else { $h = 2; }
+");
+        m.AssertVariableEquals("h", 2L);
+    }
 }
