@@ -167,6 +167,14 @@ $nested = #StaticDummy:InstanceDummy.Property;");
         m.AssertVariableEquals("property", (long)2);
         m.AssertVariableEquals("nested", 3L);
     }
+
+    [Fact]
+    public void DoesntGetMixedWithMathStuff()
+    {
+        var m = RCaronRunner.Run("$arr = @(1); $h = 1 + $arr[0]; $str = '2' + $h.ToString();");
+        m.AssertVariableEquals("h", (long)2);
+        m.AssertVariableEquals("str", "22");
+    }
 }
 
 public static class StaticDummy

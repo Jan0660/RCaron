@@ -201,7 +201,8 @@ public static class RCaronRunner
                 }
 
                 if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.Operator &&
-                    posToken.Type != TokenType.Operator
+                    posToken.Type != TokenType.Operator && posToken.Type != TokenType.Dot &&
+                    posToken.Type != TokenType.IndexerStart
                    )
                 {
                     var h = BackwardsCollectValuePosToken();
