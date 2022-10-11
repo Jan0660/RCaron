@@ -139,7 +139,7 @@ switch(name){");
 
                         source.AppendLine(@"for (var i = 0; i < arguments.Length; i++)
 {
-    if (arguments[i].Type == TokenType.Operator && arguments[i].EqualsString(motor.Raw, ""-"") &&
+    if (arguments[i].Type == TokenType.MathOperator && arguments[i].EqualsString(motor.Raw, ""-"") &&
                         arguments[i + 1].Type == TokenType.Keyword)
     {
         var argName = arguments[i + 1].ToSpan(motor.Raw);");

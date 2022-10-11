@@ -7,7 +7,7 @@ public enum TokenType : byte
 {
     Number,
     VariableIdentifier,
-    Operation,
+    EqualityOperation,
     Operator,
     String,
     Whitespace,
@@ -33,6 +33,9 @@ public enum TokenType : byte
     Indexer,
     Colon,
     Ignore,
+    MathOperator,
+    Operation,
+    EqualityOperationGroup,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -72,6 +75,8 @@ public class PosToken
             TokenType.Keyword => true,
             TokenType.KeywordCall => true,
             TokenType.Indexer => true,
+            TokenType.IndexerStart => true,
+            TokenType.IndexerEnd => true,
             TokenType.Colon => true,
             TokenType.ExternThing => true,
             _ => false,
@@ -90,6 +95,7 @@ public class PosToken
 public class StringValuePosToken : ValuePosToken
 {
     public string String { get; }
+
     public StringValuePosToken(TokenType type, (int Start, int End) position, string str) : base(type, position)
     {
         String = str;
@@ -124,14 +130,29 @@ public class ValuePosToken : PosToken
     }
 }
 
-public class ValueGroupPosToken : ValuePosToken
+public class MathValueGroupPosToken : ValuePosToken
 {
     public ValuePosToken[] ValueTokens { get; }
 
-    public ValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type,
+    public MathValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type,
         position)
     {
         ValueTokens = tokens;
+    }
+}
+
+public class ComparisonValuePosToken : ValuePosToken
+{
+    public ValuePosToken Left { get; }
+    public ValuePosToken Right { get; }
+    public PosToken ComparisonToken { get; set; }
+
+    public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, PosToken comparisonToken) : base(
+        TokenType.EqualityOperationGroup, (left.Position.Start, right.Position.End))
+    {
+        Left = left;
+        Right = right;
+        ComparisonToken = comparisonToken;
     }
 }
 
@@ -139,13 +160,15 @@ public class CallLikePosToken : ValuePosToken
 {
     public PosToken[][] Arguments { get; set; }
     public int NameEndIndex { get; }
+
     /// <summary>
     /// lower-cased
     /// </summary>
     public string Name { get; }
 
-    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex, string name
-        ) :
+    public CallLikePosToken(TokenType type, (int Start, int End) position, PosToken[][] arguments, int nameEndIndex,
+        string name
+    ) :
         base(type, position)
     {
         Arguments = arguments;
@@ -163,7 +186,7 @@ public class CallLikePosToken : ValuePosToken
         => Arguments.Length == 0 || (Arguments.Length == 1 && Arguments[0].Length == 0);
 }
 
-public class DotGroupPosToken : PosToken
+public class DotGroupPosToken : ValuePosToken
 {
     public PosToken[] Tokens { get; }
 
@@ -177,7 +200,9 @@ public class DotGroupPosToken : PosToken
 public class IndexerToken : PosToken
 {
     public PosToken[] Tokens { get; }
-    public IndexerToken(PosToken[] tokens) : base(TokenType.Indexer, (tokens[0].Position.Start, tokens[^1].Position.End))
+
+    public IndexerToken(PosToken[] tokens) : base(TokenType.Indexer,
+        (tokens[0].Position.Start, tokens[^1].Position.End))
     {
         Tokens = tokens;
     }

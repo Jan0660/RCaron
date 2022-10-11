@@ -58,6 +58,7 @@ public class Motor
     public FileScope FileScope { get; set; } = new();
     public MotorOptions Options { get; }
     public List<IRCaronModule> Modules { get; set; }
+
     /// <summary>
     /// If true and meets an else(if), it will be skipped.
     /// </summary>
@@ -136,6 +137,7 @@ public class Motor
             {
                 return RunLineResult.Exit;
             }
+
             return RunLineResult.Nothing;
         }
 
@@ -313,6 +315,7 @@ public class Motor
                     {
                         return RunLineResult.Exit;
                     }
+
                     falseI = 0;
                     RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 }
@@ -333,6 +336,7 @@ public class Motor
                     {
                         return RunLineResult.Exit;
                     }
+
                     falseI = 0;
                     RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
                 }
@@ -402,6 +406,7 @@ public class Motor
                     {
                         return RunLineResult.Exit;
                     }
+
                     break;
                 }
 
@@ -1074,7 +1079,7 @@ public class Motor
                 return Decimal.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
             case TokenType.String when token is StringValuePosToken rawStringPosToken:
                 return rawStringPosToken.String;
-            case TokenType.DumbShit when token is ValueGroupPosToken valueGroupPosToken:
+            case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.GetName(Raw), callToken: callToken);
@@ -1101,6 +1106,8 @@ public class Motor
                     throw RCaronException.TypeNotFound(nameString);
                 return new RCaronType(type);
             }
+            case TokenType.EqualityOperationGroup when token is ComparisonValuePosToken comparisonValuePosToken:
+                return EvaluateComparisonOperation(comparisonValuePosToken);
         }
 
         throw new Exception($"invalid tokentype to evaluate: {token.Type}");
@@ -1184,7 +1191,7 @@ public class Motor
             var argPos = 0;
             for (var i = 0; i < argumentTokens.Length; i++)
             {
-                if (argumentTokens[i].Type == TokenType.Operator && argumentTokens[i].EqualsString(Raw, "-") &&
+                if (argumentTokens[i].Type == TokenType.MathOperator && argumentTokens[i].EqualsString(Raw, "-") &&
                     argumentTokens[i + 1].Type == TokenType.Keyword)
                 {
                     var argName = argumentTokens[i + 1].ToSpan(Raw);
@@ -1235,16 +1242,19 @@ public class Motor
     }
 
     public bool SimpleEvaluateBool(PosToken[] tokens)
-    {
-        var val1 = SimpleEvaluateExpressionSingle(tokens[0])!;
-        if (tokens.Length == 1)
+        => tokens switch
         {
-            if (val1 is bool b)
-                return b;
-        }
+            { Length: 1 } when tokens[0] is ComparisonValuePosToken comparisonToken => EvaluateComparisonOperation(
+                comparisonToken),
+            { Length: 1 } when tokens[0] is ValuePosToken => (bool)SimpleEvaluateExpressionSingle(tokens[0])!,
+            _ => throw new Exception("what he fuck")
+        };
 
-        var op = tokens[1].ToSpan(Raw);
-        var val2 = SimpleEvaluateExpressionSingle(tokens[2])!;
+    public bool EvaluateComparisonOperation(ComparisonValuePosToken comparisonValuePosToken)
+    {
+        var val1 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left);
+        var val2 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right);
+        var op = comparisonValuePosToken.ComparisonToken.ToSpan(Raw);
         switch (op)
         {
             case Operations.IsEqualOp:

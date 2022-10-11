@@ -81,6 +81,18 @@ public static class RCaronRunner
                         break;
                 }
 
+                var dontAddCurrent = false;
+
+                if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
+                {
+                    var number = ace.Number;
+                    var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
+                    var range = tokens.GetRangeAsArray((acs + 1)..);
+                    tokens.RemoveFrom(acs);
+                    tokens.Add(new IndexerToken(range));
+                    dontAddCurrent = true;
+                }
+
                 (int index, PosToken[] tokens) BackwardsCollectDotThing()
                 {
                     var i = tokens.Count - 1;
@@ -132,6 +144,16 @@ public static class RCaronRunner
                     }
                 }
 
+                // comparison group
+                if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinableSomething() &&
+                    token.Type != TokenType.MathOperator && tokens[^2].Type == TokenType.EqualityOperation
+                    && tokens[^1] is ValuePosToken right && tokens[^3] is ValuePosToken left)
+                {
+                    var comparison = new ComparisonValuePosToken(left, right, tokens[^2]);
+                    tokens.RemoveFrom(tokens.Count - 3);
+                    tokens.Add(comparison);
+                }
+
                 if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } blockToken)
                 {
                     var startIndex = tokens.FindIndex(
@@ -180,7 +202,7 @@ public static class RCaronRunner
                         );
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
-                        goto afterAdd;
+                        dontAddCurrent = true;
                     }
                 }
 
@@ -189,7 +211,8 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken &&
-                           (tokens[i] is { Type: TokenType.Operator } || tokens[i - 1] is { Type: TokenType.Operator }))
+                           (tokens[i] is { Type: TokenType.MathOperator } ||
+                            tokens[i - 1] is { Type: TokenType.MathOperator }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
@@ -200,8 +223,8 @@ public static class RCaronRunner
                     return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
                 }
 
-                if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.Operator &&
-                    posToken.Type != TokenType.Operator && posToken.Type != TokenType.Dot &&
+                if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.MathOperator &&
+                    posToken.Type != TokenType.MathOperator && posToken.Type != TokenType.Dot &&
                     posToken.Type != TokenType.IndexerStart
                    )
                 {
@@ -209,7 +232,7 @@ public static class RCaronRunner
                     if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
                     {
                         // may not be needed?
-                        if (h.tokens[1] is not { Type: TokenType.Operator })
+                        if (h.tokens[1] is not { Type: TokenType.MathOperator })
                             goto beforeAdd;
                         // AAAAAA
                         // remove those replace with fucking imposter thing
@@ -221,10 +244,10 @@ public static class RCaronRunner
                             tokens[rem] is not ValuePosToken)
                             goto beforeAdd;
                         tokens.RemoveFrom(rem);
-                        tokens.Add(new ValueGroupPosToken(TokenType.DumbShit,
+                        tokens.Add(new MathValueGroupPosToken(TokenType.DumbShit,
                             (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
                         if (posToken is { Type: TokenType.SimpleBlockEnd })
-                            goto afterAdd;
+                            dontAddCurrent = true;
                     }
                     else
                     {
@@ -233,18 +256,9 @@ public static class RCaronRunner
                     }
                 }
 
-                if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
-                {
-                    var number = ace.Number;
-                    var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
-                    var range = tokens.GetRangeAsArray((acs + 1)..);
-                    tokens.RemoveFrom(acs);
-                    tokens.Add(new IndexerToken(range));
-                    goto afterAdd;
-                }
-
                 beforeAdd: ;
-                tokens.Add(posToken);
+                if(!dontAddCurrent)
+                    tokens.Add(posToken);
                 afterAdd: ;
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
                 {
@@ -390,9 +404,10 @@ public static class RCaronRunner
             return new TokenLine(new[] { tokens[i] }, LineType.IfStatement);
         }
         // else if statement
-        else if (tokens[i].EqualsString(text, "else") && tokens[i+1] is CallLikePosToken ifCallToken && ifCallToken.NameEquals(text, "if"))
+        else if (tokens[i].EqualsString(text, "else") && tokens[i + 1] is CallLikePosToken ifCallToken &&
+                 ifCallToken.NameEquals(text, "if"))
         {
-            res = new TokenLine(new[] { tokens[i], tokens[i+1] }, LineType.ElseIfStatement);
+            res = new TokenLine(new[] { tokens[i], tokens[i + 1] }, LineType.ElseIfStatement);
             i++;
         }
         // else statement

@@ -193,8 +193,8 @@ public class TokenReader
 
             position += index;
             // match "value" operations
-            if (tokenType == TokenType.Operator)
-                return new ValuePosToken(TokenType.Operator, (initialPosition, position));
+            if (tokenType == TokenType.Operator || tokenType == TokenType.MathOperator)
+                return new ValuePosToken(tokenType, (initialPosition, position));
 
             return new PosToken(tokenType, (initialPosition, position));
         }
@@ -326,36 +326,38 @@ public class TokenReader
 
     public (int, TokenType tokenType) CollectOperation(in ReadOnlySpan<char> span)
     {
+        //equality
+        if (IsMatch(in span, Operations.IsEqualOp))
+            return (2, TokenType.EqualityOperation);
+        if (IsMatch(in span, Operations.IsNotEqualOp))
+            return (2, TokenType.EqualityOperation);
+        if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
+            return (2, TokenType.EqualityOperation);
+        if (IsMatch(in span, Operations.IsLessOrEqualOp))
+            return (2, TokenType.EqualityOperation);
+        if (IsMatch(in span, Operations.IsGreaterOp))
+            return (1, TokenType.EqualityOperation);
+        if (IsMatch(in span, Operations.IsLessOp))
+            return (1, TokenType.EqualityOperation);
+        // other
+        if (IsMatch(in span, Operations.AssignmentOp))
+            return (1, TokenType.Operation);
+        // unary
         if (IsMatch(in span, Operations.UnaryIncrementOp))
             return (2, TokenType.UnaryOperation);
         if (IsMatch(in span, Operations.UnaryDecrementOp))
             return (2, TokenType.UnaryOperation);
-
-        if (IsMatch(in span, Operations.IsEqualOp))
-            return (2, TokenType.Operation);
-        if (IsMatch(in span, Operations.IsNotEqualOp))
-            return (2, TokenType.Operation);
-        if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
-            return (2, TokenType.Operation);
-        if (IsMatch(in span, Operations.IsLessOrEqualOp))
-            return (2, TokenType.Operation);
-        if (IsMatch(in span, Operations.IsGreaterOp))
-            return (1, TokenType.Operation);
-        if (IsMatch(in span, Operations.IsLessOp))
-            return (1, TokenType.Operation);
-        if (IsMatch(in span, Operations.AssignmentOp))
-            return (1, TokenType.Operation);
-
+        // math
         if (IsMatch(in span, Operations.SumOp))
-            return (1, TokenType.Operator);
+            return (1, TokenType.MathOperator);
         if (IsMatch(in span, Operations.SubtractOp))
-            return (1, TokenType.Operator);
+            return (1, TokenType.MathOperator);
         if (IsMatch(in span, Operations.MultiplyOp))
-            return (1, TokenType.Operator);
+            return (1, TokenType.MathOperator);
         if (IsMatch(in span, Operations.DivideOp))
-            return (1, TokenType.Operator);
+            return (1, TokenType.MathOperator);
         if (IsMatch(in span, Operations.ModuloOp))
-            return (1, TokenType.Operator);
+            return (1, TokenType.MathOperator);
         return (0, 0);
     }
 }

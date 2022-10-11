@@ -156,4 +156,44 @@ else { $h = 2; }
 ");
         m.AssertVariableEquals("h", 2L);
     }
+
+    [Fact]
+    public void ArrayIndexerDoesntGetConfused()
+    {
+        var m = RCaronRunner.Run(@"$arr = @(0); $h = 0; if(0 == $arr[0]){$h = 1;}");
+        m.AssertVariableEquals("h", 1L);
+    }
+
+    [Fact]
+    public void EqualityGroupWorks()
+    {
+        var ctx  = RCaronRunner.Parse(@"$h = 0 + 1 == 1;");
+        var l = (TokenLine)ctx.Lines[0];
+        Assert.IsType<ComparisonValuePosToken>(l.Tokens[^1]);
+        ctx = RCaronRunner.Parse("if(0 + 1 == 1){}");
+        l = (TokenLine)ctx.Lines[0];
+        Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[^1]).Arguments[0][0]);
+    }
+
+    // [Fact]
+    public void OperationOrderWithBooleanOps()
+    {
+        var m = RCaronRunner.Run("$h = 1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1;");
+        m.AssertVariableEquals("h", true);
+    }
+
+    // [Fact]
+    public void BooleanAnd()
+    {
+        var m = RCaronRunner.Run(@"
+$tt = $true && $true;
+$tf = $true && false;
+$ft = false && $true;
+$ff = false && false;
+");
+        m.AssertVariableEquals("tt", true);
+        m.AssertVariableEquals("tf", false);
+        m.AssertVariableEquals("ft", false);
+        m.AssertVariableEquals("ff", false);
+    }
 }

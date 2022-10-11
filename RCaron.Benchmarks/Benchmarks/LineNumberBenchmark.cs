@@ -36,7 +36,7 @@ $hello8 'a'     'aaa yee haawww hello worldy';";
                 tokens.Add(posToken);
                 Console.ForegroundColor = posToken.Type switch
                 {
-                    TokenType.Operation => ConsoleColor.Black,
+                    TokenType.EqualityOperation => ConsoleColor.Black,
                     TokenType.String => ConsoleColor.Blue,
                     TokenType.Number => ConsoleColor.Cyan,
                     TokenType.VariableIdentifier => ConsoleColor.Green,
