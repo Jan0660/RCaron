@@ -104,6 +104,12 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     }
 
     [Fact]
+    public void StringInvalidCharacterEscape()
+    {
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"$h = '\z';"), ExceptionCode.InvalidEscape);
+    }
+
+    [Fact]
     public void Numbers()
     {
         var m = RCaronRunner.Run(@"$long = 123; $decimal = 123.123;");
@@ -159,7 +165,7 @@ $h = v();
             ["else if"] = @"if($false) { return 0; } else if ($true) { return 1; }",
             ["else"] = @"if($false) { return 0; } else { return 1; }",
         };
-        foreach(var test in bodies)
+        foreach (var test in bodies)
         {
             try
             {
