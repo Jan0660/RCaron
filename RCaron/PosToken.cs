@@ -7,7 +7,7 @@ public enum TokenType : byte
 {
     Number,
     VariableIdentifier,
-    EqualityOperation,
+    ComparisonOperation,
     Operator,
     String,
     Whitespace,

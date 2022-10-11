@@ -326,19 +326,19 @@ public class TokenReader
 
     public (int, TokenType tokenType) CollectOperation(in ReadOnlySpan<char> span)
     {
-        //equality
+        // comparison
         if (IsMatch(in span, Operations.IsEqualOp))
-            return (2, TokenType.EqualityOperation);
+            return (2, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsNotEqualOp))
-            return (2, TokenType.EqualityOperation);
+            return (2, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
-            return (2, TokenType.EqualityOperation);
+            return (2, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsLessOrEqualOp))
-            return (2, TokenType.EqualityOperation);
+            return (2, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsGreaterOp))
-            return (1, TokenType.EqualityOperation);
+            return (1, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsLessOp))
-            return (1, TokenType.EqualityOperation);
+            return (1, TokenType.ComparisonOperation);
         // other
         if (IsMatch(in span, Operations.AssignmentOp))
             return (1, TokenType.Operation);

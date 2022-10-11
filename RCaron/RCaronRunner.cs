@@ -146,7 +146,7 @@ public static class RCaronRunner
 
                 // comparison group
                 if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinableSomething() &&
-                    token.Type != TokenType.MathOperator && tokens[^2].Type == TokenType.EqualityOperation
+                    token.Type != TokenType.MathOperator && tokens[^2].Type == TokenType.ComparisonOperation
                     && tokens[^1] is ValuePosToken right && tokens[^3] is ValuePosToken left)
                 {
                     var comparison = new ComparisonValuePosToken(left, right, tokens[^2]);
