@@ -175,25 +175,42 @@ else { $h = 2; }
         Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[^1]).Arguments[0][0]);
     }
 
-    // [Fact]
+    [Fact]
     public void OperationOrderWithBooleanOps()
     {
-        var m = RCaronRunner.Run("$h = 1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1;");
+        var m = RCaronRunner.Run("$h = 3 == 3 && 4 == 4;");
+        m.AssertVariableEquals("h", true);
+        m = RCaronRunner.Run("$h = 1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1;");
         m.AssertVariableEquals("h", true);
     }
 
-    // [Fact]
+    [Fact]
     public void BooleanAnd()
     {
         var m = RCaronRunner.Run(@"
 $tt = $true && $true;
-$tf = $true && false;
-$ft = false && $true;
-$ff = false && false;
+$tf = $true && $false;
+$ft = $false && $true;
+$ff = $false && $false;
 ");
         m.AssertVariableEquals("tt", true);
         m.AssertVariableEquals("tf", false);
         m.AssertVariableEquals("ft", false);
+        m.AssertVariableEquals("ff", false);
+    }
+
+    [Fact]
+    public void BooleanOr()
+    {
+        var m = RCaronRunner.Run(@"
+$tt = $true || $true;
+$tf = $true || $false;
+$ft = $false || $true;
+$ff = $false || $false;
+");
+        m.AssertVariableEquals("tt", true);
+        m.AssertVariableEquals("tf", true);
+        m.AssertVariableEquals("ft", true);
         m.AssertVariableEquals("ff", false);
     }
 }

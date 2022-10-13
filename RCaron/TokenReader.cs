@@ -339,6 +339,11 @@ public class TokenReader
             return (1, TokenType.ComparisonOperation);
         if (IsMatch(in span, Operations.IsLessOp))
             return (1, TokenType.ComparisonOperation);
+        // logical
+        if (IsMatch(in span, Operations.AndOp))
+            return (2, TokenType.LogicalOperation);
+        if (IsMatch(in span, Operations.OrOp))
+            return (2, TokenType.LogicalOperation);
         // other
         if (IsMatch(in span, Operations.AssignmentOp))
             return (1, TokenType.Operation);

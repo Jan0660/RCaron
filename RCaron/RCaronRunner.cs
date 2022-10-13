@@ -82,6 +82,7 @@ public static class RCaronRunner
                 }
 
                 var dontAddCurrent = false;
+                var dontDoSimpleBlockEndCheck = false;
 
                 if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
                 {
@@ -144,21 +145,123 @@ public static class RCaronRunner
                     }
                 }
 
-                // comparison group
-                if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinableSomething() &&
-                    token.Type != TokenType.MathOperator && tokens[^2].Type == TokenType.ComparisonOperation
-                    && tokens[^1] is ValuePosToken right && tokens[^3] is ValuePosToken left)
+
+                (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
                 {
-                    var comparison = new ComparisonValuePosToken(left, right, tokens[^2]);
-                    tokens.RemoveFrom(tokens.Count - 3);
-                    tokens.Add(comparison);
+                    var i = tokens.Count - 1;
+                    while ((i != 0 && i != -1) &&
+                           tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken &&
+                           (tokens[i] is { Type: TokenType.MathOperator } ||
+                            tokens[i - 1] is { Type: TokenType.MathOperator }))
+                        // while ((i != 0 && i != -1) && 
+                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
+                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
+                        //       )
+                        i--;
+                    if ((tokens.Count - i) % 2 == 0 || tokens.Count - i == 1)
+                        return (-1, Array.Empty<ValuePosToken>());
+                    return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
                 }
 
-                if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } blockToken)
+                if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.MathOperator &&
+                    posToken.Type != TokenType.MathOperator && posToken.Type != TokenType.Dot &&
+                    posToken.Type != TokenType.IndexerStart
+                   )
                 {
-                    var startIndex = tokens.FindIndex(
-                        t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
-                             bpt.Number == blockToken.Number);
+                    var h = BackwardsCollectValuePosToken();
+                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
+                    {
+                        // may not be needed?
+                        if (h.tokens[1] is not { Type: TokenType.MathOperator })
+                            goto beforeAdd;
+                        // AAAAAA
+                        // remove those replace with fucking imposter thing
+                        var rem = h.index - 1;
+                        if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
+                            posToken.Type != TokenType.SimpleBlockEnd)
+                            rem += 1;
+                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken &&
+                            tokens[rem] is not ValuePosToken)
+                            goto beforeAdd;
+                        if (tokens[rem].Type == TokenType.SimpleBlockStart)
+                        {
+                            dontDoSimpleBlockEndCheck = true;
+                            dontAddCurrent = true;
+                        }
+
+                        tokens.RemoveFrom(rem);
+                        tokens.Add(new MathValueGroupPosToken(TokenType.DumbShit,
+                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                        // if (posToken is { Type: TokenType.SimpleBlockEnd })
+                        // {
+                        //     dontDoSimpleBlockEndCheck = true;
+                        //     dontAddCurrent = true;
+                        // }
+                    }
+                    else
+                    {
+                        // if (h.index != -1)
+                        //     Debugger.Break();
+                    }
+                }
+
+                // comparison and logical operation grouping
+                if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinableSomething() &&
+                    token.Type != TokenType.MathOperator && tokens[^1] is ValuePosToken right &&
+                    tokens[^3] is ValuePosToken left)
+                {
+                    var ranComparison = false;
+                    // comparison group
+                    if (tokens[^2].Type == TokenType.ComparisonOperation)
+                    {
+                        var comparison = new ComparisonValuePosToken(left, right, tokens[^2]);
+                        tokens.RemoveFrom(tokens.Count - 3);
+                        tokens.Add(comparison);
+                        ranComparison = true;
+                    }
+
+                    // logical operation group
+                    if (tokens[^2].Type == TokenType.LogicalOperation && token.Type != TokenType.ComparisonOperation)
+                    {
+                        // recheck ^3 and ^1 are still ValuePosTokens and reassign them
+                        if (ranComparison && !((left = tokens[^3] as ValuePosToken) != null &&
+                                               (right = tokens[^1] as ValuePosToken) != null))
+                            goto afterComparisonAndLogicalGrouping;
+                        var comparison = new LogicalOperationValuePosToken(left, right, tokens[^2]);
+                        tokens.RemoveFrom(tokens.Count - 3);
+                        tokens.Add(comparison);
+                    }
+                }
+
+                afterComparisonAndLogicalGrouping: ;
+
+                if ( /*!dontDoSimpleBlockEndCheck && */posToken is BlockPosToken
+                    {
+                        Type: TokenType.SimpleBlockEnd
+                    } blockToken)
+                {
+                    int startIndex = -1;
+                    if (!dontDoSimpleBlockEndCheck)
+                        startIndex = tokens.FindIndex(
+                            t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
+                                 bpt.Number == blockToken.Number);
+                    else
+                    {
+                        var m = (MathValueGroupPosToken)tokens[^1];
+                        var nameToken = tokens[^2];
+                        if (!(nameToken.Type == TokenType.Keyword || nameToken.Type == TokenType.ArrayLiteralStart ||
+                              nameToken.IsDotJoinableSomething()))
+                            goto afterCallLikePosTokenThing;
+                        tokens.RemoveAt(tokens.Count - 1);
+                        tokens.RemoveAt(tokens.Count - 1);
+                        tokens.Add(new CallLikePosToken(TokenType.KeywordCall,
+                            (nameToken.Position.Start, m.Position.End),
+                            new PosToken[][] { m.ValueTokens },
+                            nameToken.Position.End, nameToken.ToString(text)
+                        ));
+                        goto afterCallLikePosTokenThing;
+                    }
+
                     if (tokens[startIndex - 1] is
                         {
                             Type: TokenType.Keyword or TokenType.ArrayLiteralStart
@@ -206,58 +309,10 @@ public static class RCaronRunner
                     }
                 }
 
-                (int index, ValuePosToken[] tokens) BackwardsCollectValuePosToken()
-                {
-                    var i = tokens.Count - 1;
-                    while ((i != 0 && i != -1) &&
-                           tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken &&
-                           (tokens[i] is { Type: TokenType.MathOperator } ||
-                            tokens[i - 1] is { Type: TokenType.MathOperator }))
-                        // while ((i != 0 && i != -1) && 
-                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
-                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
-                        //       )
-                        i--;
-                    if ((tokens.Count - i) % 2 == 0 || tokens.Count - i == 1)
-                        return (-1, Array.Empty<ValuePosToken>());
-                    return (i, tokens.Take(i..).Cast<ValuePosToken>().ToArray());
-                }
-
-                if (tokens.Count > 2 && tokens[^1] is ValuePosToken && tokens[^1].Type != TokenType.MathOperator &&
-                    posToken.Type != TokenType.MathOperator && posToken.Type != TokenType.Dot &&
-                    posToken.Type != TokenType.IndexerStart
-                   )
-                {
-                    var h = BackwardsCollectValuePosToken();
-                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
-                    {
-                        // may not be needed?
-                        if (h.tokens[1] is not { Type: TokenType.MathOperator })
-                            goto beforeAdd;
-                        // AAAAAA
-                        // remove those replace with fucking imposter thing
-                        var rem = h.index - 1;
-                        if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
-                            posToken.Type != TokenType.SimpleBlockEnd)
-                            rem += 1;
-                        if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken &&
-                            tokens[rem] is not ValuePosToken)
-                            goto beforeAdd;
-                        tokens.RemoveFrom(rem);
-                        tokens.Add(new MathValueGroupPosToken(TokenType.DumbShit,
-                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
-                        if (posToken is { Type: TokenType.SimpleBlockEnd })
-                            dontAddCurrent = true;
-                    }
-                    else
-                    {
-                        // if (h.index != -1)
-                        //     Debugger.Break();
-                    }
-                }
+                afterCallLikePosTokenThing: ;
 
                 beforeAdd: ;
-                if(!dontAddCurrent)
+                if (!dontAddCurrent)
                     tokens.Add(posToken);
                 afterAdd: ;
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))

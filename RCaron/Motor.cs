@@ -1108,6 +1108,8 @@ public class Motor
             }
             case TokenType.EqualityOperationGroup when token is ComparisonValuePosToken comparisonValuePosToken:
                 return EvaluateComparisonOperation(comparisonValuePosToken);
+            case TokenType.LogicalOperationGroup when token is LogicalOperationValuePosToken logicalOperationValuePosToken:
+                return EvaluateLogicalOperation(logicalOperationValuePosToken);
         }
 
         throw new Exception($"invalid tokentype to evaluate: {token.Type}");
@@ -1155,6 +1157,8 @@ public class Motor
                     value = new RCaronRange(long1.Value, long2.Value);
                     break;
                 }
+                default:
+                    throw new Exception($"invalid operation: {op}");
             }
 
             index += 2;
@@ -1269,6 +1273,21 @@ public class Motor
                 return !val1.Equals(val2) && Horrors.IsLess(val1, val2);
             case Operations.IsLessOrEqualOp:
                 return val1.Equals(val2) || Horrors.IsLess(val1, val2);
+            default:
+                throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
+        }
+    }
+    public bool EvaluateLogicalOperation(LogicalOperationValuePosToken comparisonValuePosToken)
+    {
+        var val1 = (bool) SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left)!;
+        var val2 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right)!;
+        var op = comparisonValuePosToken.ComparisonToken.ToSpan(Raw);
+        switch (op)
+        {
+            case Operations.AndOp:
+                return val1 && val2;
+            case Operations.OrOp:
+                return val1 || val2;
             default:
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
         }

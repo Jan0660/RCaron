@@ -36,6 +36,8 @@ public enum TokenType : byte
     MathOperator,
     Operation,
     EqualityOperationGroup,
+    LogicalOperation,
+    LogicalOperationGroup,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -149,6 +151,21 @@ public class ComparisonValuePosToken : ValuePosToken
 
     public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, PosToken comparisonToken) : base(
         TokenType.EqualityOperationGroup, (left.Position.Start, right.Position.End))
+    {
+        Left = left;
+        Right = right;
+        ComparisonToken = comparisonToken;
+    }
+}
+
+public class LogicalOperationValuePosToken : ValuePosToken
+{
+    public ValuePosToken Left { get; }
+    public ValuePosToken Right { get; }
+    public PosToken ComparisonToken { get; set; }
+
+    public LogicalOperationValuePosToken(ValuePosToken left, ValuePosToken right, PosToken comparisonToken) : base(
+        TokenType.LogicalOperationGroup, (left.Position.Start, right.Position.End))
     {
         Left = left;
         Right = right;
