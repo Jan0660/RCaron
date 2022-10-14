@@ -117,6 +117,29 @@ public class Motor
         }
     }
 
+    public int GetLineNumber()
+    {
+        var lineNumber = -1;
+        var pos = Lines[curIndex] switch
+        {
+            TokenLine tl => tl.Tokens[0].Position.Start,
+            SingleTokenLine stl => stl.Token.Position.Start,
+            CodeBlockLine cbl => cbl.Token.Position.Start,
+            _ => throw new ArgumentOutOfRangeException()
+        };
+        var linesEn = Raw.AsSpan().EnumerateLines();
+        var hgtrfdews = 0;
+        while(linesEn.MoveNext())
+        {
+            hgtrfdews += linesEn.Current.Length;
+            lineNumber++;
+            if(hgtrfdews >= pos)
+                break;
+        }
+
+        return lineNumber + 1;
+    }
+
     public enum RunLineResult : byte
     {
         Nothing = 0,
@@ -457,6 +480,8 @@ public class Motor
                                     SimpleEvaluateExpressionSingle(args[1]).NotNull()),
                                 SimpleEvaluateExpressionSingle(args[2]).NotNull()));
                             return RunLineResult.Nothing;
+                        case "dbg_exit":
+                            return RunLineResult.Exit;
                     }
 
                 if (Options.EnableDumb)

@@ -65,7 +65,21 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
         logger.Info($"Executing file {f.FullName}");
         motor.SetVar("args", arguments);
         motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
-        motor.Run();
+        try
+        {
+            motor.Run();
+        }
+        catch (Exception exc)
+        {
+            try
+            {
+                logger.Error("Exception thrown at line " + motor.GetLineNumber());
+            }
+            finally
+            {
+                logger.Error(exc);
+            }
+        }
     }
 
     RCaronRunner.GlobalLog = 0;

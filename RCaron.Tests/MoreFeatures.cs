@@ -213,4 +213,19 @@ $ff = $false || $false;
         m.AssertVariableEquals("ft", true);
         m.AssertVariableEquals("ff", false);
     }
+
+    [Fact]
+    public void GetLineNumber()
+    {
+        var m = RCaronRunner.Run(@"$l1 = 1;
+$l2 = 2;
+$l3 = 3;
+dbg_exit;
+$l5 = 5;", new MotorOptions(){EnableDebugging = true});
+        Assert.Equal(5, m.Lines.Count);
+        Assert.Equal(4, m.GetLineNumber());
+        m = RCaronRunner.Run(@"dbg_exit;", new MotorOptions(){EnableDebugging = true});
+        Assert.Equal(1, m.Lines.Count);
+        Assert.Equal(1, m.GetLineNumber());
+    }
 }
