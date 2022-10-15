@@ -94,11 +94,28 @@ public class PosToken
         };
 }
 
-public class StringValuePosToken : ValuePosToken
+public class ConstToken : ValuePosToken
+{
+    public object Value { get; }
+    public ConstToken(TokenType type, (int Start, int End) position, object value) : base(type, position)
+    {
+        Value = value;
+    }
+}
+
+public class VariableToken : ValuePosToken
+{
+    public string Name { get; }
+    public VariableToken((int Start, int End) position, string name) : base(TokenType.VariableIdentifier, position)
+    {
+        Name = name;
+    }
+}
+
+public class KeywordToken : PosToken
 {
     public string String { get; }
-
-    public StringValuePosToken(TokenType type, (int Start, int End) position, string str) : base(type, position)
+    public KeywordToken((int Start, int End) position, string str) : base(TokenType.Keyword, position)
     {
         String = str;
     }

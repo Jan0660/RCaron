@@ -409,7 +409,7 @@ public static class RCaronRunner
         Line? res = default;
         var callToken = tokens[i] as CallLikePosToken;
         // variable assignment
-        if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.Operation &&
+        if (tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
@@ -471,9 +471,9 @@ public static class RCaronRunner
             return new TokenLine(new[] { tokens[i] }, LineType.ElseStatement);
         }
         // loop loop
-        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "loop"))
+        else if (tokens[i] is KeywordToken keywordToken && tokens[i].EqualsString(text, "loop"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.LoopLoop);
+            return new SingleTokenLine(tokens[i], LineType.LoopLoop);
         }
         // while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "while"))
@@ -488,7 +488,11 @@ public static class RCaronRunner
         // for loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.ForLoop);
+            var falseI = 0;
+            var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
+            falseI = 0;
+            var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
+            return new ForLoopLine(callToken, initializer, iterator);
         }
         // qfor loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "qfor"))

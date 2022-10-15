@@ -42,7 +42,9 @@ public class TokenReader
             if (index == 0)
                 return null;
             position += index;
-            return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
+            return new VariableToken((initialPosition, position),
+                text.Substring(initialPosition + 1, position - initialPosition - 1));
+            // return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
         }
         // shebang
         else if (txt[position] == '#' && txt[position + 1] == '!')
@@ -63,7 +65,7 @@ public class TokenReader
             if (index == 0)
                 return null;
             position += index;
-            return new StringValuePosToken(TokenType.String, (initialPosition, position), str);
+            return new ConstToken(TokenType.String, (initialPosition, position), str);
         }
         // whitespace
         else if (char.IsWhiteSpace(txt[position]))
@@ -112,8 +114,11 @@ public class TokenReader
         {
             var (index, isDecimal) = CollectAnyNumber(txt[position..]);
             position += index;
-            return new ValuePosToken(isDecimal ? TokenType.DecimalNumber : TokenType.Number,
-                (initialPosition, position));
+            if (isDecimal)
+                return new ConstToken(TokenType.DecimalNumber,
+                    (initialPosition, position), Decimal.Parse(text[initialPosition..position]));
+            return new ConstToken(TokenType.Number, (initialPosition, position),
+                Int64.Parse(text[initialPosition..position]));
         }
         // single line comment
         else if (txt[position] == '/' && txt[position + 1] == '/')
@@ -188,7 +193,7 @@ public class TokenReader
             {
                 index = CollectAlphaNumericAndSomeAndDash(txt[position..]);
                 position += index;
-                return new PosToken(TokenType.Keyword, (initialPosition, position));
+                return new KeywordToken((initialPosition, position), text[initialPosition..position]);
             }
 
             position += index;
@@ -267,43 +272,44 @@ public class TokenReader
         // assemble the string
         Span<char> g = stackalloc char[span.Length];
         var str = new SpanStringBuilder(ref g);
-        for (var i = 0; i < index-1; i++)
+        for (var i = 0; i < index - 1; i++)
         {
             if (span[i] == '\\')
             {
                 i++;
                 // single quote
-                if(span[i] == '\'')
+                if (span[i] == '\'')
                     str.Append('\'');
                 // backslash
-                else if(span[i] == '\\')
+                else if (span[i] == '\\')
                     str.Append('\\');
                 // null
-                else if(span[i] == '0')
+                else if (span[i] == '0')
                     str.Append('\0');
                 // alert
-                else if(span[i] == 'a')
+                else if (span[i] == 'a')
                     str.Append('\a');
                 // backspace
-                else if(span[i] == 'b')
+                else if (span[i] == 'b')
                     str.Append('\b');
                 // form feed
-                else if(span[i] == 'f')
+                else if (span[i] == 'f')
                     str.Append('\f');
                 // new line
-                else if(span[i] == 'n')
+                else if (span[i] == 'n')
                     str.Append('\n');
                 // carriage return
-                else if(span[i] == 'r')
+                else if (span[i] == 'r')
                     str.Append('\r');
                 // horizontal tab
-                else if(span[i] == 't')
+                else if (span[i] == 't')
                     str.Append('\t');
                 // vertical tab
-                else if(span[i] == 'v')
+                else if (span[i] == 'v')
                     str.Append('\v');
                 else
-                    throw new RCaronException($"invalid character to escape: {span[i]}", RCaronExceptionCode.InvalidEscape);
+                    throw new RCaronException($"invalid character to escape: {span[i]}",
+                        RCaronExceptionCode.InvalidEscape);
                 continue;
             }
 

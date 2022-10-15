@@ -165,12 +165,55 @@ public class Motor
         }
 
         if (baseLine is not TokenLine line)
-            return RunLineResult.Exit;
+        {
+            switch (baseLine.Type)
+            {
+                case LineType.ForLoop when baseLine is ForLoopLine forLoopLine:
+                {
+                    var falseI = 0;
+                    RunLine(forLoopLine.Initializer);
+                    while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
+                    {
+                        BlockStack.Push(new StackThing(true, false, null));
+                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                        {
+                            return RunLineResult.Exit;
+                        }
+
+                        RunLine(forLoopLine.Iterator);
+                    }
+
+                    curIndex++;
+                    break;
+                }
+                case LineType.LoopLoop:
+                {
+                    // todo(safety): check elsewhere when ReturnValue is used that it is then set to null or something idk
+                    ReturnValue = null;
+                    while (!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? true)
+                    {
+                        BlockStack.Push(new StackThing(true, false, null));
+                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                        {
+                            return RunLineResult.Exit;
+                        }
+                    }
+
+                    curIndex++;
+                    break;
+                }
+                default:
+                    throw new("invalid line");
+            }
+            return RunLineResult.Nothing;
+        }
         switch (line.Type)
         {
             case LineType.VariableAssignment:
             {
-                var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
+                var variableName = ((VariableToken)line.Tokens[0]).Name;
                 var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..));
                 SetVar(variableName, obj);
                 Debug.WriteLine($"variable '{variableName}' set to '{obj}'");
@@ -311,41 +354,6 @@ public class Motor
                 }
 
                 break;
-            case LineType.LoopLoop:
-                // todo(safety): check elsewhere when ReturnValue is used that it is then set to null or something idk
-                ReturnValue = null;
-                while (!ReturnValue?.Equals(RCaronInsideEnum.Breaked) ?? true)
-                {
-                    BlockStack.Push(new StackThing(true, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
-                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
-                    {
-                        return RunLineResult.Exit;
-                    }
-                }
-
-                curIndex++;
-                break;
-            case LineType.ForLoop when line.Tokens[0] is CallLikePosToken callToken:
-            {
-                var falseI = 0;
-                RunLine(RCaronRunner.GetLine(callToken.Arguments[0], ref falseI, Raw));
-                while (SimpleEvaluateBool(callToken.Arguments[1]))
-                {
-                    BlockStack.Push(new StackThing(true, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
-                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
-                    {
-                        return RunLineResult.Exit;
-                    }
-
-                    falseI = 0;
-                    RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
-                }
-
-                curIndex++;
-                break;
-            }
             case LineType.QuickForLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
                 var falseI = 0;
@@ -1071,7 +1079,7 @@ public class Motor
         return objs;
     }
 
-    public object? EvaluateVariable(ReadOnlySpan<char> name)
+    public object? EvaluateVariable(string name)
     {
         switch (name)
         {
@@ -1091,19 +1099,12 @@ public class Motor
 
     public object? SimpleEvaluateExpressionSingle(PosToken token)
     {
+        if (token is ConstToken constToken)
+            return constToken.Value;
+        if(token is VariableToken variableToken)
+            return EvaluateVariable(variableToken.Name);
         switch (token.Type)
         {
-            case TokenType.VariableIdentifier:
-            {
-                var name = token.ToSpan(Raw)[1..];
-                return EvaluateVariable(name);
-            }
-            case TokenType.Number:
-                return Int64.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
-            case TokenType.DecimalNumber:
-                return Decimal.Parse(token.ToSpan(Raw), CultureInfo.InvariantCulture);
-            case TokenType.String when token is StringValuePosToken rawStringPosToken:
-                return rawStringPosToken.String;
             case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
@@ -1318,14 +1319,12 @@ public class Motor
         }
     }
 
-    public object? GetVar(ReadOnlySpan<char> name)
+    public object? GetVar(string name)
     {
-        // todo: do not
-        var nameStr = name.ToString();
         for (var i = 0; i < BlockStack.Count; i++)
         {
             var el = BlockStack.At(^(i + 1));
-            if (el.Scope != null && el.Scope.TryGetVariable(nameStr, out var value))
+            if (el.Scope != null && el.Scope.TryGetVariable(name, out var value))
             {
                 return value;
             }
@@ -1334,7 +1333,7 @@ public class Motor
                 return RCaronInsideEnum.VariableNotFound;
         }
 
-        if (GlobalScope.TryGetVariable(nameStr, out var value2))
+        if (GlobalScope.TryGetVariable(name, out var value2))
             return value2;
         return RCaronInsideEnum.VariableNotFound;
     }
