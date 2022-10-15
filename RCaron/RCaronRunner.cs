@@ -357,7 +357,7 @@ public static class RCaronRunner
             // class definition
             if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
-                var name = t[i + 1].ToString(text);
+                var name = ((KeywordToken)t[i + 1]).String;
                 Dictionary<string, CodeBlockToken> functions = null;
                 // todo: use array
                 List<string>? propertyNames = null;
@@ -378,7 +378,7 @@ public static class RCaronRunner
                         propertyNames ??= new();
                         propertyInitializers ??= new();
                         var tokenLine = (TokenLine)body.Lines[j];
-                        propertyNames.Add(tokenLine.Tokens[0].ToSpan(text)[1..].ToString());
+                        propertyNames.Add(((VariableToken)tokenLine.Tokens[0]).Name);
                         propertyInitializers.Add(tokenLine.Tokens[2..]);
                     }
                     else if (body.Lines[j].Type == LineType.PropertyWithoutInitializer)
@@ -386,7 +386,7 @@ public static class RCaronRunner
                         propertyNames ??= new();
                         propertyInitializers ??= new();
                         var tokenLine = (SingleTokenLine)body.Lines[j];
-                        propertyNames.Add(tokenLine.Token.ToSpan(text)[1..].ToString());
+                        propertyNames.Add(((VariableToken)tokenLine.Token).Name);
                         propertyInitializers.Add(null);
                     }
                 }
@@ -518,8 +518,6 @@ public static class RCaronRunner
         else if (tokens[i].Type == TokenType.Keyword)
         {
             // check if keyword is lone keyword -- dont have to -- bruh
-            // if (tokens[i].ToString(text) == "loop")
-            //     continue;
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             res = new TokenLine(
                 tokens[i..(endingIndex)],

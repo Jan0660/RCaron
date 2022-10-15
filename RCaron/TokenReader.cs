@@ -146,7 +146,8 @@ public class TokenReader
         {
             position++;
             position += CollectAlphaNumericAndSomeAndDot(txt[position..]);
-            return new PosToken(TokenType.ExternThing, (initialPosition, position));
+            return new ExternThingToken((initialPosition, position),
+                text.Substring(initialPosition + 1, position - initialPosition - 1));
         }
         // array literal start
         else if (txt[position] == '@' && txt[position + 1] == '(')

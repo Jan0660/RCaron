@@ -77,7 +77,7 @@ public class Motor
         public object? DefaultValue { get; set; } = RCaronInsideEnum.NoDefaultValue;
     }
 
-    public Dictionary<string, Function> Functions { get; set; } = new();
+    public Dictionary<string, Function> Functions { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
     public LocalScope GlobalScope { get; set; } = new();
     public List<ClassDefinition>? ClassDefinitions { get; set; }
     public object? ReturnValue = null;
@@ -381,7 +381,7 @@ public class Motor
                 FunctionArgument[]? arguments = null;
                 if (line.Tokens[1] is CallLikePosToken callToken)
                 {
-                    name = callToken.GetName(Raw).ToLowerInvariant();
+                    name = callToken.Name;
                     arguments = new FunctionArgument[callToken.Arguments.Length];
                     for (int i = 0; i < callToken.Arguments.Length; i++)
                     {
@@ -394,8 +394,10 @@ public class Motor
                         }
                     }
                 }
+                else if(line.Tokens[1] is KeywordToken keywordToken)
+                    name = keywordToken.String;
                 else
-                    name = line.Tokens[1].ToString(Raw);
+                    throw new Exception("Invalid function name token");
 
                 Functions[name] = new Function(((CodeBlockLine)Lines[curIndex + 1]).Token, arguments);
                 curIndex++;
@@ -403,7 +405,7 @@ public class Motor
             }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
-                MethodCall(callToken.GetName(Raw), callToken: callToken, instance: null
+                MethodCall(callToken.Name, callToken: callToken, instance: null
                     // instanceTokens: MemoryMarshal.CreateSpan(ref callToken.OriginalToken, 1)
                 );
                 break;
@@ -445,8 +447,8 @@ public class Motor
             }
             case LineType.KeywordPlainCall:
             {
-                var keyword = line.Tokens[0];
-                var keywordString = keyword.ToSpan(Raw);
+                var keyword = (KeywordToken)line.Tokens[0];
+                var keywordString = keyword.String;
                 var args = line.Tokens.AsSpan()[1..];
 
                 ArraySegment<PosToken> ArgsArray()
@@ -501,7 +503,7 @@ public class Motor
                     }
 
                 // todo: may not have to do this
-                if (Functions.TryGetValue(keywordString.ToString(), out var func))
+                if (Functions.TryGetValue(keywordString, out var func))
                 {
                     FunctionPlainCall(func, line.Tokens.Segment(1..));
                     return RunLineResult.Nothing;
@@ -528,7 +530,7 @@ public class Motor
         return ReturnValue;
     }
 
-    public object? MethodCall(ReadOnlySpan<char> nameArg, Span<PosToken> argumentTokens = default,
+    public object? MethodCall(string nameArg, Span<PosToken> argumentTokens = default,
         CallLikePosToken? callToken = null
         // , Span<PosToken> instanceTokens = default
         , object? instance = null
@@ -540,7 +542,7 @@ public class Motor
         //     if (!char.IsLower(name[i]))
         //     {
         Span<char> name = stackalloc char[nameArg.Length];
-        nameArg.ToLowerInvariant(name);
+        MemoryExtensions.ToLowerInvariant(nameArg, name);
         //         break;
         //     }
         // }
@@ -628,8 +630,7 @@ public class Motor
                 return RCaronInsideEnum.NoReturnValue;
         }
 
-        // todo: dont
-        if (Functions.TryGetValue(name.ToString(), out var func))
+        if (Functions.TryGetValue(nameArg, out var func))
         {
             return FunctionPlainCall(func, argumentTokens);
         }
@@ -643,14 +644,6 @@ public class Motor
             object? variable = null;
             if (instance != null)
             {
-                // Span<PosToken> given = instanceTokens;
-                // if (instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
-                // {
-                //     given = dotGroupPosToken.Tokens.AsSpan()[..^2];
-                //     instanceTokens = dotGroupPosToken.Tokens;
-                // }
-
-                // var obj = EvaluateDotThings(given);
                 var obj = instance;
                 variable = obj;
                 if (obj is RCaronType rCaronType)
@@ -660,22 +653,8 @@ public class Motor
                     target = obj;
                     type = obj.GetType();
                 }
-
-                // var i = name.Length - 1;
-                // while (name[i] != '.')
-                //     i--;
-                // i++;
-                // todo(perf): just steal it from name var? -- fix name var first lol maybe
-                // methodName = instanceTokens[^1].ToString(Raw);
                 goto resolveMethod;
             }
-
-            // var d = name[1..(name.LastIndexOf('.'))];
-            // type = TypeResolver.FindType(d, FileScope);
-            //
-            // if (type == null)
-            //     throw new RCaronException($"cannot find type '{d}' for external method call",
-            //         RCaronExceptionCode.ExternalTypeNotFound);
 
             resolveMethod: ;
             var methodsOrg = type.GetMethods()!;
@@ -849,15 +828,6 @@ public class Motor
             val = EvaluateDotThings(tokens[..^1]);
             type = val.GetType();
         }
-        // else
-        // {
-        //     val = null;
-        //     var name = tokens[0].ToSpan(Raw);
-        //     var d = name[1..(name.LastIndexOf('.'))].ToString();
-        //     type = TypeResolver.FindType(d, FileScope)!;
-        //     if (type == null)
-        //         throw RCaronException.TypeNotFound(d);
-        // }
 
         if (val is RCaronType rCaronType)
             type = rCaronType.Type;
@@ -866,7 +836,7 @@ public class Motor
         if (last.Type == TokenType.Keyword || (tokens.Length == 1 && tokens[0].Type == TokenType.ExternThing))
         {
             string str;
-            if (last.Type == TokenType.Keyword)
+            if (last is KeywordToken keywordToken)
             {
                 if (val is ClassInstance classInstance)
                 {
@@ -879,9 +849,9 @@ public class Motor
                         RCaronExceptionCode.ClassPropertyNotFound);
                 }
 
-                str = last.ToString(Raw);
+                str = keywordToken.String;
             }
-            else if (tokens[0].Type == TokenType.ExternThing)
+            else if (tokens[0] is ExternThingToken)
             {
                 var name = tokens[0].ToSpan(Raw);
                 str = name[(name.LastIndexOf('.') + 1)..].ToString();
@@ -1022,7 +992,7 @@ public class Motor
                     continue;
                 }
 
-                var d = MethodCall(callLikePosToken.GetName(Raw), callToken: callLikePosToken, instance: val);
+                var d = MethodCall(callLikePosToken.Name, callToken: callLikePosToken, instance: val);
                 val = d;
                 type = val?.GetType();
                 continue;
@@ -1035,7 +1005,12 @@ public class Motor
                 continue;
             }
 
-            var str = instanceTokens[i].ToString(Raw);
+            var str = instanceTokens[i] switch
+            {
+                KeywordToken keywordToken => keywordToken.String,
+                ExternThingToken externThingToken => externThingToken.String,
+                _ => throw new Exception("unsupported stuff for EvaluateDotThings")
+            };
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | instanceOrStatic);
@@ -1108,15 +1083,15 @@ public class Motor
             case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
-                return MethodCall(callToken.GetName(Raw), callToken: callToken);
+                return MethodCall(callToken.Name, callToken: callToken);
             case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
                 BlockStack.Push(new(false, true, null));
                 return RunCodeBlock(codeBlockToken);
-            case TokenType.Keyword:
-                return token.ToString(Raw);
+            case TokenType.Keyword when token is KeywordToken keywordToken:
+                return keywordToken.String;
             case TokenType.DotGroup:
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
-            case TokenType.ExternThing:
+            case TokenType.ExternThing when token is ExternThingToken externThingToken:
             {
                 var nameSpan = token.ToSpan(Raw)[1..];
                 // try RCaron ClassDefinition
@@ -1126,10 +1101,9 @@ public class Motor
                             return ClassDefinitions[i];
 
                 // get Type via TypeResolver
-                var nameString = nameSpan.ToString();
-                var type = TypeResolver.FindType(nameString, FileScope)!;
+                var type = TypeResolver.FindType(externThingToken.String, FileScope)!;
                 if (type == null)
-                    throw RCaronException.TypeNotFound(nameString);
+                    throw RCaronException.TypeNotFound(externThingToken.String);
                 return new RCaronType(type);
             }
             case TokenType.EqualityOperationGroup when token is ComparisonValuePosToken comparisonValuePosToken:
@@ -1196,7 +1170,7 @@ public class Motor
     public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
         => tokens.Count switch
         {
-            > 0 when tokens[0].Type == TokenType.Keyword => MethodCall(tokens[0].ToString(Raw),
+            > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
                 argumentTokens: tokens.AsSpan()[1..]),
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),

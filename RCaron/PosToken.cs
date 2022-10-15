@@ -121,6 +121,15 @@ public class KeywordToken : PosToken
     }
 }
 
+public class ExternThingToken : PosToken
+{
+    public string String { get; }
+    public ExternThingToken((int Start, int End) position, string str) : base(TokenType.ExternThing, position)
+    {
+        String = str;
+    }
+}
+
 public class BlockPosToken : PosToken
 {
     public int Depth { get; set; } = -1;
@@ -209,9 +218,6 @@ public class CallLikePosToken : ValuePosToken
         NameEndIndex = nameEndIndex;
         Name = name;
     }
-
-    public string GetName(string text)
-        => text[Position.Start..NameEndIndex];
 
     public bool NameEquals(in string text, in string b)
         => text.AsSpan()[Position.Start..NameEndIndex].SequenceEqual(b);
