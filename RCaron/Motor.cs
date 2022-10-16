@@ -584,9 +584,10 @@ public class Motor
                 return Horrors.Sum(At(argumentTokens, 0).NotNull(), At(argumentTokens, 1).NotNull());
             case "globalget":
             {
-                var val = GlobalScope.GetVariable(At(argumentTokens, 0).Expect<string>());
+                var variableName = At(argumentTokens, 0).Expect<string>();
+                var val = GlobalScope.GetVariable(variableName);
                 if (val.Equals(RCaronInsideEnum.VariableNotFound))
-                    throw RCaronException.VariableNotFound(name);
+                    throw RCaronException.VariableNotFound(variableName);
                 return val;
             }
             case "globalset":
