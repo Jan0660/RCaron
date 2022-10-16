@@ -1057,6 +1057,8 @@ public class Motor
                 return false;
             case "null":
                 return null;
+            case "current_motor":
+                return this;
         }
 
         var val = GetVar(name);
