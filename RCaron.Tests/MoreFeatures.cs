@@ -17,7 +17,7 @@ $i5 = $g[5];");
     }
 
     [Fact]
-    public void FunctionCall()
+    public void FunctionPlainCall()
     {
         var definition = @"func Funny($Arg, $OptArg = 1){
     globalset('global', $Arg + $OptArg);
@@ -50,7 +50,50 @@ $h = Funny;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 $h = Funny -OptArg 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
-$h = Funny 2 -OptArg 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+$h = Funny 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny -OptArg 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+    }
+
+    [Fact]
+    public void FunctionCallLikeCall()
+    {
+        var definition = @"func Funny($Arg, $OptArg = 1){
+    globalset('global', $Arg + $OptArg);
+    return $Arg + $OptArg;
+}";
+        var m = RCaronRunner.Run(@$"
+{definition}
+
+$h1 = Funny(2, OptArg: 2);
+$h2 = Funny(2);");
+        m.AssertVariableEquals("h1", (long)4);
+        m.AssertVariableEquals("h2", (long)3);
+        Assert.Equal(0, m.BlockStack.Count);
+
+        m.RunWithCode($@"{definition}
+Funny(2, OptArg: 3);");
+        m.AssertVariableEquals("global", (long)5);
+        Assert.Equal(0, m.BlockStack.Count);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = InvalidName(2);"), RCaronExceptionCode.MethodNotFound);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny(2, InvalidOptArg: 2);"), RCaronExceptionCode.NamedArgumentNotFound);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny();"), RCaronExceptionCode.ArgumentsLeftUnassigned);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny(OptArg: 3);"), RCaronExceptionCode.ArgumentsLeftUnassigned);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny(2, 4, 5);"), RCaronExceptionCode.LeftOverPositionalArgument);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+$h = Funny(OptArg: 3, 4);"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
     }
 
     [Fact]

@@ -23,6 +23,8 @@ public enum RCaronExceptionCode
     ClassPropertyNotFound,
     NoSuitableIndexerImplementation,
     InvalidEscape,
+    // todo(current): remove support for positional arguments after named arguments in LibrarySourceGenerator
+    PositionalArgumentAfterNamedArgument,
 }
 
 public class RCaronException : Exception

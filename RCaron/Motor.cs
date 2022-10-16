@@ -129,11 +129,11 @@ public class Motor
         };
         var linesEn = Raw.AsSpan().EnumerateLines();
         var hgtrfdews = 0;
-        while(linesEn.MoveNext())
+        while (linesEn.MoveNext())
         {
             hgtrfdews += linesEn.Current.Length;
             lineNumber++;
-            if(hgtrfdews >= pos)
+            if (hgtrfdews >= pos)
                 break;
         }
 
@@ -207,8 +207,10 @@ public class Motor
                 default:
                     throw new("invalid line");
             }
+
             return RunLineResult.Nothing;
         }
+
         switch (line.Type)
         {
             case LineType.VariableAssignment:
@@ -394,7 +396,7 @@ public class Motor
                         }
                     }
                 }
-                else if(line.Tokens[1] is KeywordToken keywordToken)
+                else if (line.Tokens[1] is KeywordToken keywordToken)
                     name = keywordToken.String;
                 else
                     throw new Exception("Invalid function name token");
@@ -502,14 +504,13 @@ public class Motor
                             return RunLineResult.Nothing;
                     }
 
-                // todo: may not have to do this
                 if (Functions.TryGetValue(keywordString, out var func))
                 {
-                    FunctionPlainCall(func, line.Tokens.Segment(1..));
+                    FunctionCall(func, null, line.Tokens.Segment(1..));
                     return RunLineResult.Nothing;
                 }
 
-                MethodCall(keywordString, line.Tokens.AsSpan()[1..]);
+                MethodCall(keywordString, line.Tokens.Segment(1..));
                 break;
             }
         }
@@ -530,7 +531,7 @@ public class Motor
         return ReturnValue;
     }
 
-    public object? MethodCall(string nameArg, Span<PosToken> argumentTokens = default,
+    public object? MethodCall(string nameArg, ArraySegment<PosToken> argumentTokens = default,
         CallLikePosToken? callToken = null
         // , Span<PosToken> instanceTokens = default
         , object? instance = null
@@ -554,9 +555,9 @@ public class Motor
             return SimpleEvaluateExpressionSingle(tokens[index]);
         }
 
-        object?[] All(in Span<PosToken> tokens)
+        object?[] All(in ArraySegment<PosToken> tokens)
         {
-            if (tokens.Length == 0 && (callToken?.ArgumentsEmpty() ?? false))
+            if (tokens.Count == 0 && (callToken?.ArgumentsEmpty() ?? false))
                 return Array.Empty<object>();
             if (callToken != null)
             {
@@ -631,9 +632,7 @@ public class Motor
         }
 
         if (Functions.TryGetValue(nameArg, out var func))
-        {
-            return FunctionPlainCall(func, argumentTokens);
-        }
+            return FunctionCall(func, callToken, argumentTokens);
 
         if (name[0] == '#' || instance != null)
         {
@@ -653,6 +652,7 @@ public class Motor
                     target = obj;
                     type = obj.GetType();
                 }
+
                 goto resolveMethod;
             }
 
@@ -811,7 +811,7 @@ public class Motor
 
         foreach (var module in Modules)
         {
-            var v = module.RCaronModuleRun(name, this, argumentTokens);
+            var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
             if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? false)
                 return v;
         }
@@ -1076,7 +1076,7 @@ public class Motor
     {
         if (token is ConstToken constToken)
             return constToken.Value;
-        if(token is VariableToken variableToken)
+        if (token is VariableToken variableToken)
             return EvaluateVariable(variableToken.Name);
         switch (token.Type)
         {
@@ -1108,7 +1108,8 @@ public class Motor
             }
             case TokenType.EqualityOperationGroup when token is ComparisonValuePosToken comparisonValuePosToken:
                 return EvaluateComparisonOperation(comparisonValuePosToken);
-            case TokenType.LogicalOperationGroup when token is LogicalOperationValuePosToken logicalOperationValuePosToken:
+            case TokenType.LogicalOperationGroup
+                when token is LogicalOperationValuePosToken logicalOperationValuePosToken:
                 return EvaluateLogicalOperation(logicalOperationValuePosToken);
         }
 
@@ -1171,74 +1172,83 @@ public class Motor
         => tokens.Count switch
         {
             > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
-                argumentTokens: tokens.AsSpan()[1..]),
+                argumentTokens: tokens.Segment(1..)),
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("what he fuck")
         };
 
-    public object? FunctionPlainCall(Function function, ReadOnlySpan<PosToken> argumentTokens)
+    public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
+        ArraySegment<PosToken> argumentTokens = default)
     {
         LocalScope scope = null;
         if (function.Arguments != null)
         {
             scope ??= new();
-            object?[] argumentValues = new object?[function.Arguments.Length];
+            Span<bool> assignedArguments = stackalloc bool[function.Arguments.Length];
+            var enumerator = callToken != null
+                ? new ArgumentEnumerator(callToken)
+                : new ArgumentEnumerator(argumentTokens, Raw);
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.CurrentName != null)
+                {
+                    var index = 0;
+                    for (; index < function.Arguments.Length; index++)
+                    {
+                        if (function.Arguments[index].Name.SequenceEqual(enumerator.CurrentName))
+                            break;
+                        else if (index == function.Arguments.Length - 1)
+                            throw RCaronException.NamedArgumentNotFound(enumerator.CurrentName);
+                    }
+
+                    scope.Variables ??= new();
+                    scope.Variables[function.Arguments[index].Name] =
+                        SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
+                    assignedArguments[index] = true;
+                }
+                else if (!enumerator.HitNamedArgument)
+                {
+                    scope.Variables ??= new();
+                    for (var i = 0; i < function.Arguments.Length; i++)
+                    {
+                        if (!scope.Variables.ContainsKey(function.Arguments[i].Name))
+                        {
+                            scope.Variables[function.Arguments[i].Name] =
+                                SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
+                            assignedArguments[i] = true;
+                            break;
+                        }
+                        else if (i == function.Arguments.Length - 1)
+                            throw RCaronException.LeftOverPositionalArgument();
+                    }
+                }
+                else
+                    throw new RCaronException("hit positional argument after a named one",
+                        RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+            }
+
+            // assign default values
+            for (var i = 0; i < function.Arguments.Length; i++)
+            {
+                if (!assignedArguments[i])
+                {
+                    scope.Variables ??= new();
+                    scope.Variables[function.Arguments[i].Name] = function.Arguments[i].DefaultValue;
+                }
+            }
+
+            // check if all arguments are assigned
             for (var i = 0; i < function.Arguments.Length; i++)
             {
                 if (function.Arguments[i].DefaultValue?.Equals(RCaronInsideEnum.NoDefaultValue) ?? false)
-                    argumentValues[i] = RCaronInsideEnum.NotAssigned;
-                else
-                    argumentValues[i] = function.Arguments[i].DefaultValue;
-            }
-
-            var argPos = 0;
-            for (var i = 0; i < argumentTokens.Length; i++)
-            {
-                if (argumentTokens[i].Type == TokenType.MathOperator && argumentTokens[i].EqualsString(Raw, "-") &&
-                    argumentTokens[i + 1].Type == TokenType.Keyword)
                 {
-                    var argName = argumentTokens[i + 1].ToSpan(Raw);
-                    var j = 0;
-                    for (; j < function.Arguments.Length; j++)
-                    {
-                        if (argName.SequenceEqual(function.Arguments[j].Name))
-                            break;
-                        else if (j == function.Arguments.Length - 1)
-                            throw RCaronException.NamedArgumentNotFound(argName);
-                    }
-
-                    argumentValues[j] = SimpleEvaluateExpressionSingle(argumentTokens[i + 2]);
-                    i += 2;
-                    argPos++;
+                    if (!assignedArguments[i])
+                        throw RCaronException.ArgumentsLeftUnassigned();
                 }
-                else
-                {
-                    for (var j = 0; j < function.Arguments.Length; j++)
-                    {
-                        if (argumentValues[j].Equals(RCaronInsideEnum.NotAssigned))
-                        {
-                            argumentValues[j] = SimpleEvaluateExpressionSingle(argumentTokens[i]);
-                            argPos++;
-                            break;
-                        }
-                        else if (j == function.Arguments.Length - 1)
-                            throw RCaronException.LeftOverPositionalArgument();
-                    }
-
-                    argPos++;
-                }
-            }
-
-            if (argumentValues.Contains(RCaronInsideEnum.NotAssigned))
-                throw RCaronException.ArgumentsLeftUnassigned();
-
-            scope.Variables ??= new();
-            for (var i = 0; i < function.Arguments.Length; i++)
-            {
-                scope.Variables[function.Arguments[i].Name] = argumentValues[i];
             }
         }
+
 
         BlockStack.Push(new StackThing(false, true, scope));
         RunCodeBlock(function.CodeBlock);
@@ -1277,9 +1287,10 @@ public class Motor
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
         }
     }
+
     public bool EvaluateLogicalOperation(LogicalOperationValuePosToken comparisonValuePosToken)
     {
-        var val1 = (bool) SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left)!;
+        var val1 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left)!;
         var val2 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right)!;
         var op = comparisonValuePosToken.ComparisonToken.ToSpan(Raw);
         switch (op)

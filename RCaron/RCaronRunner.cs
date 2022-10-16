@@ -99,8 +99,10 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Colon } ||
-                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Colon }))
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer } ||
+                            (tokens[i].Type == TokenType.Colon && tokens[i-1].Type == TokenType.ExternThing ) ||
+                            (tokens[i-1].Type == TokenType.Colon && tokens[i-2].Type == TokenType.ExternThing ) ||
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
