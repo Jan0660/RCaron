@@ -499,7 +499,11 @@ public static class RCaronRunner
         // qfor loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "qfor"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.QuickForLoop);
+            var falseI = 0;
+            var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
+            falseI = 0;
+            var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
+            return new ForLoopLine(callToken, initializer, iterator, LineType.QuickForLoop);
         }
         // foreach loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "foreach"))

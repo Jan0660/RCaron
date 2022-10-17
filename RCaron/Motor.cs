@@ -182,6 +182,26 @@ public class Motor
                     curIndex++;
                     break;
                 }
+                case LineType.QuickForLoop when baseLine is ForLoopLine forLoopLine:
+                {
+                    var falseI = 0;
+                    RunLine(forLoopLine.Initializer);
+                    var scope = new StackThing(true, false, null);
+                    while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
+                    {
+                        BlockStack.Push(scope);
+                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                        {
+                            return (true, res);
+                        }
+
+                        RunLine(forLoopLine.Iterator);
+                    }
+
+                    curIndex++;
+                    break;
+                }
                 case LineType.LoopLoop:
                 {
                     while (true)
@@ -350,27 +370,6 @@ public class Motor
                 }
 
                 break;
-            case LineType.QuickForLoop when line.Tokens[0] is CallLikePosToken callToken:
-            {
-                var falseI = 0;
-                RunLine(RCaronRunner.GetLine(callToken.Arguments[0], ref falseI, Raw));
-                var scope = new StackThing(true, false, null);
-                while (SimpleEvaluateBool(callToken.Arguments[1]))
-                {
-                    BlockStack.Push(scope);
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
-                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
-                    {
-                        return (true, res);
-                    }
-
-                    falseI = 0;
-                    RunLine(RCaronRunner.GetLine(callToken.Arguments[2], ref falseI, Raw));
-                }
-
-                curIndex++;
-                break;
-            }
             case LineType.Function:
             {
                 string name;
