@@ -57,8 +57,10 @@ if ($true){ $h2 = 1; }");
         var m = RCaronRunner.Run(@"$h = 0; loop {
 $h = $h + 1;
 if ($h > 9) { break; }
-}");
+}
+$reachedEnd = $true;");
         m.AssertVariableEquals("h", (long)10);
+        m.AssertVariableEquals("reachedEnd", true);
     }
 
     [Fact]

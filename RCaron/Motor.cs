@@ -173,6 +173,8 @@ public class Motor
                         var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
+                            if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                                break;
                             return (true, res);
                         }
 
@@ -193,6 +195,8 @@ public class Motor
                         var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
+                            if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                                break;
                             return (true, res);
                         }
 
@@ -210,6 +214,8 @@ public class Motor
                         var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
+                            if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                                break;
                             return (true, res);
                         }
                     }
@@ -306,6 +312,8 @@ public class Motor
                     var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
+                        if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                            break;
                         return (true, res);
                     }
                 }
@@ -321,6 +329,8 @@ public class Motor
                     var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
+                        if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                            break;
                         return (true, res);
                     }
                 } while (SimpleEvaluateBool(callToken.Arguments[0]));
@@ -340,6 +350,8 @@ public class Motor
                     var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
+                        if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                            break;
                         return (true, res);
                     }
                 }
