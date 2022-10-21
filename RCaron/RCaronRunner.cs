@@ -216,7 +216,7 @@ public static class RCaronRunner
                     // comparison group
                     if (tokens[^2].Type == TokenType.ComparisonOperation)
                     {
-                        var comparison = new ComparisonValuePosToken(left, right, tokens[^2]);
+                        var comparison = new ComparisonValuePosToken(left, right, (OperationPosToken)tokens[^2]);
                         tokens.RemoveFrom(tokens.Count - 3);
                         tokens.Add(comparison);
                         ranComparison = true;
@@ -229,7 +229,7 @@ public static class RCaronRunner
                         if (ranComparison && !((left = tokens[^3] as ValuePosToken) != null &&
                                                (right = tokens[^1] as ValuePosToken) != null))
                             goto afterComparisonAndLogicalGrouping;
-                        var comparison = new LogicalOperationValuePosToken(left, right, tokens[^2]);
+                        var comparison = new LogicalOperationValuePosToken(left, right, (OperationPosToken)tokens[^2]);
                         tokens.RemoveFrom(tokens.Count - 3);
                         tokens.Add(comparison);
                     }

@@ -28,5 +28,31 @@ public static class Operations
     public const string MultiplyOp = "*";
     public const string DivideOp = "/";
     public const string ModuloOp = "%";
+}
 
+public enum OperationEnum : byte
+{
+    Invalid = 0,
+    // other
+    Assignment,
+    Range,
+    // equality
+    IsEqual,
+    IsNotEqual,
+    IsGreater,
+    IsGreaterOrEqual,
+    IsLess,
+    IsLessOrEqual,
+    // boolean
+    And,
+    Or,
+    // unary
+    UnaryIncrement,
+    UnaryDecrement,
+    // math
+    Sum,
+    Subtract,
+    Multiply,
+    Divide,
+    Modulo,
 }

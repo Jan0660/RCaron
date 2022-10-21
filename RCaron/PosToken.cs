@@ -97,6 +97,7 @@ public class PosToken
 public class ConstToken : ValuePosToken
 {
     public object Value { get; }
+
     public ConstToken(TokenType type, (int Start, int End) position, object value) : base(type, position)
     {
         Value = value;
@@ -106,6 +107,7 @@ public class ConstToken : ValuePosToken
 public class VariableToken : ValuePosToken
 {
     public string Name { get; }
+
     public VariableToken((int Start, int End) position, string name) : base(TokenType.VariableIdentifier, position)
     {
         Name = name;
@@ -115,6 +117,7 @@ public class VariableToken : ValuePosToken
 public class KeywordToken : PosToken
 {
     public string String { get; }
+
     public KeywordToken((int Start, int End) position, string str) : base(TokenType.Keyword, position)
     {
         String = str;
@@ -124,6 +127,7 @@ public class KeywordToken : PosToken
 public class ExternThingToken : PosToken
 {
     public string String { get; }
+
     public ExternThingToken((int Start, int End) position, string str) : base(TokenType.ExternThing, position)
     {
         String = str;
@@ -173,9 +177,9 @@ public class ComparisonValuePosToken : ValuePosToken
 {
     public ValuePosToken Left { get; }
     public ValuePosToken Right { get; }
-    public PosToken ComparisonToken { get; set; }
+    public OperationPosToken ComparisonToken { get; set; }
 
-    public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, PosToken comparisonToken) : base(
+    public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken) : base(
         TokenType.EqualityOperationGroup, (left.Position.Start, right.Position.End))
     {
         Left = left;
@@ -188,9 +192,9 @@ public class LogicalOperationValuePosToken : ValuePosToken
 {
     public ValuePosToken Left { get; }
     public ValuePosToken Right { get; }
-    public PosToken ComparisonToken { get; set; }
+    public OperationPosToken ComparisonToken { get; set; }
 
-    public LogicalOperationValuePosToken(ValuePosToken left, ValuePosToken right, PosToken comparisonToken) : base(
+    public LogicalOperationValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken) : base(
         TokenType.LogicalOperationGroup, (left.Position.Start, right.Position.End))
     {
         Left = left;
@@ -245,5 +249,27 @@ public class IndexerToken : PosToken
         (tokens[0].Position.Start, tokens[^1].Position.End))
     {
         Tokens = tokens;
+    }
+}
+
+public class ValueOperationValuePosToken : ValuePosToken
+{
+    public OperationEnum Operation { get; }
+
+    public ValueOperationValuePosToken(TokenType type, (int Start, int End) position, OperationEnum operation) : base(
+        type, position)
+    {
+        Operation = operation;
+    }
+}
+
+public class OperationPosToken : PosToken
+{
+    public OperationEnum Operation { get; }
+
+    public OperationPosToken(TokenType type, (int Start, int End) position, OperationEnum operation) : base(type,
+        position)
+    {
+        Operation = operation;
     }
 }

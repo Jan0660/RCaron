@@ -1,13 +1,11 @@
 ﻿namespace RCaron;
 
-
 public ref struct ArgumentEnumerator
 {
     public string? CurrentName { get; private set; }
     public ArraySegment<PosToken> CurrentTokens { get; private set; }
     private CallLikePosToken? _callToken;
     public ArraySegment<PosToken> _argumentTokens;
-    public string? _rawText;
     public int Index { get; private set; }
     public bool HitNamedArgument { get; private set; }
 
@@ -21,11 +19,10 @@ public ref struct ArgumentEnumerator
         HitNamedArgument = false;
     }
 
-    public ArgumentEnumerator(ArraySegment<PosToken> argumentTokens, string rawText)
+    public ArgumentEnumerator(ArraySegment<PosToken> argumentTokens)
     {
         this._callToken = null;
         _argumentTokens = argumentTokens;
-        _rawText = rawText;
         this.CurrentName = default;
         CurrentTokens = default;
         Index = -1;
@@ -61,7 +58,7 @@ public ref struct ArgumentEnumerator
                 return false;
             }
 
-            if (_argumentTokens[Index].Type == TokenType.MathOperator && _argumentTokens[Index].EqualsString(_rawText!, "-") &&
+            if (_argumentTokens[Index] is ValueOperationValuePosToken { Operation: OperationEnum.Subtract } &&
                 _argumentTokens[Index + 1].Type == TokenType.Keyword)
             {
                 HitNamedArgument = true;
@@ -72,10 +69,10 @@ public ref struct ArgumentEnumerator
             else
             {
                 CurrentName = null;
-                CurrentTokens = _argumentTokens[Index..(Index+1)];
+                CurrentTokens = _argumentTokens[Index..(Index + 1)];
             }
         }
-        
+
         return true;
     }
 }

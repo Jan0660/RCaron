@@ -155,11 +155,13 @@ public class TokenReader
             position++;
             return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
         }
+        // todo: for clarity maybe make ranges into a single token that would contain the numbers
         // range operator
+        // it is here, instead of in CollectOperation, because it would conflict with TokenType.Dot
         else if (txt[position] == '.' && txt[position + 1] == '.' && txt[position + 2] != '.')
         {
             position += 2;
-            return new PosToken(TokenType.Operator, (initialPosition, position));
+            return new ValueOperationValuePosToken(TokenType.Operator, (initialPosition, position), OperationEnum.Range);
         }
         // dot
         else if (txt[position] == '.')
@@ -188,7 +190,7 @@ public class TokenReader
         // operation
         else
         {
-            var (index, tokenType) = CollectOperation(txt[position..]);
+            var (index, tokenType, op) = CollectOperation(txt[position..]);
             // collect a keyword e.g. "println"
             if (index == 0)
             {
@@ -200,9 +202,9 @@ public class TokenReader
             position += index;
             // match "value" operations
             if (tokenType == TokenType.Operator || tokenType == TokenType.MathOperator)
-                return new ValuePosToken(tokenType, (initialPosition, position));
+                return new ValueOperationValuePosToken(tokenType, (initialPosition, position), op);
 
-            return new PosToken(tokenType, (initialPosition, position));
+            return new OperationPosToken(tokenType, (initialPosition, position), op);
         }
     }
 
@@ -331,45 +333,45 @@ public class TokenReader
         return true;
     }
 
-    public (int, TokenType tokenType) CollectOperation(in ReadOnlySpan<char> span)
+    public (int, TokenType tokenType, OperationEnum operationEnum) CollectOperation(in ReadOnlySpan<char> span)
     {
         // comparison
         if (IsMatch(in span, Operations.IsEqualOp))
-            return (2, TokenType.ComparisonOperation);
+            return (2, TokenType.ComparisonOperation, OperationEnum.IsEqual);
         if (IsMatch(in span, Operations.IsNotEqualOp))
-            return (2, TokenType.ComparisonOperation);
+            return (2, TokenType.ComparisonOperation, OperationEnum.IsNotEqual);
         if (IsMatch(in span, Operations.IsGreaterOrEqualOp))
-            return (2, TokenType.ComparisonOperation);
+            return (2, TokenType.ComparisonOperation, OperationEnum.IsGreaterOrEqual);
         if (IsMatch(in span, Operations.IsLessOrEqualOp))
-            return (2, TokenType.ComparisonOperation);
+            return (2, TokenType.ComparisonOperation, OperationEnum.IsLessOrEqual);
         if (IsMatch(in span, Operations.IsGreaterOp))
-            return (1, TokenType.ComparisonOperation);
+            return (1, TokenType.ComparisonOperation, OperationEnum.IsGreater);
         if (IsMatch(in span, Operations.IsLessOp))
-            return (1, TokenType.ComparisonOperation);
+            return (1, TokenType.ComparisonOperation, OperationEnum.IsLess);
         // logical
         if (IsMatch(in span, Operations.AndOp))
-            return (2, TokenType.LogicalOperation);
+            return (2, TokenType.LogicalOperation, OperationEnum.And);
         if (IsMatch(in span, Operations.OrOp))
-            return (2, TokenType.LogicalOperation);
+            return (2, TokenType.LogicalOperation, OperationEnum.Or);
         // other
         if (IsMatch(in span, Operations.AssignmentOp))
-            return (1, TokenType.Operation);
+            return (1, TokenType.Operation, OperationEnum.Assignment);
         // unary
         if (IsMatch(in span, Operations.UnaryIncrementOp))
-            return (2, TokenType.UnaryOperation);
+            return (2, TokenType.UnaryOperation, OperationEnum.UnaryIncrement);
         if (IsMatch(in span, Operations.UnaryDecrementOp))
-            return (2, TokenType.UnaryOperation);
+            return (2, TokenType.UnaryOperation, OperationEnum.UnaryDecrement);
         // math
         if (IsMatch(in span, Operations.SumOp))
-            return (1, TokenType.MathOperator);
+            return (1, TokenType.MathOperator,OperationEnum.Sum);
         if (IsMatch(in span, Operations.SubtractOp))
-            return (1, TokenType.MathOperator);
+            return (1, TokenType.MathOperator, OperationEnum.Subtract);
         if (IsMatch(in span, Operations.MultiplyOp))
-            return (1, TokenType.MathOperator);
+            return (1, TokenType.MathOperator, OperationEnum.Multiply);
         if (IsMatch(in span, Operations.DivideOp))
-            return (1, TokenType.MathOperator);
+            return (1, TokenType.MathOperator, OperationEnum.Divide);
         if (IsMatch(in span, Operations.ModuloOp))
-            return (1, TokenType.MathOperator);
-        return (0, 0);
+            return (1, TokenType.MathOperator, OperationEnum.Modulo);
+        return (0, 0, 0);
     }
 }

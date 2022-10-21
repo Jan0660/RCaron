@@ -340,8 +340,7 @@ public class Motor
             }
             case LineType.ForeachLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
-                var varName =
-                    Raw[(callToken.Arguments[0][0].Position.Start + 1)..callToken.Arguments[0][0].Position.End];
+                var varName = ((VariableToken)callToken.Arguments[0][0]).Name;
                 foreach (var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
                 {
                     var scope = new LocalScope();
@@ -361,14 +360,17 @@ public class Motor
             }
             case LineType.UnaryOperation:
             {
-                var variableName = Raw[(line.Tokens[0].Position.Start + 1)..line.Tokens[0].Position.End];
-                if (line.Tokens[1].EqualsString(Raw, "++"))
+                var variableName = ((VariableToken)line.Tokens[0]).Name;
+                switch (line.Tokens[1])
                 {
-                    Horrors.AddTo(ref GetVarRef(variableName)!, (long)1);
+                    case OperationPosToken { Operation: OperationEnum.UnaryIncrement }:
+                        Horrors.AddTo(ref GetVarRef(variableName)!, (long)1);
+                        break;
+                    case OperationPosToken { Operation: OperationEnum.UnaryDecrement }:
+                        SetVar(variableName,
+                            Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]).NotNull(), (long)1));
+                        break;
                 }
-                else if (line.Tokens[1].EqualsString(Raw, "--"))
-                    SetVar(variableName,
-                        Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]).NotNull(), (long)1));
 
                 break;
             }
@@ -393,9 +395,9 @@ public class Motor
                     for (int i = 0; i < callToken.Arguments.Length; i++)
                     {
                         var cur = callToken.Arguments[i];
-                        var argName = Raw[(cur[0].Position.Start + 1)..cur[0].Position.End];
+                        var argName = ((VariableToken)cur[0]).Name;
                         arguments[i] = new FunctionArgument(argName);
-                        if (cur.Length > 1 && cur[1].EqualsString(Raw, "="))
+                        if (cur is [_, OperationPosToken { Operation: OperationEnum.Assignment }, ..])
                         {
                             arguments[i].DefaultValue = SimpleEvaluateExpressionHigh(cur[2..]);
                         }
@@ -429,16 +431,10 @@ public class Motor
                 for (var i = 1; i < cases.Lines.Count - 1; i++)
                 {
                     var caseLine = ((TokenLine)cases.Lines[i]);
-                    /*if (caseLine.Tokens[0].Type == TokenType.Keyword &&
-                        caseLine.Tokens[0].EqualsStringCaseInsensitive(Raw, "default"))
-                    {
-                        BlockStack.Push(new(true, false, null));
-                        RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
-                        BlockStack.Pop();
-                    }*/
                     var value = SimpleEvaluateExpressionSingle(caseLine.Tokens[0]);
-                    if (!caseLine.Tokens[0].IsKeyword(Raw, "default") && ((switchValue == null && value == null) ||
-                                                                          (!switchValue?.Equals(value) ?? false)))
+                    if (caseLine.Tokens[0] is not KeywordToken { String: "default" } &&
+                        ((switchValue == null && value == null) ||
+                         (!switchValue?.Equals(value) ?? false)))
                         continue;
                     BlockStack.Push(new(true, false, null));
                     var res = RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
@@ -846,19 +842,19 @@ public class Motor
                 {
                     if (classInstance.PropertyValues == null)
                         throw new RCaronException("Class has no properties", RCaronExceptionCode.ClassNoProperties);
-                    var i = classInstance.GetPropertyIndex(last.ToSpan(Raw));
+                    var i = classInstance.GetPropertyIndex(keywordToken.String);
                     if (i != -1)
                         return new ClassAssigner(classInstance, i);
-                    throw new RCaronException($"Class property of name '{last.ToSpan(Raw)}' not found",
+                    throw new RCaronException($"Class property of name '{keywordToken.String}' not found",
                         RCaronExceptionCode.ClassPropertyNotFound);
                 }
 
                 str = keywordToken.String;
             }
-            else if (tokens[0] is ExternThingToken)
+            else if (tokens[0] is ExternThingToken ett)
             {
-                var name = tokens[0].ToSpan(Raw);
-                str = name[(name.LastIndexOf('.') + 1)..].ToString();
+                var name = ett.String;
+                str = name[(name.LastIndexOf('.') + 1)..];
             }
             else
             {
@@ -1004,7 +1000,8 @@ public class Motor
 
             if (val is ClassInstance classInstance1)
             {
-                val = classInstance1.PropertyValues[classInstance1.GetPropertyIndex(instanceTokens[i].ToSpan(Raw))];
+                val = classInstance1.PropertyValues[
+                    classInstance1.GetPropertyIndex(((KeywordToken)instanceTokens[i]).String)];
                 type = val?.GetType();
                 continue;
             }
@@ -1099,11 +1096,11 @@ public class Motor
                 return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
             case TokenType.ExternThing when token is ExternThingToken externThingToken:
             {
-                var nameSpan = token.ToSpan(Raw)[1..];
+                var name = externThingToken.String;
                 // try RCaron ClassDefinition
                 if (ClassDefinitions != null)
                     for (var i = 0; i < ClassDefinitions.Count; i++)
-                        if (nameSpan.Equals(ClassDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
+                        if (name.Equals(ClassDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
                             return ClassDefinitions[i];
 
                 // get Type via TypeResolver
@@ -1134,26 +1131,26 @@ public class Motor
 
         while (index < tokens.Count - 1)
         {
-            var op = tokens[index + 1].ToSpan(Raw);
+            var op = (ValueOperationValuePosToken)tokens[index + 1];
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
-            switch (op)
+            switch (op.Operation)
             {
-                case Operations.SumOp:
+                case OperationEnum.Sum:
                     Horrors.AddTo(ref value, second);
                     break;
-                case Operations.SubtractOp:
+                case OperationEnum.Subtract:
                     value = Horrors.Subtract(value, second);
                     break;
-                case Operations.MultiplyOp:
+                case OperationEnum.Multiply:
                     value = Horrors.Multiply(value, second);
                     break;
-                case Operations.DivideOp:
+                case OperationEnum.Divide:
                     value = Horrors.Divide(value, second);
                     break;
-                case Operations.ModuloOp:
+                case OperationEnum.Modulo:
                     value = Horrors.Modulo(value, second);
                     break;
-                case Operations.RangeOp:
+                case OperationEnum.Range:
                 {
                     var long1 = value as long?;
                     var long2 = second as long?;
@@ -1194,7 +1191,7 @@ public class Motor
             Span<bool> assignedArguments = stackalloc bool[function.Arguments.Length];
             var enumerator = callToken != null
                 ? new ArgumentEnumerator(callToken)
-                : new ArgumentEnumerator(argumentTokens, Raw);
+                : new ArgumentEnumerator(argumentTokens);
             while (enumerator.MoveNext())
             {
                 if (enumerator.CurrentName != null)
@@ -1273,20 +1270,20 @@ public class Motor
     {
         var val1 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left);
         var val2 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right);
-        var op = comparisonValuePosToken.ComparisonToken.ToSpan(Raw);
-        switch (op)
+        var op = comparisonValuePosToken.ComparisonToken;
+        switch (op.Operation)
         {
-            case Operations.IsEqualOp:
+            case OperationEnum.IsEqual:
                 return val1.Equals(val2);
-            case Operations.IsNotEqualOp:
+            case OperationEnum.IsNotEqual:
                 return !val1.Equals(val2);
-            case Operations.IsGreaterOp:
+            case OperationEnum.IsGreater:
                 return Horrors.IsGreater(val1, val2);
-            case Operations.IsGreaterOrEqualOp:
+            case OperationEnum.IsGreaterOrEqual:
                 return val1.Equals(val2) || Horrors.IsGreater(val1, val2);
-            case Operations.IsLessOp:
+            case OperationEnum.IsLess:
                 return !val1.Equals(val2) && Horrors.IsLess(val1, val2);
-            case Operations.IsLessOrEqualOp:
+            case OperationEnum.IsLessOrEqual:
                 return val1.Equals(val2) || Horrors.IsLess(val1, val2);
             default:
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
@@ -1297,12 +1294,12 @@ public class Motor
     {
         var val1 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left)!;
         var val2 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right)!;
-        var op = comparisonValuePosToken.ComparisonToken.ToSpan(Raw);
-        switch (op)
+        var op = comparisonValuePosToken.ComparisonToken;
+        switch (op.Operation)
         {
-            case Operations.AndOp:
+            case OperationEnum.And:
                 return val1 && val2;
-            case Operations.OrOp:
+            case OperationEnum.Or:
                 return val1 || val2;
             default:
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
