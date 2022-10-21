@@ -35,6 +35,17 @@ public partial class FunModule : IRCaronModule
         ev.AddEventHandler(obj, finDel);
     }
 
+    [Method("Start-MotorPoolTask")]
+    public void StartMotorPoolTask(Motor motor, Motor parent, CodeBlockToken codeBlockToken, object[]? args = null)
+    {
+        using var m = MotorPool.GetAndPrepare(parent);
+        var scope = new LocalScope();
+        scope.Variables ??= new();
+        scope.SetVariable("args", args);
+        m.Motor.BlockStack.Push(new(false, true, scope));
+        Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
+    }
+
     public class CodeBlockWrap
     {
         public Motor Motor { get; }
