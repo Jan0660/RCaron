@@ -39,6 +39,7 @@ public partial class JsonModule : IRCaronModule
         }
         else if (type != null)
             return JsonSerializer.Deserialize(json, type.Type);
+
         return JsonNode.Parse(json);
     }
 }
@@ -140,5 +141,24 @@ public class ClassInstanceReadConverter : JsonConverter<ClassInstance>
     {
         throw new Exception(
             $"can not write {nameof(ClassInstance)}, for writing use {nameof(ClassInstanceWriteConverter)}");
+    }
+}
+
+public class JsonNodeIndexer : IIndexerImplementation
+{
+    public bool Do(object? indexerValue, ref object? value, ref Type? type)
+    {
+        if (value is not JsonNode jsonNode)
+            return false;
+
+        if (indexerValue is string str)
+            value = jsonNode[str];
+        else if (indexerValue is int @int)
+            value = jsonNode[@int];
+        else
+            return false;
+
+        type = value?.GetType() ?? typeof(object);
+        return true;
     }
 }
