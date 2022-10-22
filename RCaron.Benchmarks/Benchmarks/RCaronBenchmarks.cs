@@ -10,7 +10,7 @@ public class RCaronBenchmarks
     public const string FibbonaciCode = @"
 $a = 0; $b = 1; $c = 0;
 
-for($i = 0, $i < 2, $i++) {
+for($i = 0; $i < 2; $i++) {
     $c = $a + $b;
     $a = $b;
     $b = $c;
