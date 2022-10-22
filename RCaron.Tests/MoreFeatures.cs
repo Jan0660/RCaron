@@ -271,4 +271,18 @@ $l5 = 5;", new MotorOptions(){EnableDebugging = true});
         Assert.Equal(1, m.Lines.Count);
         Assert.Equal(1, m.GetLineNumber());
     }
+
+    [Fact]
+    public void ComparisonInParentheses()
+    {
+        var m = RCaronRunner.Run("$h = (1 == 1);");
+        m.AssertVariableEquals("h", true);
+    }
+
+    [Fact]
+    public void LogicalInParentheses()
+    {
+        var m = RCaronRunner.Run("$h = ($true && $true);");
+        m.AssertVariableEquals("h", true);
+    }
 }

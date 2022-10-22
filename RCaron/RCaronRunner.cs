@@ -237,6 +237,16 @@ public static class RCaronRunner
 
                 afterComparisonAndLogicalGrouping: ;
 
+                if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } &&
+                    tokens[^1] is { Type: TokenType.EqualityOperationGroup or TokenType.LogicalOperationGroup } &&
+                    tokens[^2].Type == TokenType.SimpleBlockStart)
+                {
+                    var awd = tokens[^1];
+                    tokens.RemoveAt(tokens.Count - 2);
+                    dontDoSimpleBlockEndCheck = true;
+                    dontAddCurrent = true;
+                }
+
                 if ( /*!dontDoSimpleBlockEndCheck && */posToken is BlockPosToken
                     {
                         Type: TokenType.SimpleBlockEnd
@@ -249,7 +259,10 @@ public static class RCaronRunner
                                  bpt.Number == blockToken.Number);
                     else
                     {
-                        var m = (MathValueGroupPosToken)tokens[^1];
+                        if (!(tokens[^1].Type is TokenType.DumbShit or TokenType.EqualityOperationGroup
+                                or TokenType.LogicalOperationGroup))
+                            throw new();
+                        var m = tokens[^1];
                         var nameToken = tokens[^2];
                         if (!(nameToken.Type == TokenType.Keyword || nameToken.Type == TokenType.ArrayLiteralStart ||
                               nameToken.IsDotJoinableSomething()))
@@ -258,7 +271,7 @@ public static class RCaronRunner
                         tokens.RemoveAt(tokens.Count - 1);
                         tokens.Add(new CallLikePosToken(TokenType.KeywordCall,
                             (nameToken.Position.Start, m.Position.End),
-                            new PosToken[][] { m.ValueTokens },
+                            new PosToken[][] { new PosToken[] { m } },
                             nameToken.Position.End, nameToken.ToString(text)
                         ));
                         goto afterCallLikePosTokenThing;
