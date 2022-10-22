@@ -738,11 +738,17 @@ public class Motor
                     {
                         score += 10;
                     }
-                    else if (parameters[j].ParameterType.IsGenericType &&
-                             ListEx.IsAssignableToGenericType(args[j].GetType(),
+                    // todo: support actual generic parameters constraints
+                    else if (parameters[j].ParameterType.IsGenericType
+                             && ListEx.IsAssignableToGenericType(args[j].GetType(),
                                  parameters[j].ParameterType.GetGenericTypeDefinition()))
+                        // parameters[j].ParameterType.GetGenericParameterConstraints()
                     {
                         score += 10;
+                    }
+                    else if (parameters[j].ParameterType.IsGenericParameter)
+                    {
+                        score += 5;
                     }
                     else
                     {
@@ -795,10 +801,20 @@ public class Motor
                 if (t.IsSealed && t.IsAbstract)
                 {
                     var staticContext = InvokeContext.CreateStatic;
+                    if (methods[bestIndex] is MethodInfo mi && mi.ReturnType == typeof(void))
+                    {
+                        Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
+                        return RCaronInsideEnum.NoReturnValue;
+                    }
                     return Dynamic.InvokeMember(staticContext(t), methods[bestIndex].Name, args);
                 }
                 else
                 {
+                    if (methods[bestIndex] is MethodInfo mi && mi.ReturnType == typeof(void))
+                    {
+                        Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
+                        return RCaronInsideEnum.NoReturnValue;
+                    }
                     return Dynamic.InvokeMember(target, methods[bestIndex].Name, args);
                 }
             }
