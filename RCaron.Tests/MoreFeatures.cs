@@ -163,7 +163,7 @@ $h = 1;");
     {
         var m = RCaronRunner.Run(@"
 $ls = #System.Collections.ArrayList:New();
-for ($h = 0, $h < 4, $h++) {
+for ($h = 0; $h < 4; $h++) {
     switch($h) {
         0 { $ls.Add('zero');  }
         1 { $ls.Add('one'); }

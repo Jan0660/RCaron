@@ -123,13 +123,13 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     public void Functions()
     {
         var m = RCaronRunner.Run(@"func sus{
-    for($r = 0, $r < 2, $r++){
+    for($r = 0; $r < 2; $r++){
         print(1);
     }
     globalset('h', globalget('h') + 1);
 }
 $h = 0;
-for($i = 0, $i < 3, $i++){
+for($i = 0; $i < 3; $i++){
     sus;
 }");
         m.AssertVariableEquals("h", (long)3);
@@ -161,8 +161,8 @@ $h = v();
             ["dowhile"] = @"dowhile($true) { return 1; } return 0;",
             ["foreach"] = @"foreach($z in 0..10) { return 1; } return 0;",
             ["loop"] = @"loop { return 1; } return 0;",
-            ["for"] = @"for($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
-            ["qfor"] = @"qfor($z = 0, $z < 10, $z = $z + 1) { return 1; } return 0;",
+            ["for"] = @"for($z = 0; $z < 10; $z = $z + 1) { return 1; } return 0;",
+            ["qfor"] = @"qfor($z = 0; $z < 10; $z = $z + 1) { return 1; } return 0;",
             ["switch"] = @"switch (1) { 1 { return 1; } } return 0;",
             ["else if"] = @"if($false) { return 0; } else if ($true) { return 1; }",
             ["else"] = @"if($false) { return 0; } else { return 1; }",
@@ -204,7 +204,7 @@ $h = v();
     [Fact]
     public void ForLoop()
     {
-        var m = RCaronRunner.Run(@"$l = 0; for($h = 0, $h < 10, $h = $h + 1){$l = $h;}");
+        var m = RCaronRunner.Run(@"$l = 0; for($h = 0; $h < 10; $h = $h + 1){$l = $h;}");
         m.AssertVariableEquals("l", (long)9);
         m.AssertVariableEquals("h", (long)10);
     }
@@ -212,7 +212,7 @@ $h = v();
     [Fact]
     public void QuickFor()
     {
-        var m = RCaronRunner.Run(@"$l = 0; qfor($h = 0, $h < 10, $h = $h + 1){$l = $h;}");
+        var m = RCaronRunner.Run(@"$l = 0; qfor($h = 0; $h < 10; $h = $h + 1){$l = $h;}");
         m.AssertVariableEquals("l", (long)9);
         m.AssertVariableEquals("h", (long)10);
     }

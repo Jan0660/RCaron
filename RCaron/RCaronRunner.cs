@@ -100,8 +100,8 @@ public static class RCaronRunner
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
                            (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer } ||
-                            (tokens[i].Type == TokenType.Colon && tokens[i-1].Type == TokenType.ExternThing ) ||
-                            (tokens[i-1].Type == TokenType.Colon && tokens[i-2].Type == TokenType.ExternThing ) ||
+                            (tokens[i].Type == TokenType.Colon && tokens[i - 1].Type == TokenType.ExternThing) ||
+                            (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
                             tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer }))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
@@ -272,11 +272,15 @@ public static class RCaronRunner
                     {
                         // todo: dear lord
                         var tks = CollectionsMarshal.AsSpan(tokens)[(startIndex + 1)..];
+                        var separator = TokenType.Comma;
+                        if (tokens[startIndex - 1].EqualsString(text, "for") ||
+                            tokens[startIndex - 1].EqualsString(text, "qfor"))
+                            separator = TokenType.LineEnding;
                         var c = 1;
                         // count commas in tks
                         for (var i = 0; i < tks.Length; i++)
                         {
-                            if (tks[i].Type == TokenType.Comma) c++;
+                            if (tks[i].Type == separator) c++;
                         }
 
                         if (tks.Length == 0)
@@ -288,7 +292,7 @@ public static class RCaronRunner
                             var ind = 0;
                             for (; ind < tks.Length; ind++)
                             {
-                                if (tks[ind].Type == TokenType.Comma) break;
+                                if (tks[ind].Type == separator) break;
                             }
 
                             args[i] = tks[..(ind != -1 ? new Index(ind) : Index.End)].ToArray();
