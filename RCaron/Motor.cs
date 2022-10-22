@@ -494,6 +494,8 @@ public class Motor
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_exit":
                             return (true, RCaronInsideEnum.NoReturnValue);
+                        case "dbg_throw":
+                            throw new("dbg_throw");
                     }
 
                 if (Options.EnableDumb)

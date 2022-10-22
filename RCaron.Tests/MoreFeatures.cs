@@ -177,7 +177,7 @@ for ($h = 0; $h < 4; $h++) {
         Assert.Equal("default 3", ls[3]);
         Assert.Equal(4, ls.Count);
     }
-    
+
     [Fact]
     public void ElseIfStatement()
     {
@@ -188,7 +188,7 @@ else if ($true) { $h = 2; }
 ");
         m.AssertVariableEquals("h", 1L);
     }
-    
+
     [Fact]
     public void ElseStatement()
     {
@@ -210,7 +210,7 @@ else { $h = 2; }
     [Fact]
     public void EqualityGroupWorks()
     {
-        var ctx  = RCaronRunner.Parse(@"$h = 0 + 1 == 1;");
+        var ctx = RCaronRunner.Parse(@"$h = 0 + 1 == 1;");
         var l = (TokenLine)ctx.Lines[0];
         Assert.IsType<ComparisonValuePosToken>(l.Tokens[^1]);
         ctx = RCaronRunner.Parse("if(0 + 1 == 1){}");
@@ -264,12 +264,25 @@ $ff = $false || $false;
 $l2 = 2;
 $l3 = 3;
 dbg_exit;
-$l5 = 5;", new MotorOptions(){EnableDebugging = true});
+$l5 = 5;", new MotorOptions() { EnableDebugging = true });
         Assert.Equal(5, m.Lines.Count);
         Assert.Equal(4, m.GetLineNumber());
-        m = RCaronRunner.Run(@"dbg_exit;", new MotorOptions(){EnableDebugging = true});
+        m = RCaronRunner.Run(@"dbg_exit;", new MotorOptions() { EnableDebugging = true });
         Assert.Equal(1, m.Lines.Count);
         Assert.Equal(1, m.GetLineNumber());
+        // when exception it thrown it returns the previous line number
+        m = new Motor(RCaronRunner.Parse(@"$l1 = 1;
+$l2 = 2;
+$l3 = 3;
+dbg_throw;
+$l5 = 5;"), new MotorOptions() { EnableDebugging = true });
+        var exc = Assert.Throws<Exception>(() =>
+        {
+            m.Run();
+        });
+        Assert.Equal("dbg_throw", exc.Message);
+        Assert.Equal(5, m.Lines.Count);
+        Assert.Equal(4, m.GetLineNumber());
     }
 
     [Fact]
