@@ -124,6 +124,31 @@ $h2 = $arr[$h];");
         m.AssertVariableEquals("h", 6L);
     }
 
+    private class CustomPropertyAccessorClass : IPropertyAccessor
+    {
+        public bool Do(string propertyName, ref object? value, ref Type? type)
+        {
+            if (value is string a)
+            {
+                value = a + '.' + propertyName;
+                type = typeof(string);
+                return true;
+            }
+
+            return false;
+        }
+    }
+    
+    [Fact]
+    public void CustomPropertyAccessor()
+    {
+        var m = new Motor(RCaronRunner.Parse(@"$v = 'funny'; $h = $v.hello;"));
+        m.FileScope.PropertyAccessors ??= new();
+        m.FileScope.PropertyAccessors.Add(new CustomPropertyAccessorClass());
+        m.Run();
+        m.AssertVariableEquals("h", "funny.hello");
+    }
+
     public class NormalIndexerOnDotThingDummy
     {
         public object[] Array { get; set; }

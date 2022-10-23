@@ -6,4 +6,5 @@ public class FileScope
     public Dictionary<string, Type>? TypeCache { get; set; }
     public List<string>? UsedNamespacesForExtensionMethods { get; set; }
     public List<IIndexerImplementation>? IndexerImplementations { get; set; }
+    public List<IPropertyAccessor>? PropertyAccessors { get; set; }
 }

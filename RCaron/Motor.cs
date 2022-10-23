@@ -1030,9 +1030,26 @@ public class Motor
             var str = instanceTokens[i] switch
             {
                 KeywordToken keywordToken => keywordToken.String,
-                ExternThingToken externThingToken => externThingToken.String,
+                // ExternThingToken externThingToken => externThingToken.String,
                 _ => throw new Exception("unsupported stuff for EvaluateDotThings")
             };
+
+            if (FileScope.PropertyAccessors != null)
+            {
+                var broke = false;
+                for (var j = 0; j < FileScope.PropertyAccessors.Count; j++)
+                {
+                    if (FileScope.PropertyAccessors[j].Do(str, ref val, ref type))
+                    {
+                        broke = true;
+                        break;
+                    }
+                }
+
+                if (broke)
+                    continue;
+            }
+            
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | instanceOrStatic);
