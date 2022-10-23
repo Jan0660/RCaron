@@ -806,6 +806,7 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
+
                     return Dynamic.InvokeMember(staticContext(t), methods[bestIndex].Name, args);
                 }
                 else
@@ -815,6 +816,7 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
+
                     return Dynamic.InvokeMember(target, methods[bestIndex].Name, args);
                 }
             }
@@ -922,6 +924,23 @@ public class Motor
             if (instanceTokens[i] is IndexerToken arrayAccessorToken)
             {
                 var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
+
+                if (FileScope.IndexerImplementations != null)
+                {
+                    var broke = false;
+                    for (var j = 0; j < FileScope.IndexerImplementations.Count; j++)
+                    {
+                        if (FileScope.IndexerImplementations[j].Do(evaluated, ref val, ref type))
+                        {
+                            broke = true;
+                            break;
+                        }
+                    }
+
+                    if (broke)
+                        continue;
+                }
+
                 if (val is IDictionary dict)
                 {
                     var args = type.GetGenericArguments();
@@ -958,22 +977,6 @@ public class Motor
                         type = val?.GetType();
                         continue;
                     }
-                }
-
-                if (FileScope.IndexerImplementations != null)
-                {
-                    var broke = false;
-                    for (var j = 0; j < FileScope.IndexerImplementations.Count; j++)
-                    {
-                        if (FileScope.IndexerImplementations[j].Do(evaluated, ref val, ref type))
-                        {
-                            broke = true;
-                            break;
-                        }
-                    }
-
-                    if (broke)
-                        continue;
                 }
 
                 throw new RCaronException("could not get array accessor",
