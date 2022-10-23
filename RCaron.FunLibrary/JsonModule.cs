@@ -162,3 +162,16 @@ public class JsonNodeIndexer : IIndexerImplementation
         return true;
     }
 }
+
+public class JsonObjectPropertyAccessor : IPropertyAccessor
+{
+    public bool Do(string propertyName, ref object? value, ref Type? type)
+    {
+        if (value is not JsonObject jsonObject)
+            return false;
+
+        value = jsonObject[propertyName];
+        type = value?.GetType() ?? typeof(object);
+        return true;
+    }
+}
