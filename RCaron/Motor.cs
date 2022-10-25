@@ -519,11 +519,20 @@ public class Motor
             {
                 CodeBlockToken? catchBlock = null;
                 CodeBlockToken? finallyBlock = null;
-                if(Lines[curIndex+1] is TokenLine{Type: LineType.CatchBlock} catchBlockLine)
+                if (Lines.Count - curIndex > 1 && Lines[curIndex + 1] is TokenLine
+                    {
+                        Type: LineType.CatchBlock
+                    } catchBlockLine)
                     catchBlock = (CodeBlockToken)catchBlockLine.Tokens[1];
-                else if (Lines[curIndex+1] is TokenLine{Type: LineType.FinallyBlock} finallyBlockLine)
+                else if (Lines.Count - curIndex > 1 && Lines[curIndex + 1] is TokenLine
+                         {
+                             Type: LineType.FinallyBlock
+                         } finallyBlockLine)
                     finallyBlock = (CodeBlockToken)finallyBlockLine.Tokens[1];
-                if(Lines[curIndex+2] is TokenLine{Type: LineType.FinallyBlock} finallyBlockLine2)
+                if (Lines.Count - curIndex > 2 && Lines[curIndex + 2] is TokenLine
+                    {
+                        Type: LineType.FinallyBlock
+                    } finallyBlockLine2)
                     finallyBlock = (CodeBlockToken)finallyBlockLine2.Tokens[1];
                 var pastIndex = curIndex;
                 var pastLines = Lines;
@@ -561,6 +570,7 @@ public class Motor
                             throw new("cannot return from finally block");
                     }
                 }
+
                 break;
             }
         }
@@ -1099,7 +1109,7 @@ public class Motor
                 if (broke)
                     continue;
             }
-            
+
             var instanceOrStatic = val is RCaronType ? BindingFlags.Static : BindingFlags.Instance;
             var p = type!.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | instanceOrStatic);
