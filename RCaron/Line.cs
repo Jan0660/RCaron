@@ -75,4 +75,7 @@ public enum LineType : byte
     SwitchCase,
     ElseIfStatement,
     ElseStatement,
+    TryBlock,
+    CatchBlock,
+    FinallyBlock,
 }

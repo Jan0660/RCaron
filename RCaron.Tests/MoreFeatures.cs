@@ -276,10 +276,7 @@ $l2 = 2;
 $l3 = 3;
 dbg_throw;
 $l5 = 5;"), new MotorOptions() { EnableDebugging = true });
-        var exc = Assert.Throws<Exception>(() =>
-        {
-            m.Run();
-        });
+        var exc = Assert.Throws<Exception>(() => { m.Run(); });
         Assert.Equal("dbg_throw", exc.Message);
         Assert.Equal(5, m.Lines.Count);
         Assert.Equal(4, m.GetLineNumber());
@@ -297,5 +294,74 @@ $l5 = 5;"), new MotorOptions() { EnableDebugging = true });
     {
         var m = RCaronRunner.Run("$h = ($true && $true);");
         m.AssertVariableEquals("h", true);
+    }
+
+    [Fact]
+    public void Throw()
+    {
+        var m = new Motor(RCaronRunner.Parse("throw(#System.Exception:new('funny'));"));
+        var exc = Assert.Throws<Exception>(() => { m.Run(); });
+        Assert.Equal("funny", exc.Message);
+        m = new Motor(RCaronRunner.Parse("throw #System.Exception:new('funny');"));
+        exc = Assert.Throws<Exception>(() => { m.Run(); });
+        Assert.Equal("funny", exc.Message);
+    }
+
+    [Fact]
+    public void TryAndCatchBlock()
+    {
+        var m = RCaronRunner.Run(@"
+$h = 0;
+$exc = $null;
+try {
+    throw(#System.Exception:new('funny'));
+    $h = $h + 1;
+}
+catch {
+    $h = $h + 2;
+    $exc = $exception;
+}
+$h = $h + 1;");
+        m.AssertVariableEquals("h", 3L);
+        m.AssertVariableIsType<Exception>("exc");
+        Assert.Equal(0, m.BlockStack.Count);
+    }
+
+    [Fact]
+    public void TryAndFinallyBlock()
+    {
+        var m = new Motor(RCaronRunner.Parse(@"
+$h = 0;
+try {
+    throw(#System.Exception:new('funny'));
+    $h = $h + 1;
+}
+finally {
+    $h = $h + 2;
+}
+$h = $h + 1;"));
+        Assert.Throws<Exception>(() => m.Run());
+        m.AssertVariableEquals("h", 2L);
+        Assert.Equal(0, m.BlockStack.Count);
+    }
+
+    [Fact]
+    public void TryAndCatchAndFinallyBlock()
+    {
+        var m = RCaronRunner.Run(@"
+$h = 0;
+try {
+    throw(#System.Exception:new('funny'));
+    $h = $h + 1;
+}
+catch {
+    $h = $h + 4;
+}
+finally {
+    $h = $h + 2;
+}
+$h = $h + 1;");
+        m.AssertVariableEquals("h", 7L);
+        Assert.Equal(0, m.BlockStack.Count);
     }
 }

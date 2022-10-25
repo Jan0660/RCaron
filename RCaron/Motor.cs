@@ -515,6 +515,54 @@ public class Motor
                 MethodCall(keywordString, line.Tokens.Segment(1..));
                 break;
             }
+            case LineType.TryBlock when line.Tokens[1] is CodeBlockToken codeBlockToken:
+            {
+                CodeBlockToken? catchBlock = null;
+                CodeBlockToken? finallyBlock = null;
+                if(Lines[curIndex+1] is TokenLine{Type: LineType.CatchBlock} catchBlockLine)
+                    catchBlock = (CodeBlockToken)catchBlockLine.Tokens[1];
+                else if (Lines[curIndex+1] is TokenLine{Type: LineType.FinallyBlock} finallyBlockLine)
+                    finallyBlock = (CodeBlockToken)finallyBlockLine.Tokens[1];
+                if(Lines[curIndex+2] is TokenLine{Type: LineType.FinallyBlock} finallyBlockLine2)
+                    finallyBlock = (CodeBlockToken)finallyBlockLine2.Tokens[1];
+                var pastIndex = curIndex;
+                var pastLines = Lines;
+                try
+                {
+                    BlockStack.Push(new StackThing(false, false, null));
+                    var res = RunCodeBlock(codeBlockToken);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                        return (true, res);
+                }
+                catch (Exception exc)
+                {
+                    BlockStack.Pop();
+                    if (catchBlock is not null)
+                    {
+                        var scope = new LocalScope();
+                        scope.SetVariable("exception", exc);
+                        BlockStack.Push(new StackThing(false, false, scope));
+                        var res = RunCodeBlock(catchBlock);
+                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                            return (true, res);
+                    }
+                    else
+                        throw;
+                }
+                finally
+                {
+                    curIndex = pastIndex;
+                    Lines = pastLines;
+                    if (finallyBlock is not null)
+                    {
+                        BlockStack.Push(new StackThing(false, false, null));
+                        var res = RunCodeBlock(finallyBlock);
+                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                            throw new("cannot return from finally block");
+                    }
+                }
+                break;
+            }
         }
 
         return (false, RCaronInsideEnum.NoReturnValue);
@@ -631,6 +679,8 @@ public class Motor
                 FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
                     t => t.Expect<string>()));
                 return RCaronInsideEnum.NoReturnValue;
+            case "throw":
+                throw (Exception)At(argumentTokens, 0);
         }
 
         if (Functions.TryGetValue(nameArg, out var func))

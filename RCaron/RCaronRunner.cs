@@ -455,6 +455,24 @@ public static class RCaronRunner
             res = new SingleTokenLine(tokens[i], LineType.PropertyWithoutInitializer);
             i++;
         }
+        // try block
+        else if (tokens[i] is KeywordToken { String: "try" })
+        {
+            res = new TokenLine(tokens[i..(i + 2)], LineType.TryBlock);
+            i++;
+        }
+        // catch block
+        else if (tokens[i] is KeywordToken { String: "catch" })
+        {
+            res = new TokenLine(tokens[i..(i + 2)], LineType.CatchBlock);
+            i++;
+        }
+        // finally block
+        else if (tokens[i] is KeywordToken { String: "finally" })
+        {
+            res = new TokenLine(tokens[i..(i + 2)], LineType.FinallyBlock);
+            i++;
+        }
         // assigner assignment
         else if (tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
                  && tokens[i + 1].Type == TokenType.Operation
