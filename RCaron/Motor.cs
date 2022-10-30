@@ -24,6 +24,7 @@ public enum RCaronInsideEnum : byte
     // todo(current): use everywhere instead of null
     NoReturnValue,
     Breaked,
+    Continued,
 }
 
 public class MotorOptions
@@ -175,6 +176,8 @@ public class Motor
                         {
                             if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                                 break;
+                            if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                                continue;
                             return (true, res);
                         }
 
@@ -197,6 +200,8 @@ public class Motor
                         {
                             if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                                 break;
+                            if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                                continue;
                             return (true, res);
                         }
 
@@ -216,6 +221,8 @@ public class Motor
                         {
                             if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                                 break;
+                            if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                                continue;
                             return (true, res);
                         }
                     }
@@ -314,6 +321,8 @@ public class Motor
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                             break;
+                        if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                            continue;
                         return (true, res);
                     }
                 }
@@ -331,6 +340,8 @@ public class Motor
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                             break;
+                        if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                            continue;
                         return (true, res);
                     }
                 } while (SimpleEvaluateBool(callToken.Arguments[0]));
@@ -351,6 +362,8 @@ public class Motor
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
                             break;
+                        if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                            continue;
                         return (true, res);
                     }
                 }
@@ -473,6 +486,13 @@ public class Motor
                         while (!g.IsReturnWorthy)
                             g = BlockStack.Pop();
                         return (true, res);
+                    }
+                    case "continue":
+                    {
+                        var g = BlockStack.Pop();
+                        while (!g.IsBreakWorthy)
+                            g = BlockStack.Pop();
+                        return (true, RCaronInsideEnum.Continued);
                     }
                 }
 

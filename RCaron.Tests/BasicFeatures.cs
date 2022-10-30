@@ -64,6 +64,24 @@ $reachedEnd = $true;");
     }
 
     [Fact]
+    public void LoopLoopAndContinueAndBreak()
+    {
+        var m = RCaronRunner.Run(@"
+$h = 0;
+$b = 0;
+loop {
+    if ($h == 6) { break; }
+    $h = $h + 1;
+    if ($h == 6) { continue; }
+    $b = $h;
+}
+$reachedEnd = $true;");
+        m.AssertVariableEquals("h", (long)6);
+        m.AssertVariableEquals("b", (long)5);
+        m.AssertVariableEquals("reachedEnd", true);
+    }
+
+    [Fact]
     public void WhileLoop()
     {
         var m = RCaronRunner.Run(@"$h = 10;
