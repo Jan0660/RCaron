@@ -25,6 +25,8 @@ public enum RCaronInsideEnum : byte
     NoReturnValue,
     Breaked,
     Continued,
+    // todo: fix the name of this and NoReturnValue to make sense
+    ReturnWithoutValue,
 }
 
 public class MotorOptions
@@ -481,7 +483,9 @@ public class Motor
                     }
                     case "return":
                     {
-                        var res = SimpleEvaluateExpressionHigh(ArgsArray());
+                        var res = args.Length == 0
+                            ? RCaronInsideEnum.ReturnWithoutValue
+                            : SimpleEvaluateExpressionHigh(ArgsArray());
                         var g = BlockStack.Pop();
                         while (!g.IsReturnWorthy)
                             g = BlockStack.Pop();

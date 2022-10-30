@@ -165,7 +165,21 @@ for($i = 0; $i < 3; $i++){
 }
 $h = v();
 ");
-        m.AssertVariableEquals("h", (long)2);
+    }
+
+    [Fact]
+    public void FunctionReturnNoValue()
+    {
+        var m = RCaronRunner.Run(@"func v(){
+    $g = 2;
+    if ($true) {
+        return;
+    }
+    return 'wrong way';
+}
+$h = v();
+");
+        m.AssertVariableEquals("h", RCaronInsideEnum.ReturnWithoutValue);
     }
 
     [Fact(Timeout = 20_000)]
