@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Globalization;
@@ -744,9 +745,10 @@ public class Motor
 
             resolveMethod: ;
             var methodsOrg = type.GetMethods()!;
-            var arr = new MethodBase[methodsOrg.Length];
+            var methodsLength = methodsOrg.Length;
+            var arr = ArrayPool<MethodBase>.Shared.Rent(methodsLength);
             var count = 0;
-            for (var i = 0; i < methodsOrg.Length; i++)
+            for (var i = 0; i < methodsLength; i++)
             {
                 var method = methodsOrg[i];
                 if (!MemoryExtensions.Equals(method.Name, name, StringComparison.InvariantCultureIgnoreCase))
@@ -802,6 +804,7 @@ public class Motor
             }
 
             Span<uint> scores = stackalloc uint[methods.Count];
+            Span<bool> needsNumericConversions = stackalloc bool[methods.Count];
             for (var i = 0; i < methods.Count; i++)
             {
                 uint score = 0;
@@ -830,6 +833,11 @@ public class Motor
                     {
                         score += 10;
                     }
+                    else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
+                    {
+                        score += 10;
+                        needsNumericConversions[i] = true;
+                    }
                     else if (parameters[j].ParameterType.IsGenericParameter)
                     {
                         score += 5;
@@ -856,14 +864,17 @@ public class Motor
                 }
             }
 
-
             if (best == 0)
                 throw new RCaronException($"cannot find a match for method '{name}'",
                     ExceptionCode.MethodNoSuitableMatch);
 
+            var bestMethod = methods[bestIndex];
+            // attention: do not use arr or methods after this point
+            ArrayPool<MethodBase>.Shared.Return(arr, true);
+
             // mismatch count arguments -> equate it out with default values
             // is equate even a word?
-            var paramss = methods[bestIndex].GetParameters();
+            var paramss = bestMethod.GetParameters();
             if (paramss.Length > args.Length)
             {
                 var argsNew = new object[paramss.Length];
@@ -875,42 +886,51 @@ public class Motor
 
                 args = argsNew;
             }
+            // numeric conversions
+            if (needsNumericConversions[bestIndex])
+            {
+                for (var i = 0; i < args.Length; i++)
+                {
+                    if(paramss[i].ParameterType.IsNumericType() && args[i].GetType().IsNumericType())
+                        args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
+                }
+            }
 
             // generic method handling aaa
-            if (methods[bestIndex].IsGenericMethod)
+            if (bestMethod.IsGenericMethod)
             {
                 // todo(perf): probably not the fastest
-                var t = methods[bestIndex].DeclaringType!;
+                var t = bestMethod.DeclaringType!;
                 // static class
                 if (t.IsSealed && t.IsAbstract)
                 {
                     var staticContext = InvokeContext.CreateStatic;
-                    if (methods[bestIndex] is MethodInfo mi && mi.ReturnType == typeof(void))
+                    if (bestMethod is MethodInfo mi && mi.ReturnType == typeof(void))
                     {
-                        Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
+                        Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
 
-                    return Dynamic.InvokeMember(staticContext(t), methods[bestIndex].Name, args);
+                    return Dynamic.InvokeMember(staticContext(t), bestMethod.Name, args);
                 }
                 else
                 {
-                    if (methods[bestIndex] is MethodInfo mi && mi.ReturnType == typeof(void))
+                    if (bestMethod is MethodInfo mi && mi.ReturnType == typeof(void))
                     {
-                        Dynamic.InvokeMemberAction(target, methods[bestIndex].Name, args);
+                        Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
 
-                    return Dynamic.InvokeMember(target, methods[bestIndex].Name, args);
+                    return Dynamic.InvokeMember(target, bestMethod.Name, args);
                 }
             }
 
-            if (methods[bestIndex] is ConstructorInfo constructorInfo)
+            if (bestMethod is ConstructorInfo constructorInfo)
             {
                 return constructorInfo.Invoke(args);
             }
 
-            return methods[bestIndex].Invoke(target, args);
+            return bestMethod.Invoke(target, args);
         }
 
         foreach (var module in Modules)

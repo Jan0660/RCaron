@@ -137,4 +137,10 @@ static class ListEx
             throw new RCaronException("expected not null", RCaronExceptionCode.ExpectedNotNull);
         return obj;
     }
+
+    public static bool IsNumericType(this Type type)
+        => type != typeof(bool) &&
+            (type.IsPrimitive ||
+             // type.IsEnum ||
+             type == typeof(decimal));
 }
