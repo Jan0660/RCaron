@@ -15,7 +15,7 @@ public static class RCaronRunner
         return motor;
     }
 
-    public static RCaronRunnerContext Parse(string text, bool returnIgnored = false)
+    public static RCaronRunnerContext Parse(string text, bool returnIgnored = false, bool returnDescriptive = false)
     {
         var tokens = new List<PosToken>();
         var reader = new TokenReader(text, returnIgnored);
@@ -410,6 +410,8 @@ public static class RCaronRunner
                     }
                 }
 
+                if (returnDescriptive)
+                    lines.Add(new TokenLine(new[] { t[i], t[i + 1], t[i + 2] }, LineType.ClassDefinition));
                 i += 2;
                 classDefinitions ??= new();
                 classDefinitions.Add(

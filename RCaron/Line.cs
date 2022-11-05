@@ -78,4 +78,5 @@ public enum LineType : byte
     TryBlock,
     CatchBlock,
     FinallyBlock,
+    ClassDefinition,
 }
