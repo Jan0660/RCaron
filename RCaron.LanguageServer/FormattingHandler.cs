@@ -75,8 +75,27 @@ public class FormattingHandler : DocumentFormattingHandlerBase
 
         void NewlineAfter(int index)
         {
+            if (index + 0 >= content.Length)
+            {
+                if (request.Options.InsertFinalNewline)
+                {
+                    var pos2 = Util.GetPosition(index, content);
+                    res.Add(new TextEdit()
+                    {
+                        NewText = "\n",
+                        Range = new Range
+                        {
+                            Start = pos2,
+                            End = pos2,
+                        }
+                    });
+                }
+
+                return;
+            }
+
             // check already has newline
-            if (content[index + 1] == '\r' || content[index + 1] == '\n')
+            if (content[index + 0] == '\r' || content[index + 0] == '\n')
                 return;
 
             var pos = Util.GetPosition(index, content);
@@ -98,34 +117,10 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             return depth;
         }
 
-        void NewlineBefore(BlockPosToken blockPosToken)
-        {
-            var index = blockPosToken.Position.Start;
-            var curIndex = index;
-            while (curIndex >= 0 && (content[curIndex] == ' ' || content[curIndex] == '\t'))
-            {
-                curIndex--;
-            }
-
-            if (content[curIndex] == '\n')
-                return;
-
-            var pos = Util.GetPosition(curIndex, content);
-            res.Add(new TextEdit
-            {
-                NewText = "\n", // + new string(' ', GetIndentationLengthForDepth(depth)),
-                Range = new Range
-                {
-                    Start = pos,
-                    End = pos
-                }
-            });
-        }
-
         void Indent(int index, int depth)
         {
             // indent according to depth and current indentation
-            var curIndex = index;
+            var curIndex = index - 1;
             var indent = 0;
             while (curIndex >= 0 && (content[curIndex] == ' ' || content[curIndex] == '\t'))
             {
@@ -134,8 +129,11 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             }
 
             var shouldBeIndent = GetIndentationLengthForDepth(depth);
+            _logger.LogTrace($"shouldBeIndent: {shouldBeIndent}; indent: {indent}");
             if (indent == shouldBeIndent)
                 return;
+
+            curIndex += 1;
 
             // var pos = Util.GetPosition(index, content);
             // var endPos = Util.GetPosition(curIndex, content, pos.Line, pos.Character, index);
@@ -162,9 +160,13 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             var startBlockPosToken = ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]);
             var endBlockPosToken = ((BlockPosToken)((TokenLine)cbt.Lines[^1]).Tokens[0]);
             var depth = startBlockPosToken.Depth;
-            NewlineAfter(startBlockPosToken.Position.End);
-            NewlineBefore(endBlockPosToken);
+            // NewlineAfter(startBlockPosToken.Position.End);
+            if (cbt.Lines.Count != 2)
+                NewlineBefore(endBlockPosToken.Position.Start);
+            else
+                NewlineAfter(startBlockPosToken.Position.End);
             Indent(endBlockPosToken.Position.Start, depth);
+            // NewlineAfter(endBlockPosToken.Position.End);
         }
 
         // returns index at which semicolon is
@@ -175,11 +177,12 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             {
                 curIndex++;
             }
+
             var pos = Util.GetPosition(index, content);
             var endPos = Util.GetPosition(curIndex, content, pos.Line, pos.Character, index);
             res.Add(new TextEdit()
             {
-                NewText = "",
+                NewText = string.Empty,
                 Range = new Range
                 {
                     Start = pos,
@@ -189,11 +192,21 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             return curIndex;
         }
 
-        void NewLineAfterSemicolon(int index)
+        void NewlineBefore(int index)
         {
-            if(content[index + 1] == '\r' || content[index + 1] == '\n')
+            var curIndex = index - 1;
+            var ran = false;
+            while (curIndex >= 0 && (content[curIndex] == ' ' || content[curIndex] == '\t'))
+            {
+                ran = true;
+                curIndex--;
+            }
+
+            if (!ran && curIndex >= 0 && content[curIndex] != '\n')
+                curIndex++;
+            if (curIndex <= 0 || content[curIndex] == '\n')
                 return;
-            var pos = Util.GetPosition(index + 1, content);
+            var pos = Util.GetPosition(curIndex, content);
             res.Add(new TextEdit()
             {
                 NewText = "\n",
@@ -216,6 +229,8 @@ public class FormattingHandler : DocumentFormattingHandlerBase
 
                 if (line is TokenLine tokenLine)
                 {
+                    if (tokenLine.Type != LineType.BlockStuff)
+                        NewlineBefore(tokenLine.Tokens[0].Position.Start);
                     switch (tokenLine.Type)
                     {
                         case LineType.SwitchStatement:
@@ -227,7 +242,6 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                                 SingleSpaceAfter(callLikePosToken.NameEndIndex);
 
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
-                            BodyBlockToken(((CodeBlockLine)lines[i + 1]).Token);
                             break;
                         case LineType.VariableAssignment:
                             // space after variable
@@ -235,8 +249,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                             // space after equals
                             SingleSpaceAfter(tokenLine.Tokens[1].Position.End);
 
-                            var sci = NoSpaceUntilSemicolon(tokenLine.Tokens[^1].Position.End);
-                            NewLineAfterSemicolon(sci);
+                            NoSpaceUntilSemicolon(tokenLine.Tokens[^1].Position.End);
                             break;
                         case LineType.ClassDefinition:
                         {
@@ -254,24 +267,49 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                         {
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
                             SingleSpaceAfter(tokenLine.Tokens[1].Position.End);
-                            var cbt = ((CodeBlockLine)lines[i+1]).Token;
+                            break;
+                        }
+                        case LineType.TryBlock:
+                        {
+                            SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
+                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
+                            BodyBlockToken(cbt);
+                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
+                            break;
+                        }
+                        case LineType.CatchBlock:
+                        {
+                            SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
+                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
+                            BodyBlockToken(cbt);
+                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
+                            break;
+                        }
+                        case LineType.FinallyBlock:
+                        {
+                            SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
+                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
                             BodyBlockToken(cbt);
                             EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
                             break;
                         }
                     }
 
-                    if (depth != -1 && tokenLine.Type != LineType.BlockStuff) 
+                    if (depth != -1 && tokenLine.Type != LineType.BlockStuff)
                         Indent(tokenLine.Tokens[0].Position.Start, depth + 1);
                 }
 
                 if (line is CodeBlockLine codeBlockLine)
+                {
+                    BodyBlockToken(codeBlockLine.Token);
                     EvaluateLines(codeBlockLine.Token.Lines,
                         ((BlockPosToken)((TokenLine)codeBlockLine.Token.Lines[0]).Tokens[0]).Depth);
+                }
+
                 if (line is SingleTokenLine { Type: LineType.PropertyWithoutInitializer } singleTokenLine)
                 {
-                    var sci = NoSpaceUntilSemicolon(singleTokenLine.Token.Position.End);
-                    NewLineAfterSemicolon(sci);
+                    NewlineBefore(singleTokenLine.Token.Position.Start);
+                     NoSpaceUntilSemicolon(singleTokenLine.Token.Position.End);
                     Indent(singleTokenLine.Token.Position.Start, depth + 1);
                 }
             }
@@ -279,6 +317,10 @@ public class FormattingHandler : DocumentFormattingHandlerBase
 
         EvaluateLines(parsed.Lines, -1);
 
+#if DEBUG
+        foreach (var edit in res)
+            _logger.LogTrace($"TextEdit: NewText: {edit.NewText} Range: {edit.Range}");
+#endif
         return res;
     }
 }
