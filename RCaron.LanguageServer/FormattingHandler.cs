@@ -51,7 +51,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
         void SingleSpaceAfter(int index)
         {
             // check already has space
-            if (content[index + 1] == ' ' && content[index + 2] != ' ')
+            if (index + 1 >= content.Length || (content[index] == ' ' && content[index + 1] != ' '))
                 return;
 
             var curIndex = index;
@@ -202,10 +202,9 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                 curIndex--;
             }
 
-            if (!ran && curIndex >= 0 && content[curIndex] != '\n')
-                curIndex++;
             if (curIndex <= 0 || content[curIndex] == '\n')
                 return;
+            curIndex++;
             var pos = Util.GetPosition(curIndex, content);
             res.Add(new TextEdit()
             {
@@ -237,12 +236,27 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                         case LineType.WhileLoop:
                         case LineType.DoWhileLoop:
                         case LineType.IfStatement:
+                        case LineType.ForeachLoop:
+                        {
                             // space after first keyword
                             if (tokenLine.Tokens[0] is CallLikePosToken callLikePosToken)
                                 SingleSpaceAfter(callLikePosToken.NameEndIndex);
 
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
+
+                            // if (tokenLine.Type == LineType.SwitchCase)
+                            // {
+                            //     var cbt = ((CodeBlockToken)tokenLine.Tokens[1]);
+                            //     BodyBlockToken(cbt);
+                            //     EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
+                            // }
                             break;
+                        }
+                        case LineType.SwitchCase:
+                        {
+                            SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
+                            break;
+                        }
                         case LineType.VariableAssignment:
                             // space after variable
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
@@ -257,10 +271,6 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                             SingleSpaceAfter(tokenLine.Tokens[1].Position.End);
                             // space after 'class'
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
-
-                            var cbt = (CodeBlockToken)tokenLine.Tokens[2];
-                            BodyBlockToken(cbt);
-                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
                             break;
                         }
                         case LineType.Function:
@@ -272,31 +282,33 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                         case LineType.TryBlock:
                         {
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
-                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
-                            BodyBlockToken(cbt);
-                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
                             break;
                         }
                         case LineType.CatchBlock:
                         {
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
-                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
-                            BodyBlockToken(cbt);
-                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
                             break;
                         }
                         case LineType.FinallyBlock:
                         {
                             SingleSpaceAfter(tokenLine.Tokens[0].Position.End);
-                            var cbt = (CodeBlockToken)tokenLine.Tokens[1];
-                            BodyBlockToken(cbt);
-                            EvaluateLines(cbt.Lines, ((BlockPosToken)((TokenLine)cbt.Lines[0]).Tokens[0]).Depth);
                             break;
                         }
                     }
 
                     if (depth != -1 && tokenLine.Type != LineType.BlockStuff)
                         Indent(tokenLine.Tokens[0].Position.Start, depth + 1);
+
+                    // do code blocks in tokens
+                    foreach (var token in tokenLine.Tokens)
+                    {
+                        if (token is CodeBlockToken codeBlockToken)
+                        {
+                            BodyBlockToken(codeBlockToken);
+                            EvaluateLines(codeBlockToken.Lines,
+                                ((BlockPosToken)((TokenLine)codeBlockToken.Lines[0]).Tokens[0]).Depth);
+                        }
+                    }
                 }
 
                 if (line is CodeBlockLine codeBlockLine)
@@ -309,7 +321,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                 if (line is SingleTokenLine { Type: LineType.PropertyWithoutInitializer } singleTokenLine)
                 {
                     NewlineBefore(singleTokenLine.Token.Position.Start);
-                     NoSpaceUntilSemicolon(singleTokenLine.Token.Position.End);
+                    NoSpaceUntilSemicolon(singleTokenLine.Token.Position.End);
                     Indent(singleTokenLine.Token.Position.Start, depth + 1);
                 }
             }

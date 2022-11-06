@@ -179,8 +179,9 @@ public class ComparisonValuePosToken : ValuePosToken
     public ValuePosToken Right { get; }
     public OperationPosToken ComparisonToken { get; set; }
 
-    public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken) : base(
-        TokenType.EqualityOperationGroup, (left.Position.Start, right.Position.End))
+    public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken,
+        (int Start, int End) position) : base(
+        TokenType.EqualityOperationGroup, position)
     {
         Left = left;
         Right = right;
@@ -194,8 +195,9 @@ public class LogicalOperationValuePosToken : ValuePosToken
     public ValuePosToken Right { get; }
     public OperationPosToken ComparisonToken { get; set; }
 
-    public LogicalOperationValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken) : base(
-        TokenType.LogicalOperationGroup, (left.Position.Start, right.Position.End))
+    public LogicalOperationValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken,
+        (int Start, int End) position) : base(
+        TokenType.LogicalOperationGroup, position)
     {
         Left = left;
         Right = right;

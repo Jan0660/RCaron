@@ -90,52 +90,52 @@ namespace SampleServer
                                 );
                             }
                         )
-                       // .OnInitialize(
-                       //      async (server, request, token) =>
-                       //      {
-                       //          var manager = server.WorkDoneManager.For(
-                       //              request, new WorkDoneProgressBegin
-                       //              {
-                       //                  Title = "Server is starting...",
-                       //                  Percentage = 10,
-                       //              }
-                       //          );
-                       //          workDone = manager;
-                       //
-                       //          await Task.Delay(100).ConfigureAwait(false);
-                       //
-                       //          manager.OnNext(
-                       //              new WorkDoneProgressReport
-                       //              {
-                       //                  Percentage = 20,
-                       //                  Message = "loading in progress"
-                       //              }
-                       //          );
-                       //      }
-                       // //  )
-                       // .OnInitialized(
-                       //      async (server, request, response, token) =>
-                       //      {
-                       //          workDone.OnNext(
-                       //              new WorkDoneProgressReport
-                       //              {
-                       //                  Percentage = 40,
-                       //                  Message = "loading almost done",
-                       //              }
-                       //          );
-                       //
-                       //          await Task.Delay(100).ConfigureAwait(false);
-                       //
-                       //          workDone.OnNext(
-                       //              new WorkDoneProgressReport
-                       //              {
-                       //                  Message = "loading done",
-                       //                  Percentage = 100,
-                       //              }
-                       //          );
-                       //          workDone.OnCompleted();
-                       //      }
-                       //  )
+                       .OnInitialize(
+                            async (server, request, token) =>
+                            {
+                                var manager = server.WorkDoneManager.For(
+                                    request, new WorkDoneProgressBegin
+                                    {
+                                        Title = "Server is starting...",
+                                        Percentage = 10,
+                                    }
+                                );
+                                workDone = manager;
+                       
+                                await Task.Delay(100).ConfigureAwait(false);
+                       
+                                manager.OnNext(
+                                    new WorkDoneProgressReport
+                                    {
+                                        Percentage = 20,
+                                        Message = "loading in progress"
+                                    }
+                                );
+                            }
+                       )
+                       .OnInitialized(
+                            async (server, request, response, token) =>
+                            {
+                                workDone.OnNext(
+                                    new WorkDoneProgressReport
+                                    {
+                                        Percentage = 40,
+                                        Message = "loading almost done",
+                                    }
+                                );
+                       
+                                await Task.Delay(100).ConfigureAwait(false);
+                       
+                                workDone.OnNext(
+                                    new WorkDoneProgressReport
+                                    {
+                                        Message = "loading done",
+                                        Percentage = 100,
+                                    }
+                                );
+                                workDone.OnCompleted();
+                            }
+                        )
                        .OnStarted(
                             async (languageServer, token) =>
                             {
