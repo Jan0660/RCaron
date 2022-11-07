@@ -195,6 +195,8 @@ public class TokenReader
             if (index == 0)
             {
                 index = CollectAlphaNumericAndSomeAndDash(txt[position..]);
+                if (index == 0)
+                    throw new("Invalid token at position " + position);
                 position += index;
                 return new KeywordToken((initialPosition, position), text[initialPosition..position]);
             }
