@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -107,152 +108,79 @@ namespace SampleServer
             // var lines = content.Split('\n');
             var symbols = new List<SymbolInformationOrDocumentSymbol>();
 
-            void AddSymbol(string name, (int Start, int End) range, (int Start, int End) selectionRange,
-                SymbolKind kind)
+            DocumentSymbol AddSymbol(string name,
+                (int Start, int End) range, (int Start, int End) selectionRange,
+                SymbolKind kind, List<DocumentSymbol> parentChildren, [CanBeNull] List<DocumentSymbol> children = null)
             {
-                symbols.Add(
-                    new DocumentSymbol
-                    {
-                        Detail = name,
-                        Deprecated = false,
-                        Kind = kind,
-                        // Tags = new[] { SymbolTag.Deprecated },                
-                        Range = Util.GetRange(range.Start, range.End, content),
-                        // Range = new Range(                                    
-                        //     new Position(startPos.Item1, startPos.Item2),      
-                        //     new Position(endPos.Item1, endPos.Item2)
-                        // ),
-                        SelectionRange = Util.GetRange(selectionRange.Start, selectionRange.End, content),
-                        // SelectionRange =
-                        //     new Range(
-                        //         new Position(startPos.Item1, startPos.Item2),
-                        //         new Position(endPos.Item1, endPos.Item2)
-                        //     ),
-                        Name = name,
-                    }
-                );
+                var symbol = new DocumentSymbol
+                {
+                    Detail = name,
+                    Deprecated = false,
+                    Kind = kind,
+                    // Tags = new[] { SymbolTag.Deprecated },                
+                    Range = Util.GetRange(range.Start, range.End, content),
+                    // Range = new Range(                                    
+                    //     new Position(startPos.Item1, startPos.Item2),      
+                    //     new Position(endPos.Item1, endPos.Item2)
+                    // ),
+                    SelectionRange = Util.GetRange(selectionRange.Start, selectionRange.End, content),
+                    // SelectionRange =
+                    //     new Range(
+                    //         new Position(startPos.Item1, startPos.Item2),
+                    //         new Position(endPos.Item1, endPos.Item2)
+                    //     ),
+                    Name = name,
+                    Children = children,
+                };
+                if (parentChildren != null)
+                    parentChildren.Add(symbol);
+                else
+                    symbols.Add(symbol);
 
                 _logger.LogInformation(
                     $"Symbol name: {name}; {range.Start} - {range.End}; {selectionRange.Start} - {selectionRange.End}; kind: {kind}");
+                return symbol;
             }
 
-            var parsed = RCaronRunner.Parse(content);
-            for (var i = 0; i < parsed.Lines.Count; i++)
+            var parsed = RCaronRunner.Parse(content, returnDescriptive: true);
+
+            void EvaluateLines(IList<Line> lines, [CanBeNull] List<DocumentSymbol> parentChildren = null)
             {
-                var line = parsed.Lines[i];
-                // _logger.LogInformation(
-                //     $"Symbol: {token.ToString(content)}; ({lineIndex}, {chr}) - ({endLineIndex}, {endChr})");
-                if (line is TokenLine { Type: LineType.Function } tokenLine)
+                for (var i = 0; i < lines.Count; i++)
                 {
-                    var token = (CallLikePosToken)tokenLine.Tokens[1];
-                    AddSymbol(token.Name,
-                        (tokenLine.Tokens[0].Position.Start, ((CodeBlockLine)parsed.Lines[i + 1]).Token.Position.End),
-                        (token.Position.Start, token.NameEndIndex), SymbolKind.Function);
-                    _logger.LogInformation($"{token.Position}");
-                }
-            }
-
-            // todo: i guess put in classes as a line into the Lines array too since I am not storign the difiontiofj tokens here
-            // -- could make it an extra option for the parser and have the motor just skip over it - call it descriptive lines or whatever
-            // if (parsed.ClassDefinitions != null)
-            //     foreach (var @class in parsed.ClassDefinitions)
-            //     {
-            //         var (line, chr) = GetLineAndColumn(@class., content, @class.StartLine, @class.StartColumn,
-            //             @class.StartOffset);
-            //         var (endLine, endChr) = GetLineAndColumn(@class.EndIndex, content, @class.EndLine, @class.EndColumn,
-            //             @class.EndOffset);
-            //         symbols.Add(new SymbolInformationOrDocumentSymbol(
-            //             new DocumentSymbol()
-            //             {
-            //                 Name = @class.Name,
-            //                 Kind = SymbolKind.Class,
-            //                 Range = new Range(new Position(line, chr), new Position(endLine, endChr)),
-            //                 SelectionRange = new Range(new Position(line, chr), new Position(line, chr + @class.Name.Length))
-            //             }
-            //         ));
-            //     }
-            /*
-            var reader = new TokenReader(content, false);
-
-            var token = reader.Read();
-            while (token != null)
-            {
-                if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment ||
-                    token.Type == TokenType.Ignore)
-                {
-                    token = reader.Read();
-                    continue;
-                }
-
-                var (lineIndex, chr) = GetLineAndColumn(token.Position.Start, content, null, null, null);
-                var (endLineIndex, endChr) =
-                    GetLineAndColumn(token.Position.End, content, lineIndex, chr, token.Position.Start);
-                symbols.Add(
-                    new DocumentSymbol
+                    var line = lines[i];
+                    // _logger.LogInformation(
+                    //     $"Symbol: {token.ToString(content)}; ({lineIndex}, {chr}) - ({endLineIndex}, {endChr})");
+                    switch (line.Type)
                     {
-                        Detail = token.Type.ToString(),
-                        Deprecated = false,
-                        Kind = token.Type switch
+                        case LineType.Function when line is TokenLine tokenLine:
                         {
-                            TokenType.VariableIdentifier => SymbolKind.Variable,
-                            _ => SymbolKind.File,
-                        },
-                        Tags = new[] { SymbolTag.Deprecated },
-                        Range = new Range(
-                            new Position(lineIndex, chr),
-                            new Position(endLineIndex, endChr)
-                        ),
-                        SelectionRange =
-                            new Range(
-                                new Position(lineIndex, chr),
-                                new Position(endLineIndex, endChr)
-                            ),
-                        Name = token.ToString(content),
+                            var token = (CallLikePosToken)tokenLine.Tokens[1];
+                            AddSymbol(token.Name,
+                                (tokenLine.Tokens[0].Position.Start, ((CodeBlockLine)lines[i + 1]).Token.Position.End),
+                                (token.Position.Start, token.NameEndIndex), SymbolKind.Function, parentChildren);
+                            _logger.LogInformation($"{token.Position}");
+                            break;
+                        }
+                        case LineType.ClassDefinition when line is TokenLine tokenLine:
+                        {
+                            var cbt = (CodeBlockToken)tokenLine.Tokens[2];
+                            var children = new List<DocumentSymbol>();
+                            EvaluateLines(cbt.Lines, children);
+                            AddSymbol(((KeywordToken)tokenLine.Tokens[1]).String,
+                                (tokenLine.Tokens[0].Position.Start, cbt.Position.End),
+                                (tokenLine.Tokens[1].Position.Start, tokenLine.Tokens[1].Position.End),
+                                SymbolKind.Class, parentChildren, children);
+                            break;
+                        }
+                        case LineType.CodeBlock when line is CodeBlockLine codeBlockLine:
+                            EvaluateLines(codeBlockLine.Token.Lines, parentChildren);
+                            break;
                     }
-                );
-                _logger.LogInformation(
-                    $"Symbol: {token.ToString(content)}; ({lineIndex}, {chr}) - ({endLineIndex}, {endChr})");
-
-                token = reader.Read();
+                }
             }
-            
-            */
-            // for (var lineIndex = 0; lineIndex < lines.Length; lineIndex++)
-            // {
-            //     var line = lines[lineIndex];
-            //     var parts = line.Split(' ', '.', '(', ')', '{', '}', '[', ']', ';');
-            //     var currentCharacter = 0;
-            //     foreach (var part in parts)
-            //     {
-            //         if (string.IsNullOrWhiteSpace(part))
-            //         {
-            //             currentCharacter += part.Length + 1;
-            //             continue;
-            //         }
-            //
-            //         symbols.Add(
-            //             new DocumentSymbol {
-            //                 Detail = part,
-            //                 Deprecated = true,
-            //                 Kind = SymbolKind.Field,
-            //                 Tags = new[] { SymbolTag.Deprecated },
-            //                 Range = new Range(
-            //                     new Position(lineIndex, currentCharacter),
-            //                     new Position(lineIndex, currentCharacter + part.Length)
-            //                 ),
-            //                 SelectionRange =
-            //                     new Range(
-            //                         new Position(lineIndex, currentCharacter),
-            //                         new Position(lineIndex, currentCharacter + part.Length)
-            //                     ),
-            //                 Name = part
-            //             }
-            //         );
-            //         currentCharacter += part.Length + 1;
-            //     }
-            // }
 
-            // await Task.Delay(2000, cancellationToken);
+            EvaluateLines(parsed.Lines);
             return symbols;
         }
 
