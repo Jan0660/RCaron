@@ -687,7 +687,6 @@ public class Motor
                 GlobalScope.SetVariable(At(argumentTokens, 0).Expect<string>(), At(argumentTokens, 1));
                 return RCaronInsideEnum.NoReturnValue;
             }
-            case "printfunny":
             case "println":
                 foreach (var arg in All(argumentTokens))
                     Console.WriteLine(arg);
