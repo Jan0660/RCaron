@@ -156,11 +156,11 @@ namespace SampleServer
                         case LineType.Function when line is TokenLine tokenLine:
                         {
                             var token = (CallLikePosToken)tokenLine.Tokens[1];
-                            var cbt = ((CodeBlockLine)lines[i+1]).Token;
+                            var cbt = (CodeBlockToken)tokenLine.Tokens[2];
                             var children = new List<DocumentSymbol>();
                             EvaluateLines(cbt.Lines, children);
                             AddSymbol(token.Name,
-                                (tokenLine.Tokens[0].Position.Start, ((CodeBlockLine)lines[i + 1]).Token.Position.End),
+                                (tokenLine.Tokens[0].Position.Start, cbt.Position.End),
                                 (token.Position.Start, token.NameEndIndex), SymbolKind.Function, parentChildren,
                                 children);
                             i++;
