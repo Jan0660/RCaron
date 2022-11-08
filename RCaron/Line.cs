@@ -35,11 +35,13 @@ public class ForLoopLine : Line
     public CallLikePosToken CallToken { get; }
     public Line Initializer { get; }
     public Line Iterator { get; }
-    public ForLoopLine(CallLikePosToken callToken, Line initializer, Line iterator, LineType lineType = LineType.ForLoop) : base(lineType)
+    public CodeBlockToken Body { get; }
+    public ForLoopLine(CallLikePosToken callToken, Line initializer, Line iterator, CodeBlockToken body, LineType lineType = LineType.ForLoop) : base(lineType)
     {
         CallToken = callToken;
         Initializer = initializer;
         Iterator = iterator;
+        Body = body;
     }
 }
 

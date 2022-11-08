@@ -140,7 +140,7 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     [Fact]
     public void Functions()
     {
-        var m = RCaronRunner.Run(@"func sus{
+        var m = RCaronRunner.Run(@"func sus(){
     for($r = 0; $r < 2; $r++){
         print(1);
     }

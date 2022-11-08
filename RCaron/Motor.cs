@@ -174,7 +174,7 @@ public class Motor
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(new StackThing(true, false, null));
-                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                        var res = RunCodeBlock(forLoopLine.Body);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
                             if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
@@ -187,7 +187,6 @@ public class Motor
                         RunLine(forLoopLine.Iterator);
                     }
 
-                    curIndex++;
                     break;
                 }
                 case LineType.QuickForLoop when baseLine is ForLoopLine forLoopLine:
@@ -198,7 +197,7 @@ public class Motor
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(scope);
-                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                        var res = RunCodeBlock(forLoopLine.Body);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
                             if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
@@ -211,26 +210,6 @@ public class Motor
                         RunLine(forLoopLine.Iterator);
                     }
 
-                    curIndex++;
-                    break;
-                }
-                case LineType.LoopLoop:
-                {
-                    while (true)
-                    {
-                        BlockStack.Push(new StackThing(true, false, null));
-                        var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
-                        if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
-                        {
-                            if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
-                                break;
-                            if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
-                                continue;
-                            return (true, res);
-                        }
-                    }
-
-                    curIndex++;
                     break;
                 }
                 default:
@@ -272,14 +251,13 @@ public class Motor
                 {
                     ElseState = true;
                     BlockStack.Push(new(false, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock((CodeBlockToken)line.Tokens[1]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         return (true, res);
                     }
                 }
 
-                curIndex += 1;
                 break;
             }
             case LineType.ElseIfStatement when line.Tokens[1] is CallLikePosToken callToken:
@@ -288,14 +266,13 @@ public class Motor
                 {
                     ElseState = true;
                     BlockStack.Push(new(false, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock((CodeBlockToken)line.Tokens[2]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         return (true, res);
                     }
                 }
 
-                curIndex += 1;
                 break;
             }
             case LineType.ElseStatement:
@@ -304,22 +281,22 @@ public class Motor
                 {
                     ElseState = true;
                     BlockStack.Push(new(false, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock((CodeBlockToken)line.Tokens[1]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         return (true, res);
                     }
                 }
 
-                curIndex += 1;
                 break;
             }
             case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
+                var body = (CodeBlockToken)line.Tokens[1];
                 while (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
@@ -330,15 +307,15 @@ public class Motor
                     }
                 }
 
-                curIndex++;
                 break;
             }
             case LineType.DoWhileLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
+                var body = (CodeBlockToken)line.Tokens[1];
                 do
                 {
                     BlockStack.Push(new StackThing(true, false, null));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
@@ -349,18 +326,18 @@ public class Motor
                     }
                 } while (SimpleEvaluateBool(callToken.Arguments[0]));
 
-                curIndex++;
                 break;
             }
             case LineType.ForeachLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
+                var body = (CodeBlockToken)line.Tokens[1];
                 var varName = ((VariableToken)callToken.Arguments[0][0]).Name;
                 foreach (var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
                 {
                     var scope = new LocalScope();
                     scope.SetVariable(varName, item);
                     BlockStack.Push(new StackThing(true, false, scope));
-                    var res = RunCodeBlock(((CodeBlockLine)Lines[curIndex + 1]).Token);
+                    var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
                         if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
@@ -371,7 +348,25 @@ public class Motor
                     }
                 }
 
-                curIndex++;
+                break;
+            }
+            case LineType.LoopLoop:
+            {
+                var body = (CodeBlockToken)line.Tokens[1];
+                while (true)
+                {
+                    BlockStack.Push(new StackThing(true, false, null));
+                    var res = RunCodeBlock(body);
+                    if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
+                    {
+                        if (res?.Equals(RCaronInsideEnum.Breaked) ?? false)
+                            break;
+                        if (res?.Equals(RCaronInsideEnum.Continued) ?? false)
+                            continue;
+                        return (true, res);
+                    }
+                }
+
                 break;
             }
             case LineType.UnaryOperation:
@@ -424,8 +419,7 @@ public class Motor
                 else
                     throw new Exception("Invalid function name token");
 
-                Functions[name] = new Function(((CodeBlockLine)Lines[curIndex + 1]).Token, arguments);
-                curIndex++;
+                Functions[name] = new Function((CodeBlockToken)line.Tokens[2], arguments);
                 break;
             }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:

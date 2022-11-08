@@ -392,7 +392,7 @@ public static class RCaronRunner
                     {
                         var funcName = ((CallLikePosToken)((TokenLine)body.Lines[j]).Tokens[1]).Name;
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
-                        functions[funcName] = ((CodeBlockLine)body.Lines[j + 1]).Token;
+                        functions[funcName] = ((CodeBlockToken)((TokenLine)body.Lines[j]).Tokens[2]);
                         j++;
                     }
                     else if (body.Lines[j].Type == LineType.VariableAssignment)
@@ -498,34 +498,33 @@ public static class RCaronRunner
         // if statement
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "if"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.IfStatement);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.IfStatement);
         }
         // else if statement
         else if (tokens[i].EqualsString(text, "else") && tokens[i + 1] is CallLikePosToken ifCallToken &&
                  ifCallToken.NameEquals(text, "if"))
         {
-            res = new TokenLine(new[] { tokens[i], tokens[i + 1] }, LineType.ElseIfStatement);
-            i++;
+            res = new TokenLine(new[] { tokens[i], tokens[++i], tokens[++i] }, LineType.ElseIfStatement);
         }
         // else statement
         else if (tokens[i].EqualsString(text, "else"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.ElseStatement);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.ElseStatement);
         }
         // loop loop
-        else if (tokens[i] is KeywordToken keywordToken && tokens[i].EqualsString(text, "loop"))
+        else if (tokens[i] is KeywordToken keywordToken && keywordToken.String == "loop")
         {
-            return new SingleTokenLine(tokens[i], LineType.LoopLoop);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.LoopLoop);
         }
         // while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "while"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.WhileLoop);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.WhileLoop);
         }
         // do while loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "dowhile"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.DoWhileLoop);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.DoWhileLoop);
         }
         // for loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
@@ -534,7 +533,7 @@ public static class RCaronRunner
             var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
             falseI = 0;
             var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
-            return new ForLoopLine(callToken, initializer, iterator);
+            return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i]);
         }
         // qfor loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "qfor"))
@@ -543,18 +542,19 @@ public static class RCaronRunner
             var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
             falseI = 0;
             var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
-            return new ForLoopLine(callToken, initializer, iterator, LineType.QuickForLoop);
+            return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i],
+                LineType.QuickForLoop);
         }
         // foreach loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "foreach"))
         {
-            return new TokenLine(new[] { tokens[i] }, LineType.ForeachLoop);
+            return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.ForeachLoop);
         }
         // function
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
-            res = new TokenLine(tokens[i..(i + 2)], LineType.Function);
-            i += 1;
+            res = new TokenLine(tokens[i..(i + 3)], LineType.Function);
+            i += 2;
         }
         else if (tokens[i] is { Type: TokenType.BlockStart or TokenType.BlockEnd })
         {

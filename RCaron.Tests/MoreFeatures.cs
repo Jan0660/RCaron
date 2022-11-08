@@ -215,7 +215,7 @@ else { $h = 2; }
         Assert.IsType<ComparisonValuePosToken>(l.Tokens[^1]);
         ctx = RCaronRunner.Parse("if(0 + 1 == 1){}");
         l = (TokenLine)ctx.Lines[0];
-        Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[^1]).Arguments[0][0]);
+        Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[0]).Arguments[0][0]);
     }
 
     [Fact]
