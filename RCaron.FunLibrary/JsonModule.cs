@@ -146,7 +146,7 @@ public class ClassInstanceReadConverter : JsonConverter<ClassInstance>
 
 public class JsonNodeIndexer : IIndexerImplementation
 {
-    public bool Do(object? indexerValue, ref object? value, ref Type? type)
+    public bool Do(Motor _, object? indexerValue, ref object? value, ref Type? type)
     {
         if (value is not JsonNode jsonNode)
             return false;
@@ -165,7 +165,7 @@ public class JsonNodeIndexer : IIndexerImplementation
 
 public class JsonObjectPropertyAccessor : IPropertyAccessor
 {
-    public bool Do(string propertyName, ref object? value, ref Type? type)
+    public bool Do(Motor _, string propertyName, ref object? value, ref Type? type)
     {
         if (value is not JsonObject jsonObject)
             return false;

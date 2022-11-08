@@ -101,7 +101,7 @@ $h2 = $arr[$h];");
 
     private class CustomIndexerImplementationClass : IIndexerImplementation
     {
-        public bool Do(object? indexerValue, ref object? value, ref Type? type)
+        public bool Do(Motor _, object? indexerValue, ref object? value, ref Type? type)
         {
             if (value is long a && indexerValue is long b)
             {
@@ -126,7 +126,7 @@ $h2 = $arr[$h];");
 
     private class CustomPropertyAccessorClass : IPropertyAccessor
     {
-        public bool Do(string propertyName, ref object? value, ref Type? type)
+        public bool Do(Motor _, string propertyName, ref object? value, ref Type? type)
         {
             if (value is string a)
             {

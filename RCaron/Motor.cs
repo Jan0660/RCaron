@@ -639,6 +639,7 @@ public class Motor
             return SimpleEvaluateExpressionSingle(tokens[index]);
         }
 
+        // todo(perf): could use a ref struct enumerator for when callToken != null but no idea what to do whet callToken == null
         object?[] All(in ArraySegment<PosToken> tokens)
         {
             if (tokens.Count == 0 && (callToken?.ArgumentsEmpty() ?? false))
@@ -1033,7 +1034,7 @@ public class Motor
                     var broke = false;
                     for (var j = 0; j < FileScope.IndexerImplementations.Count; j++)
                     {
-                        if (FileScope.IndexerImplementations[j].Do(evaluated, ref val, ref type))
+                        if (FileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
                         {
                             broke = true;
                             break;
@@ -1142,7 +1143,7 @@ public class Motor
                 var broke = false;
                 for (var j = 0; j < FileScope.PropertyAccessors.Count; j++)
                 {
-                    if (FileScope.PropertyAccessors[j].Do(str, ref val, ref type))
+                    if (FileScope.PropertyAccessors[j].Do(this, str, ref val, ref type))
                     {
                         broke = true;
                         break;

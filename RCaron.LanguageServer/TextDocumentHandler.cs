@@ -163,7 +163,6 @@ namespace SampleServer
                                 (tokenLine.Tokens[0].Position.Start, ((CodeBlockLine)lines[i + 1]).Token.Position.End),
                                 (token.Position.Start, token.NameEndIndex), SymbolKind.Function, parentChildren,
                                 children);
-                            _logger.LogInformation($"{token.Position}");
                             i++;
                             break;
                         }
