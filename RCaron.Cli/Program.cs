@@ -59,10 +59,10 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
     {
         motor.Modules.Add(new FunModule());
         motor.Modules.Add(new JsonModule());
-        motor.FileScope.IndexerImplementations ??= new();
-        motor.FileScope.IndexerImplementations.Add(new JsonNodeIndexer());
-        motor.FileScope.PropertyAccessors ??= new();
-        motor.FileScope.PropertyAccessors.Add(new JsonObjectPropertyAccessor());
+        motor.MainFileScope.IndexerImplementations ??= new();
+        motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());
+        motor.MainFileScope.PropertyAccessors ??= new();
+        motor.MainFileScope.PropertyAccessors.Add(new JsonObjectPropertyAccessor());
     }
     if (f is not null)
     {

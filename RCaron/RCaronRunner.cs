@@ -372,7 +372,7 @@ public static class RCaronRunner
 
         // find lines
         var lines = new List<Line>();
-        List<ClassDefinition> classDefinitions = null;
+        var fileScope = new FileScope();
         var t = tokens.ToArray();
         for (var i = 0; i < tokens.Count; i++)
         {
@@ -380,7 +380,7 @@ public static class RCaronRunner
             if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
                 var name = ((KeywordToken)t[i + 1]).String;
-                Dictionary<string, CodeBlockToken> functions = null;
+                Dictionary<string, Function> functions = null;
                 // todo: use array
                 List<string>? propertyNames = null;
                 List<PosToken[]?>? propertyInitializers = null;
@@ -390,9 +390,10 @@ public static class RCaronRunner
                 {
                     if (body.Lines[j].Type == LineType.Function)
                     {
-                        var funcName = ((CallLikePosToken)((TokenLine)body.Lines[j]).Tokens[1]).Name;
+                        var tokenLine = (TokenLine)body.Lines[j];
+                        var f = DoFunction(tokenLine.Tokens);
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
-                        functions[funcName] = ((CodeBlockToken)((TokenLine)body.Lines[j]).Tokens[2]);
+                        functions[f.name] = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
                         j++;
                     }
                     else if (body.Lines[j].Type == LineType.VariableAssignment)
@@ -416,16 +417,26 @@ public static class RCaronRunner
                 if (returnDescriptive)
                     lines.Add(new TokenLine(new[] { t[i], t[i + 1], t[i + 2] }, LineType.ClassDefinition));
                 i += 2;
-                classDefinitions ??= new();
-                classDefinitions.Add(
+                fileScope.ClassDefinitions ??= new();
+                fileScope.ClassDefinitions.Add(
                     new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray())
                         { Functions = functions });
+            }
+            // function
+            else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
+            {
+                var (name, arguments) = DoFunction(tokens, i);
+                fileScope.Functions ??= new(StringComparer.InvariantCultureIgnoreCase);
+                fileScope.Functions[name] = new Function((CodeBlockToken)tokens[i + 2], arguments, fileScope);
+                if (returnDescriptive)
+                    lines.Add(new TokenLine(tokens.GetRangeAsArray(i..(i + 3)), LineType.Function));
+                i += 2;
             }
             else
                 lines.Add(GetLine(t, ref i, text));
         }
 
-        return new RCaronRunnerContext(text, lines, classDefinitions);
+        return new RCaronRunnerContext(text, lines, fileScope);
     }
 
     public static Line GetLine(PosToken[] tokens, ref int i, in string text)
@@ -550,7 +561,8 @@ public static class RCaronRunner
         {
             return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.ForeachLoop);
         }
-        // function
+        // function (should happen only inside a code block)
+        // todo(perf): do not do this in code blocks too
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
         {
             res = new TokenLine(tokens[i..(i + 3)], LineType.Function);
@@ -601,9 +613,47 @@ public static class RCaronRunner
 
         return res;
     }
+
+    public static (string name, FunctionArgument[]? arguments) DoFunction(IList<PosToken> tokens, int offset = 0)
+    {
+        string name;
+        FunctionArgument[]? arguments = null;
+        if (tokens[offset + 1] is CallLikePosToken callToken)
+        {
+            name = callToken.Name;
+            arguments = new FunctionArgument[callToken.Arguments.Length];
+            for (int j = 0; j < callToken.Arguments.Length; j++)
+            {
+                var cur = callToken.Arguments[j];
+                var argName = ((VariableToken)cur[0]).Name;
+                arguments[j] = new FunctionArgument(argName);
+                if (cur is [_, OperationPosToken { Operation: OperationEnum.Assignment }, ..])
+                {
+                    // todo: support constant expressions like if 1 + 1
+                    arguments[j].DefaultValue = EvaluateConstantToken(cur[2]);
+                }
+            }
+        }
+        else if (tokens[offset + 1] is KeywordToken keywordToken)
+            name = keywordToken.String;
+        else
+            throw new Exception("Invalid function name token");
+
+        return (name, arguments);
+    }
+
+    public static object? EvaluateConstantToken(PosToken token)
+        => token switch
+        {
+            // todo(current): in TokenReader make true, false and null into ConstTokens instead of variables
+            VariableToken { Name: "true" } => true,
+            VariableToken { Name: "false" } => false,
+            VariableToken { Name: "null" } => null,
+            ConstToken constToken => constToken.Value,
+        };
 }
 
-public record RCaronRunnerContext(string Code, IList<Line> Lines, List<ClassDefinition>? ClassDefinitions);
+public record RCaronRunnerContext(string Code, IList<Line> Lines, FileScope FileScope);
 
 [Flags]
 public enum RCaronRunnerLog

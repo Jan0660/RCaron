@@ -61,14 +61,7 @@ var opt = new MotorOptions()
 //     $b = $c;
 // }";
 var text = @"
-for ($h = 0, $h < 5, $h++) {
-    print $h;
-    switch($h) {
-        0 { print 'zero';  }
-        1 { print 'one'; }
-        default { print 'default' $h; }
-    }
-}
+throw #System.Exception:new('balls');
 ";
 // $g = @(1, 2).Length;
 // print $g;

@@ -118,8 +118,8 @@ $h2 = $arr[$h];");
     public void CustomIndexerImplementation()
     {
         var m = new Motor(RCaronRunner.Parse(@"$v = 2; $h = $v[3];"));
-        m.FileScope.IndexerImplementations ??= new();
-        m.FileScope.IndexerImplementations.Add(new CustomIndexerImplementationClass());
+        m.MainFileScope.IndexerImplementations ??= new();
+        m.MainFileScope.IndexerImplementations.Add(new CustomIndexerImplementationClass());
         m.Run();
         m.AssertVariableEquals("h", 6L);
     }
@@ -143,8 +143,8 @@ $h2 = $arr[$h];");
     public void CustomPropertyAccessor()
     {
         var m = new Motor(RCaronRunner.Parse(@"$v = 'funny'; $h = $v.hello;"));
-        m.FileScope.PropertyAccessors ??= new();
-        m.FileScope.PropertyAccessors.Add(new CustomPropertyAccessorClass());
+        m.MainFileScope.PropertyAccessors ??= new();
+        m.MainFileScope.PropertyAccessors.Add(new CustomPropertyAccessorClass());
         m.Run();
         m.AssertVariableEquals("h", "funny.hello");
     }

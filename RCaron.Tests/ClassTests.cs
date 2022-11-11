@@ -81,4 +81,17 @@ $h = $f.prop;
 ");
         m.AssertVariableEquals("h", 5L);
     }
+
+    [Fact]
+    public void FunctionWithParameter()
+    {
+        var m = RCaronRunner.Run(@"
+class Funny {
+    $prop = 2;
+    func Function($a){ return $a + $prop; }
+}
+$h = #Funny:New().Function(4);
+");
+        m.AssertVariableEquals("h", 6L);
+    }
 }

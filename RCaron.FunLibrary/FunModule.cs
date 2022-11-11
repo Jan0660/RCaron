@@ -42,7 +42,7 @@ public partial class FunModule : IRCaronModule
         var scope = new LocalScope();
         scope.Variables ??= new();
         scope.SetVariable("args", args);
-        m.Motor.BlockStack.Push(new(false, true, scope));
+        m.Motor.BlockStack.Push(new(false, true, scope, motor.MainFileScope));
         Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
     }
 
@@ -63,7 +63,7 @@ public partial class FunModule : IRCaronModule
             using var m = MotorPool.GetAndPrepare(Motor);
             var scope = new LocalScope();
             scope.SetVariable("eventArgs", args);
-            m.Motor.BlockStack.Push(new(false, true, scope));
+            m.Motor.BlockStack.Push(new(false, true, scope, Motor.MainFileScope));
             return m.Motor.RunCodeBlock(CodeBlockToken);
         }
     }

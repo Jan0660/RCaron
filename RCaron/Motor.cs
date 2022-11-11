@@ -46,20 +46,22 @@ public class Motor
     public class StackThing
     {
         public StackThing(bool isBreakWorthy, bool isReturnWorthy,
-            LocalScope? scope)
+            LocalScope? scope, FileScope fileScope)
         {
             this.IsBreakWorthy = isBreakWorthy;
             this.IsReturnWorthy = isReturnWorthy;
             this.Scope = scope;
+            this.FileScope = fileScope;
         }
 
         public bool IsBreakWorthy { get; init; }
         public bool IsReturnWorthy { get; init; }
         public LocalScope? Scope { get; set; }
+        public FileScope FileScope { get; init; }
     }
 
     public NiceStack<StackThing> BlockStack { get; set; } = new();
-    public FileScope FileScope { get; set; } = new();
+    public FileScope MainFileScope { get; set; }
     public MotorOptions Options { get; }
     public List<IRCaronModule> Modules { get; set; }
 
@@ -67,23 +69,7 @@ public class Motor
     /// If true and meets an else(if), it will be skipped.
     /// </summary>
     public bool ElseState { get; set; } = false;
-
-    public record Function(CodeBlockToken CodeBlock, FunctionArgument[]? Arguments);
-
-    public class FunctionArgument
-    {
-        public FunctionArgument(string Name)
-        {
-            this.Name = Name;
-        }
-
-        public string Name { get; }
-        public object? DefaultValue { get; set; } = RCaronInsideEnum.NoDefaultValue;
-    }
-
-    public Dictionary<string, Function> Functions { get; set; } = new(StringComparer.InvariantCultureIgnoreCase);
     public LocalScope GlobalScope { get; set; } = new();
-    public List<ClassDefinition>? ClassDefinitions { get; set; }
 
 #pragma warning disable CS8618
     public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
@@ -98,7 +84,7 @@ public class Motor
     {
         Lines = runnerContext.Lines;
         Raw = runnerContext.Code;
-        ClassDefinitions = runnerContext.ClassDefinitions;
+        MainFileScope = runnerContext.FileScope;
     }
 
     /// <summary>
@@ -153,7 +139,7 @@ public class Motor
                 baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
         if (baseLine is CodeBlockLine codeBlockLine)
         {
-            BlockStack.Push(new(false, false, null));
+            BlockStack.Push(new(false, false, null, GetFileScope()));
             var res = RunCodeBlock(codeBlockLine.Token);
             if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
             {
@@ -173,7 +159,7 @@ public class Motor
                     RunLine(forLoopLine.Initializer);
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
-                        BlockStack.Push(new StackThing(true, false, null));
+                        BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                         var res = RunCodeBlock(forLoopLine.Body);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         {
@@ -193,7 +179,7 @@ public class Motor
                 {
                     var falseI = 0;
                     RunLine(forLoopLine.Initializer);
-                    var scope = new StackThing(true, false, null);
+                    var scope = new StackThing(true, false, null, GetFileScope());
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(scope);
@@ -250,7 +236,7 @@ public class Motor
                 if (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
                     ElseState = true;
-                    BlockStack.Push(new(false, false, null));
+                    BlockStack.Push(new(false, false, null, GetFileScope()));
                     var res = RunCodeBlock((CodeBlockToken)line.Tokens[1]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -265,7 +251,7 @@ public class Motor
                 if (!ElseState && SimpleEvaluateBool(callToken.Arguments[0]))
                 {
                     ElseState = true;
-                    BlockStack.Push(new(false, false, null));
+                    BlockStack.Push(new(false, false, null, GetFileScope()));
                     var res = RunCodeBlock((CodeBlockToken)line.Tokens[2]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -280,7 +266,7 @@ public class Motor
                 if (!ElseState)
                 {
                     ElseState = true;
-                    BlockStack.Push(new(false, false, null));
+                    BlockStack.Push(new(false, false, null, GetFileScope()));
                     var res = RunCodeBlock((CodeBlockToken)line.Tokens[1]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -295,7 +281,7 @@ public class Motor
                 var body = (CodeBlockToken)line.Tokens[1];
                 while (SimpleEvaluateBool(callToken.Arguments[0]))
                 {
-                    BlockStack.Push(new StackThing(true, false, null));
+                    BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                     var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -314,7 +300,7 @@ public class Motor
                 var body = (CodeBlockToken)line.Tokens[1];
                 do
                 {
-                    BlockStack.Push(new StackThing(true, false, null));
+                    BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                     var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -336,7 +322,7 @@ public class Motor
                 {
                     var scope = new LocalScope();
                     scope.SetVariable(varName, item);
-                    BlockStack.Push(new StackThing(true, false, scope));
+                    BlockStack.Push(new StackThing(true, false, scope, GetFileScope()));
                     var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -355,7 +341,7 @@ public class Motor
                 var body = (CodeBlockToken)line.Tokens[1];
                 while (true)
                 {
-                    BlockStack.Push(new StackThing(true, false, null));
+                    BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                     var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -395,33 +381,6 @@ public class Motor
                 }
 
                 break;
-            case LineType.Function:
-            {
-                string name;
-                FunctionArgument[]? arguments = null;
-                if (line.Tokens[1] is CallLikePosToken callToken)
-                {
-                    name = callToken.Name;
-                    arguments = new FunctionArgument[callToken.Arguments.Length];
-                    for (int i = 0; i < callToken.Arguments.Length; i++)
-                    {
-                        var cur = callToken.Arguments[i];
-                        var argName = ((VariableToken)cur[0]).Name;
-                        arguments[i] = new FunctionArgument(argName);
-                        if (cur is [_, OperationPosToken { Operation: OperationEnum.Assignment }, ..])
-                        {
-                            arguments[i].DefaultValue = SimpleEvaluateExpressionHigh(cur[2..]);
-                        }
-                    }
-                }
-                else if (line.Tokens[1] is KeywordToken keywordToken)
-                    name = keywordToken.String;
-                else
-                    throw new Exception("Invalid function name token");
-
-                Functions[name] = new Function((CodeBlockToken)line.Tokens[2], arguments);
-                break;
-            }
             case LineType.KeywordCall when line.Tokens[0] is CallLikePosToken callToken:
             {
                 MethodCall(callToken.Name, callToken: callToken, instance: null
@@ -446,7 +405,7 @@ public class Motor
                         ((switchValue == null && value == null) ||
                          (!switchValue?.Equals(value) ?? false)))
                         continue;
-                    BlockStack.Push(new(true, false, null));
+                    BlockStack.Push(new(true, false, null, GetFileScope()));
                     var res = RunCodeBlock((CodeBlockToken)caseLine.Tokens[1]);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                     {
@@ -525,7 +484,7 @@ public class Motor
                             return (false, RCaronInsideEnum.NoReturnValue);
                     }
 
-                if (Functions.TryGetValue(keywordString, out var func))
+                if (GetFileScope().Functions?.TryGetValue(keywordString, out var func) ?? false)
                 {
                     FunctionCall(func, null, line.Tokens.Segment(1..));
                     return (false, RCaronInsideEnum.NoReturnValue);
@@ -557,7 +516,7 @@ public class Motor
                 var pastLines = Lines;
                 try
                 {
-                    BlockStack.Push(new StackThing(false, false, null));
+                    BlockStack.Push(new StackThing(false, false, null, GetFileScope()));
                     var res = RunCodeBlock(codeBlockToken);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                         return (true, res);
@@ -569,7 +528,7 @@ public class Motor
                     {
                         var scope = new LocalScope();
                         scope.SetVariable("exception", exc);
-                        BlockStack.Push(new StackThing(false, false, scope));
+                        BlockStack.Push(new StackThing(false, false, scope, GetFileScope()));
                         var res = RunCodeBlock(catchBlock);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                             return (true, res);
@@ -583,7 +542,7 @@ public class Motor
                     Lines = pastLines;
                     if (finallyBlock is not null)
                     {
-                        BlockStack.Push(new StackThing(false, false, null));
+                        BlockStack.Push(new StackThing(false, false, null, GetFileScope()));
                         var res = RunCodeBlock(finallyBlock);
                         if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
                             throw new("cannot return from finally block");
@@ -700,19 +659,19 @@ public class Motor
                 return RCaronInsideEnum.NoReturnValue;
             }
             case "open":
-                FileScope.UsedNamespaces ??= new();
-                FileScope.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
+                MainFileScope.UsedNamespaces ??= new();
+                MainFileScope.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return RCaronInsideEnum.NoReturnValue;
             case "open_ext":
-                FileScope.UsedNamespacesForExtensionMethods ??= new();
-                FileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
+                MainFileScope.UsedNamespacesForExtensionMethods ??= new();
+                MainFileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
                     t => t.Expect<string>()));
                 return RCaronInsideEnum.NoReturnValue;
             case "throw":
                 throw (Exception)At(argumentTokens, 0);
         }
 
-        if (Functions.TryGetValue(nameArg, out var func))
+        if (GetFileScope().Functions?.TryGetValue(nameArg, out var func) ?? false)
             return FunctionCall(func, callToken, argumentTokens);
 
         if (name[0] == '#' || instance != null)
@@ -785,7 +744,7 @@ public class Motor
                         {
                             if (MemoryExtensions.Equals(method.Name, name,
                                     StringComparison.InvariantCultureIgnoreCase) &&
-                                (FileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
+                                (MainFileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
                                  false))
                             {
                                 foundMethods.Add(method);
@@ -1023,12 +982,12 @@ public class Motor
             {
                 var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
 
-                if (FileScope.IndexerImplementations != null)
+                if (MainFileScope.IndexerImplementations != null)
                 {
                     var broke = false;
-                    for (var j = 0; j < FileScope.IndexerImplementations.Count; j++)
+                    for (var j = 0; j < MainFileScope.IndexerImplementations.Count; j++)
                     {
-                        if (FileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
+                        if (MainFileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
                         {
                             broke = true;
                             break;
@@ -1105,8 +1064,7 @@ public class Motor
                     if (func == null)
                         throw new RCaronException($"Class function '{callLikePosToken.Name}' not found",
                             RCaronExceptionCode.ClassFunctionNotFound);
-                    BlockStack.Push(new StackThing(false, true, new ClassFunctionScope(classInstance)));
-                    val = RunCodeBlock(func);
+                    val = FunctionCall(func, callLikePosToken, classInstance: classInstance);
                     type = val?.GetType();
                     continue;
                 }
@@ -1132,12 +1090,12 @@ public class Motor
                 _ => throw new Exception("unsupported stuff for EvaluateDotThings")
             };
 
-            if (FileScope.PropertyAccessors != null)
+            if (MainFileScope.PropertyAccessors != null)
             {
                 var broke = false;
-                for (var j = 0; j < FileScope.PropertyAccessors.Count; j++)
+                for (var j = 0; j < MainFileScope.PropertyAccessors.Count; j++)
                 {
-                    if (FileScope.PropertyAccessors[j].Do(this, str, ref val, ref type))
+                    if (MainFileScope.PropertyAccessors[j].Do(this, str, ref val, ref type))
                     {
                         broke = true;
                         break;
@@ -1224,7 +1182,7 @@ public class Motor
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.Name, callToken: callToken);
             case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
-                BlockStack.Push(new(false, true, null));
+                BlockStack.Push(new(false, true, null, GetFileScope()));
                 return RunCodeBlock(codeBlockToken);
             case TokenType.Keyword when token is KeywordToken keywordToken:
                 return keywordToken.String;
@@ -1234,13 +1192,14 @@ public class Motor
             {
                 var name = externThingToken.String;
                 // try RCaron ClassDefinition
-                if (ClassDefinitions != null)
-                    for (var i = 0; i < ClassDefinitions.Count; i++)
-                        if (name.Equals(ClassDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
-                            return ClassDefinitions[i];
+                var classDefinitions = GetFileScope().ClassDefinitions;
+                if (classDefinitions != null)
+                    for (var i = 0; i < classDefinitions.Count; i++)
+                        if (name.Equals(classDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
+                            return classDefinitions[i];
 
                 // get Type via TypeResolver
-                var type = TypeResolver.FindType(externThingToken.String, FileScope)!;
+                var type = TypeResolver.FindType(externThingToken.String, MainFileScope)!;
                 if (type == null)
                     throw RCaronException.TypeNotFound(externThingToken.String);
                 return new RCaronType(type);
@@ -1318,12 +1277,12 @@ public class Motor
         };
 
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
-        ArraySegment<PosToken> argumentTokens = default)
+        ArraySegment<PosToken> argumentTokens = default, ClassInstance? classInstance = null)
     {
         LocalScope scope = null;
         if (function.Arguments != null)
         {
-            scope ??= new();
+            scope ??= classInstance == null ? new LocalScope() : new ClassFunctionScope(classInstance);
             Span<bool> assignedArguments = stackalloc bool[function.Arguments.Length];
             var enumerator = callToken != null
                 ? new ArgumentEnumerator(callToken)
@@ -1389,7 +1348,7 @@ public class Motor
         }
 
 
-        BlockStack.Push(new StackThing(false, true, scope));
+        BlockStack.Push(new StackThing(false, true, scope, function.FileScope));
         return RunCodeBlock(function.CodeBlock);
     }
 
@@ -1513,4 +1472,8 @@ public class Motor
         currentStack.Scope ??= new();
         currentStack.Scope.SetVariable(name, value);
     }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    FileScope GetFileScope()
+        => BlockStack.Count == 0 ? MainFileScope : BlockStack.Peek().FileScope;
 }
