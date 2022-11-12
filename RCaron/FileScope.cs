@@ -4,6 +4,7 @@ namespace RCaron;
 
 public class FileScope
 {
+    public string? FileName { get; set; }
     public List<ClassDefinition>? ClassDefinitions { get; set; }
     public Dictionary<string, Function>? Functions { get; set; }
     public List<string>? UsedNamespaces { get; set; }
@@ -11,6 +12,9 @@ public class FileScope
     public List<string>? UsedNamespacesForExtensionMethods { get; set; }
     public List<IIndexerImplementation>? IndexerImplementations { get; set; }
     public List<IPropertyAccessor>? PropertyAccessors { get; set; }
+    public List<ClassDefinition>? ImportedClassDefinitions { get; set; }
+    public Dictionary<string, Function>? ImportedFunctions { get; set; }
+    public List<FileScope>? ImportedFileScopes { get; set; }
 }
 
 public record Function(CodeBlockToken CodeBlock, FunctionArgument[]? Arguments, FileScope FileScope);

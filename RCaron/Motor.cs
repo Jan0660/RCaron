@@ -1,6 +1,7 @@
 using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
+using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
@@ -26,6 +27,7 @@ public enum RCaronInsideEnum : byte
     NoReturnValue,
     Breaked,
     Continued,
+
     // todo: fix the name of this and NoReturnValue to make sense
     ReturnWithoutValue,
 }
@@ -69,6 +71,7 @@ public class Motor
     /// If true and meets an else(if), it will be skipped.
     /// </summary>
     public bool ElseState { get; set; } = false;
+
     public LocalScope GlobalScope { get; set; } = new();
 
 #pragma warning disable CS8618
@@ -80,11 +83,12 @@ public class Motor
         Modules = new List<IRCaronModule>(1) { new LoggingModule() };
     }
 
-    public void UseContext(RCaronRunnerContext runnerContext)
+    public void UseContext(RCaronRunnerContext runnerContext, bool withFileScope = true)
     {
         Lines = runnerContext.Lines;
         Raw = runnerContext.Code;
-        MainFileScope = runnerContext.FileScope;
+        if (withFileScope)
+            MainFileScope = runnerContext.FileScope;
     }
 
     /// <summary>
@@ -484,7 +488,7 @@ public class Motor
                             return (false, RCaronInsideEnum.NoReturnValue);
                     }
 
-                if (GetFileScope().Functions?.TryGetValue(keywordString, out var func) ?? false)
+                if (TryGetFunction(keywordString, GetFileScope(), out var func))
                 {
                     FunctionCall(func, null, line.Tokens.Segment(1..));
                     return (false, RCaronInsideEnum.NoReturnValue);
@@ -557,11 +561,14 @@ public class Motor
     }
 
     public object? RunCodeBlock(CodeBlockToken codeBlock)
+        => RunLinesList(codeBlock.Lines);
+
+    public object? RunLinesList(IList<Line> lines)
     {
         var prevIndex = curIndex;
         var prevLines = Lines;
         curIndex = 0;
-        Lines = codeBlock.Lines;
+        Lines = lines;
         var r = Run();
         curIndex = prevIndex;
         Lines = prevLines;
@@ -659,19 +666,25 @@ public class Motor
                 return RCaronInsideEnum.NoReturnValue;
             }
             case "open":
-                MainFileScope.UsedNamespaces ??= new();
-                MainFileScope.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
+            {
+                var f = GetFileScope();
+                f.UsedNamespaces ??= new();
+                f.UsedNamespaces.AddRange(Array.ConvertAll(All(argumentTokens), t => t.Expect<string>()));
                 return RCaronInsideEnum.NoReturnValue;
+            }
             case "open_ext":
-                MainFileScope.UsedNamespacesForExtensionMethods ??= new();
-                MainFileScope.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
+            {
+                var f = GetFileScope();
+                f.UsedNamespacesForExtensionMethods ??= new();
+                f.UsedNamespacesForExtensionMethods.AddRange(Array.ConvertAll(All(argumentTokens),
                     t => t.Expect<string>()));
                 return RCaronInsideEnum.NoReturnValue;
+            }
             case "throw":
                 throw (Exception)At(argumentTokens, 0);
         }
 
-        if (GetFileScope().Functions?.TryGetValue(nameArg, out var func) ?? false)
+        if (TryGetFunction(nameArg, GetFileScope(), out var func))
             return FunctionCall(func, callToken, argumentTokens);
 
         if (name[0] == '#' || instance != null)
@@ -729,6 +742,7 @@ public class Motor
                 args = args.Prepend(variable!).ToArray();
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 // Type? endingMatch =  null;
+                var fileScope = GetFileScope();
                 foreach (var ass in assemblies)
                 {
                     foreach (var exportedType in ass.GetTypes())
@@ -744,7 +758,7 @@ public class Motor
                         {
                             if (MemoryExtensions.Equals(method.Name, name,
                                     StringComparison.InvariantCultureIgnoreCase) &&
-                                (MainFileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
+                                (fileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
                                  false))
                             {
                                 foundMethods.Add(method);
@@ -839,12 +853,13 @@ public class Motor
 
                 args = argsNew;
             }
+
             // numeric conversions
             if (needsNumericConversions[bestIndex])
             {
                 for (var i = 0; i < args.Length; i++)
                 {
-                    if(paramss[i].ParameterType.IsNumericType() && args[i].GetType().IsNumericType())
+                    if (paramss[i].ParameterType.IsNumericType() && args[i].GetType().IsNumericType())
                         args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
                 }
             }
@@ -982,12 +997,13 @@ public class Motor
             {
                 var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
 
-                if (MainFileScope.IndexerImplementations != null)
+                var fileScope = GetFileScope();
+                if (fileScope.IndexerImplementations != null)
                 {
                     var broke = false;
-                    for (var j = 0; j < MainFileScope.IndexerImplementations.Count; j++)
+                    for (var j = 0; j < fileScope.IndexerImplementations.Count; j++)
                     {
-                        if (MainFileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
+                        if (fileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
                         {
                             broke = true;
                             break;
@@ -1090,12 +1106,13 @@ public class Motor
                 _ => throw new Exception("unsupported stuff for EvaluateDotThings")
             };
 
-            if (MainFileScope.PropertyAccessors != null)
+            var fileScopee = GetFileScope();
+            if (fileScopee.PropertyAccessors != null)
             {
                 var broke = false;
-                for (var j = 0; j < MainFileScope.PropertyAccessors.Count; j++)
+                for (var j = 0; j < fileScopee.PropertyAccessors.Count; j++)
                 {
-                    if (MainFileScope.PropertyAccessors[j].Do(this, str, ref val, ref type))
+                    if (fileScopee.PropertyAccessors[j].Do(this, str, ref val, ref type))
                     {
                         broke = true;
                         break;
@@ -1191,15 +1208,13 @@ public class Motor
             case TokenType.ExternThing when token is ExternThingToken externThingToken:
             {
                 var name = externThingToken.String;
+                var fileScope = GetFileScope();
                 // try RCaron ClassDefinition
-                var classDefinitions = GetFileScope().ClassDefinitions;
-                if (classDefinitions != null)
-                    for (var i = 0; i < classDefinitions.Count; i++)
-                        if (name.Equals(classDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
-                            return classDefinitions[i];
+                if (TryGetClassDefinition(name, fileScope, out var classDefinition))
+                    return classDefinition;
 
                 // get Type via TypeResolver
-                var type = TypeResolver.FindType(externThingToken.String, MainFileScope)!;
+                var type = TypeResolver.FindType(externThingToken.String, fileScope)!;
                 if (type == null)
                     throw RCaronException.TypeNotFound(externThingToken.String);
                 return new RCaronType(type);
@@ -1474,6 +1489,52 @@ public class Motor
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    FileScope GetFileScope()
+    public FileScope GetFileScope()
         => BlockStack.Count == 0 ? MainFileScope : BlockStack.Peek().FileScope;
+
+    private bool TryGetClassDefinition(string name, FileScope fileScope,
+        [MaybeNullWhen(false)] out ClassDefinition classDefinition)
+    {
+        if (TryGetClassDefinition(fileScope.ClassDefinitions, name, out classDefinition))
+            return true;
+        if (TryGetClassDefinition(fileScope.ImportedClassDefinitions, name, out classDefinition))
+            return true;
+        if (fileScope.ImportedFileScopes != null)
+            for (var i = 0; i < fileScope.ImportedFileScopes.Count; i++)
+                if (TryGetClassDefinition(fileScope.ImportedFileScopes[i].ClassDefinitions, name, out classDefinition))
+                    return true;
+        classDefinition = null;
+        return false;
+    }
+
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    public bool TryGetClassDefinition(List<ClassDefinition>? classDefinitions, string name,
+        [MaybeNullWhen(false)] out ClassDefinition classDefinition)
+    {
+        if (classDefinitions != null)
+            for (var i = 0; i < classDefinitions.Count; i++)
+                if (name.Equals(classDefinitions[i].Name, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    classDefinition = classDefinitions[i];
+                    return true;
+                }
+
+        classDefinition = null;
+        return false;
+    }
+
+    public bool TryGetFunction(string name, FileScope fileScope, [MaybeNullWhen(false)] out Function function)
+    {
+        if (fileScope.Functions?.TryGetValue(name, out function) ?? false)
+            return true;
+        if (fileScope.ImportedFunctions?.TryGetValue(name, out function) ?? false)
+            return true;
+        if (fileScope.ImportedFileScopes != null)
+            for (var i = 0; i < fileScope.ImportedFileScopes.Count; i++)
+                if (fileScope.ImportedFileScopes[i].Functions?.TryGetValue(name, out function) ?? false)
+                    return true;
+
+        function = null;
+        return false;
+    }
 }

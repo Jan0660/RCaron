@@ -45,6 +45,17 @@ public partial class FunModule : IRCaronModule
         m.Motor.BlockStack.Push(new(false, true, scope, motor.MainFileScope));
         Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
     }
+    
+    [Method("Open-File")]
+    public void OpenFile(Motor motor, string path)
+    {
+        var fileScope = motor.GetFileScope();
+        var p = RCaronRunner.Parse(File.ReadAllText(path));
+        motor.BlockStack.Push(new(false, true, null, p.FileScope));
+        motor.RunLinesList(p.Lines);
+        fileScope.ImportedFileScopes ??= new();
+        fileScope.ImportedFileScopes.Add(p.FileScope);
+    }
 
     public class CodeBlockWrap
     {

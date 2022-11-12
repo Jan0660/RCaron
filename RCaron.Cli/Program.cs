@@ -55,20 +55,13 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!, null!, null));
-    if (fun)
-    {
-        motor.Modules.Add(new FunModule());
-        motor.Modules.Add(new JsonModule());
-        motor.MainFileScope.IndexerImplementations ??= new();
-        motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());
-        motor.MainFileScope.PropertyAccessors ??= new();
-        motor.MainFileScope.PropertyAccessors.Add(new JsonObjectPropertyAccessor());
-    }
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
         motor.SetVar("args", arguments);
         motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
+        if (fun)
+            AddFun(motor);
         try
         {
             motor.Run();
@@ -94,7 +87,8 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
         while (input != null)
         {
             var ctx = RCaronRunner.Parse(input, returnIgnored: lint);
-            motor.UseContext(ctx);
+            // todo: doesn't do functions and classes
+            motor.UseContext(ctx, false);
             try
             {
                 motor.Run();
@@ -111,3 +105,13 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
 
 // Parse the incoming args and invoke the handler
 return rootCommand.Invoke(args);
+
+void AddFun(Motor motor)
+{
+    motor.Modules.Add(new FunModule());
+    motor.Modules.Add(new JsonModule());
+    motor.MainFileScope.IndexerImplementations ??= new();
+    motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());
+    motor.MainFileScope.PropertyAccessors ??= new();
+    motor.MainFileScope.PropertyAccessors.Add(new JsonObjectPropertyAccessor());
+}
