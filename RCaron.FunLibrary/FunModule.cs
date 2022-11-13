@@ -45,16 +45,61 @@ public partial class FunModule : IRCaronModule
         m.Motor.BlockStack.Push(new(false, true, scope, motor.MainFileScope));
         Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
     }
-    
+
     [Method("Open-File")]
-    public void OpenFile(Motor motor, string path)
+    public void OpenFile(Motor motor, string path, string[]? functions = null, string[]? classes = null,
+        bool noRun = false)
     {
         var fileScope = motor.GetFileScope();
         var p = RCaronRunner.Parse(File.ReadAllText(path));
-        motor.BlockStack.Push(new(false, true, null, p.FileScope));
-        motor.RunLinesList(p.Lines);
-        fileScope.ImportedFileScopes ??= new();
-        fileScope.ImportedFileScopes.Add(p.FileScope);
+        if (!noRun)
+        {
+            var s = new Motor.StackThing(false, true, null, p.FileScope);
+            motor.BlockStack.Push(s);
+            motor.RunLinesList(p.Lines);
+            if (motor.BlockStack.Peek() == s)
+                motor.BlockStack.Pop();
+        }
+
+        if (functions == null && classes == null)
+        {
+            fileScope.ImportedFileScopes ??= new();
+            fileScope.ImportedFileScopes.Add(p.FileScope);
+        }
+
+        if (functions != null)
+        {
+            fileScope.ImportedFunctions ??= new(StringComparer.InvariantCultureIgnoreCase);
+            foreach (var function in functions)
+            {
+                var f = p.FileScope.Functions[function];
+                fileScope.ImportedFunctions.Add(function, f);
+            }
+        }
+
+        if (classes != null)
+        {
+            fileScope.ImportedClassDefinitions ??= new();
+            foreach (var classDef in p.FileScope.ClassDefinitions)
+            {
+                if (classes.Contains(classDef.Name, StringComparer.InvariantCultureIgnoreCase))
+                    fileScope.ImportedClassDefinitions.Add(classDef);
+            }
+        }
+    }
+
+    [Method("Convert-Array")]
+    public object ConvertArray(Motor _, object[] array, RCaronType type)
+    {
+        if (array is not object[] arr)
+            throw new();
+        var r = Array.CreateInstance(type.Type, arr.Length);
+        for (var i = 0; i < arr.Length; i++)
+        {
+            r.SetValue(arr[i], i);
+        }
+
+        return r;
     }
 
     public class CodeBlockWrap
