@@ -54,12 +54,13 @@ rootCommand.Description = "RCaron.Cli";
 rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, string[] arguments) =>
 {
     RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
-    Motor motor = new(new(null!, null!, null));
+    Motor motor = new(new(null!));
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
         motor.SetVar("args", arguments);
         motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
+        motor.MainFileScope.FileName = f.FullName;
         if (fun)
             AddFun(motor);
         try
@@ -70,7 +71,8 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
         {
             try
             {
-                logger.Error("Exception thrown at line " + motor.GetLineNumber());
+                logger.Error("Exception thrown while running the file:");
+                FunModule.PrintException(exc, motor);
             }
             finally
             {

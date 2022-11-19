@@ -327,7 +327,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             }
         }
 
-        EvaluateLines(parsed.Lines, -1);
+        EvaluateLines(parsed.FileScope.Lines, -1);
 
 #if DEBUG
         foreach (var edit in res)

@@ -372,7 +372,11 @@ public static class RCaronRunner
 
         // find lines
         var lines = new List<Line>();
-        var fileScope = new FileScope();
+        var fileScope = new FileScope
+        {
+            Raw = text,
+            Lines = lines,
+        };
         var t = tokens.ToArray();
         for (var i = 0; i < tokens.Count; i++)
         {
@@ -436,7 +440,7 @@ public static class RCaronRunner
                 lines.Add(GetLine(t, ref i, text));
         }
 
-        return new RCaronRunnerContext(text, lines, fileScope);
+        return new RCaronRunnerContext(fileScope);
     }
 
     public static Line GetLine(PosToken[] tokens, ref int i, in string text)
@@ -653,7 +657,7 @@ public static class RCaronRunner
         };
 }
 
-public record RCaronRunnerContext(string Code, IList<Line> Lines, FileScope FileScope);
+public record RCaronRunnerContext(FileScope FileScope);
 
 [Flags]
 public enum RCaronRunnerLog

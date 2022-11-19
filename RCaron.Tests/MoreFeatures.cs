@@ -211,10 +211,10 @@ else { $h = 2; }
     public void EqualityGroupWorks()
     {
         var ctx = RCaronRunner.Parse(@"$h = 0 + 1 == 1;");
-        var l = (TokenLine)ctx.Lines[0];
+        var l = (TokenLine)ctx.FileScope.Lines[0];
         Assert.IsType<ComparisonValuePosToken>(l.Tokens[^1]);
         ctx = RCaronRunner.Parse("if(0 + 1 == 1){}");
-        l = (TokenLine)ctx.Lines[0];
+        l = (TokenLine)ctx.FileScope.Lines[0];
         Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[0]).Arguments[0][0]);
     }
 

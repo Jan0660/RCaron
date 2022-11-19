@@ -139,10 +139,10 @@ switch(name){");
 
                         source.AppendLine(@"for (var i = 0; i < arguments.Length; i++)
 {
-    if (arguments[i].Type == TokenType.MathOperator && arguments[i].EqualsString(motor.Raw, ""-"") &&
-                        arguments[i + 1].Type == TokenType.Keyword)
+    if (arguments[i] is ValueOperationValuePosToken { Operation: OperationEnum.Subtract } &&
+                        arguments[i + 1] is KeywordToken keywordToken)
     {
-        var argName = arguments[i + 1].ToSpan(motor.Raw);");
+        var argName = keywordToken.String;");
                         for (var i = 0; i < parameters.Length; i++)
                         {
                             var param = parameters[i];

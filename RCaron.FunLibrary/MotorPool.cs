@@ -12,7 +12,6 @@ public static class MotorPool
         {
             motor.Lines = parent.Lines;
             motor.Modules = parent.Modules;
-            motor.Raw = parent.Raw;
             motor.MainFileScope = parent.MainFileScope;
             motor.GlobalScope.SetVariable("parentMotor", parent);
         }
@@ -26,7 +25,7 @@ public static class MotorPool
             }
         }
 
-        res = new Motor(new RCaronRunnerContext(parent.Raw, parent.Lines, parent.MainFileScope));
+        res = new Motor(new RCaronRunnerContext(parent.MainFileScope));
         Prepare(res);
         var item = new MotorPoolItem(res) { InUse = true };
         Pool.Add(item);

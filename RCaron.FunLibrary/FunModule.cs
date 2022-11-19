@@ -1,6 +1,8 @@
 ﻿using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Text;
 using JetBrains.Annotations;
 using Microsoft.CSharp.RuntimeBinder;
 using RCaron.LibrarySourceGenerator;
@@ -52,11 +54,12 @@ public partial class FunModule : IRCaronModule
     {
         var fileScope = motor.GetFileScope();
         var p = RCaronRunner.Parse(File.ReadAllText(path));
+        p.FileScope.FileName = Path.GetFullPath(path);
         if (!noRun)
         {
             var s = new Motor.StackThing(false, true, null, p.FileScope);
             motor.BlockStack.Push(s);
-            motor.RunLinesList(p.Lines);
+            motor.RunLinesList(p.FileScope.Lines);
             if (motor.BlockStack.Peek() == s)
                 motor.BlockStack.Pop();
         }
@@ -100,6 +103,102 @@ public partial class FunModule : IRCaronModule
         }
 
         return r;
+    }
+
+    [Method("Get-StackTraceString")]
+    public static string GetStackTraceString(Motor motor)
+    {
+        // this is going to be terrible
+        var sb = new StringBuilder();
+
+        FileScope GetFileScopeBefore(int i)
+            => i == 0 ? motor.MainFileScope : motor.BlockStack.At(i - 1).FileScope;
+
+        FileScope GetFileScopeAt(int i)
+            => i < 0 ? motor.MainFileScope : motor.BlockStack.At(i).FileScope;
+
+        int GetPos(Line line)
+            => line switch
+            {
+                TokenLine tl => tl.Tokens[0].Position.Start,
+                SingleTokenLine stl => stl.Token.Position.Start,
+                CodeBlockLine cbl => cbl.Token.Position.Start,
+                _ => throw new ArgumentOutOfRangeException()
+            };
+
+        string GetName(FileScope fileScope, int pos)
+        {
+            if (fileScope.Functions != null)
+                foreach (var function in fileScope.Functions)
+                {
+                    var l = function.Value.CodeBlock.Lines;
+                    if (GetPos(l[0]) <= pos && GetPos(l[^1]) >= pos)
+                        return function.Key;
+                }
+
+            if (fileScope.ClassDefinitions != null)
+                foreach (var classDefinition in fileScope.ClassDefinitions)
+                {
+                    if (classDefinition.Functions == null)
+                        continue;
+                    foreach (var function in classDefinition.Functions)
+                    {
+                        var l = function.Value.CodeBlock.Lines;
+                        if (GetPos(l[0]) <= pos && GetPos(l[^1]) >= pos)
+                            return $"{classDefinition.Name}.{function.Key}";
+                    }
+                }
+
+            return "???";
+        }
+
+        void Do(Line line, FileScope fileScopeBefore)
+        {
+            var pos = GetPos(line);
+            var lineNumber = motor.GetLineNumber(fileScopeBefore, pos);
+            var name = GetName(fileScopeBefore, pos);
+            sb.AppendLine(
+                $"{(name == null ? "" : $"at {name} ")}in {fileScopeBefore.FileName ?? "null FileName"}:{lineNumber}");
+        }
+
+        Do(motor.Lines[motor.CurrentLineIndex], GetFileScopeBefore(motor.BlockStack.Count - 1));
+
+        for (int i = motor.BlockStack.Count - 1; i >= 0; i--)
+        {
+            var s = motor.BlockStack.At(i);
+            if (s.LineForTrace == null)
+                continue;
+            var line = s.LineForTrace;
+            var fileScope = GetFileScopeBefore(i);
+            Do(line, fileScope);
+        }
+
+        return sb.ToString();
+    }
+
+    [Method("Try-StackTrace")]
+    public void TryStackTrace(Motor motor, CodeBlockToken codeBlockToken)
+    {
+        // var h = new StackTrace().GetFrames();
+        var previousCount = motor.BlockStack.Count;
+        try
+        {
+            motor.BlockStack.Push(new(false, true, null, motor.MainFileScope));
+            motor.RunCodeBlock(codeBlockToken);
+        }
+        catch (Exception e)
+        {
+            PrintException(e, motor);
+            while (motor.BlockStack.Count != previousCount)
+                motor.BlockStack.Pop();
+        }
+    }
+
+    public static void PrintException(Exception e, Motor motor)
+    {
+        Console.WriteLine("RCaron Stack Trace:");
+        Console.Write(GetStackTraceString(motor));
+        Console.WriteLine(e.ToString());
     }
 
     public class CodeBlockWrap

@@ -40,7 +40,6 @@ public class MotorOptions
 
 public class Motor
 {
-    public string Raw { get; set; }
     public IList<Line> Lines { get; set; }
 
     // public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
@@ -48,18 +47,20 @@ public class Motor
     public class StackThing
     {
         public StackThing(bool isBreakWorthy, bool isReturnWorthy,
-            LocalScope? scope, FileScope fileScope)
+            LocalScope? scope, FileScope fileScope, Line? lineForTrace = null)
         {
             this.IsBreakWorthy = isBreakWorthy;
             this.IsReturnWorthy = isReturnWorthy;
             this.Scope = scope;
             this.FileScope = fileScope;
+            this.LineForTrace = lineForTrace;
         }
 
         public bool IsBreakWorthy { get; init; }
         public bool IsReturnWorthy { get; init; }
         public LocalScope? Scope { get; set; }
         public FileScope FileScope { get; init; }
+        public Line? LineForTrace { get; init; }
     }
 
     public NiceStack<StackThing> BlockStack { get; set; } = new();
@@ -85,8 +86,7 @@ public class Motor
 
     public void UseContext(RCaronRunnerContext runnerContext, bool withFileScope = true)
     {
-        Lines = runnerContext.Lines;
-        Raw = runnerContext.Code;
+        Lines = runnerContext.FileScope?.Lines;
         if (withFileScope)
             MainFileScope = runnerContext.FileScope;
     }
@@ -95,6 +95,8 @@ public class Motor
     /// current line index
     /// </summary>
     private int curIndex;
+
+    public int CurrentLineIndex => curIndex;
 
     public object? Run(int startIndex = 0)
     {
@@ -112,33 +114,31 @@ public class Motor
         return RCaronInsideEnum.NoReturnValue;
     }
 
-    public int GetLineNumber()
+    public int GetLineNumber(FileScope? fileScope = null, int? position = null)
     {
-        var lineNumber = -1;
-        var pos = Lines[curIndex] switch
+        fileScope ??= GetFileScope();
+        var lineNumber = 1;
+        var pos = position ?? Lines[curIndex] switch
         {
             TokenLine tl => tl.Tokens[0].Position.Start,
             SingleTokenLine stl => stl.Token.Position.Start,
             CodeBlockLine cbl => cbl.Token.Position.Start,
             _ => throw new ArgumentOutOfRangeException()
         };
-        var linesEn = Raw.AsSpan().EnumerateLines();
-        var hgtrfdews = 0;
-        while (linesEn.MoveNext())
+        var raw = fileScope.Raw.AsSpan();
+        for(var i = 0; i < pos; i++)
         {
-            hgtrfdews += linesEn.Current.Length;
-            lineNumber++;
-            if (hgtrfdews >= pos)
-                break;
+            if (raw[i] == '\n')
+                lineNumber++;
         }
 
-        return lineNumber + 1;
+        return lineNumber;
     }
 
     public (bool Exit, object? Result) RunLine(Line baseLine)
     {
         Debug.WriteLine(baseLine is TokenLine tokenLine
-            ? Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End]
+            ? GetFileScope().Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End]
             : (
                 baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
         if (baseLine is CodeBlockLine codeBlockLine)
@@ -978,7 +978,7 @@ public class Motor
             instanceTokens = dotGroupPosToken.Tokens;
         var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
         if (val == null)
-            throw RCaronException.NullInTokens(instanceTokens, Raw, 0);
+            throw RCaronException.NullInTokens(instanceTokens, GetFileScope().Raw, 0);
         Type? type;
         if (val is RCaronType rCaronType)
             type = rCaronType.Type;
@@ -992,7 +992,7 @@ public class Motor
             if (instanceTokens[i].Type == TokenType.Dot || instanceTokens[i].Type == TokenType.Colon)
                 continue;
             if (i != instanceTokens.Length - 1 && val == null)
-                throw RCaronException.NullInTokens(instanceTokens, Raw, i);
+                throw RCaronException.NullInTokens(instanceTokens, GetFileScope().Raw, i);
             if (instanceTokens[i] is IndexerToken arrayAccessorToken)
             {
                 var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
@@ -1151,7 +1151,7 @@ public class Motor
             }
 
             throw new RCaronException(
-                $"cannot resolve '{str}'(index={i}) in '{Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
+                $"cannot resolve '{str}'(index={i}) in '{GetFileScope().Raw[instanceTokens[0].Position.Start..instanceTokens[^1].Position.End]}'",
                 ExceptionCode.CannotResolveInDotThing);
         }
 
@@ -1363,7 +1363,7 @@ public class Motor
         }
 
 
-        BlockStack.Push(new StackThing(false, true, scope, function.FileScope));
+        BlockStack.Push(new StackThing(false, true, scope, function.FileScope, Lines[curIndex]));
         return RunCodeBlock(function.CodeBlock);
     }
 

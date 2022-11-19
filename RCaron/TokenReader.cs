@@ -161,7 +161,8 @@ public class TokenReader
         else if (txt[position] == '.' && txt[position + 1] == '.' && txt[position + 2] != '.')
         {
             position += 2;
-            return new ValueOperationValuePosToken(TokenType.Operator, (initialPosition, position), OperationEnum.Range);
+            return new ValueOperationValuePosToken(TokenType.Operator, (initialPosition, position),
+                OperationEnum.Range);
         }
         // dot
         else if (txt[position] == '.')
@@ -365,7 +366,7 @@ public class TokenReader
             return (2, TokenType.UnaryOperation, OperationEnum.UnaryDecrement);
         // math
         if (IsMatch(in span, Operations.SumOp))
-            return (1, TokenType.MathOperator,OperationEnum.Sum);
+            return (1, TokenType.MathOperator, OperationEnum.Sum);
         if (IsMatch(in span, Operations.SubtractOp))
             return (1, TokenType.MathOperator, OperationEnum.Subtract);
         if (IsMatch(in span, Operations.MultiplyOp))

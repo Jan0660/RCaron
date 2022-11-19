@@ -184,7 +184,7 @@ namespace SampleServer
                 }
             }
 
-            EvaluateLines(parsed.Lines);
+            EvaluateLines(parsed.FileScope.Lines);
             return symbols;
         }
 
