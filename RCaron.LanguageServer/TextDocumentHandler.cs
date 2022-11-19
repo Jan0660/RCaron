@@ -144,7 +144,7 @@ namespace SampleServer
 
             var parsed = RCaronRunner.Parse(content, returnDescriptive: true);
 
-            void EvaluateLines(IList<Line> lines, [CanBeNull] List<DocumentSymbol> parentChildren = null)
+            void EvaluateLines(IList<Line> lines, [CanBeNull] List<DocumentSymbol> parentChildren = null, bool insideClass = false)
             {
                 for (var i = 0; i < lines.Count; i++)
                 {
@@ -163,14 +163,13 @@ namespace SampleServer
                                 (tokenLine.Tokens[0].Position.Start, cbt.Position.End),
                                 (token.Position.Start, token.NameEndIndex), SymbolKind.Function, parentChildren,
                                 children);
-                            i++;
                             break;
                         }
                         case LineType.ClassDefinition when line is TokenLine tokenLine:
                         {
                             var cbt = (CodeBlockToken)tokenLine.Tokens[2];
                             var children = new List<DocumentSymbol>();
-                            EvaluateLines(cbt.Lines, children);
+                            EvaluateLines(cbt.Lines, children, true);
                             AddSymbol(((KeywordToken)tokenLine.Tokens[1]).String,
                                 (tokenLine.Tokens[0].Position.Start, cbt.Position.End),
                                 (tokenLine.Tokens[1].Position.Start, tokenLine.Tokens[1].Position.End),
@@ -180,6 +179,22 @@ namespace SampleServer
                         case LineType.CodeBlock when line is CodeBlockLine codeBlockLine:
                             EvaluateLines(codeBlockLine.Token.Lines, parentChildren);
                             break;
+                        case LineType.PropertyWithoutInitializer when line is SingleTokenLine singleTokenLine && insideClass:
+                        {
+                            var token = (VariableToken)singleTokenLine.Token;
+                            AddSymbol(token.Name,
+                                (singleTokenLine.Token.Position.Start, singleTokenLine.Token.Position.End),
+                                (token.Position.Start, token.Position.End), SymbolKind.Property, parentChildren);
+                            break;
+                        }
+                        case LineType.VariableAssignment when line is TokenLine tokenLine && insideClass:
+                        {
+                            var token = (VariableToken)tokenLine.Tokens[0];
+                            AddSymbol(token.Name,
+                                (tokenLine.Tokens[0].Position.Start, tokenLine.Tokens[^1].Position.End),
+                                (token.Position.Start, token.Position.End), SymbolKind.Property, parentChildren);
+                            break;
+                        }
                     }
                 }
             }
