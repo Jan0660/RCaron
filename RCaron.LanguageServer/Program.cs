@@ -1,19 +1,16 @@
 using System;
-using System.IO;
 using System.Threading.Tasks;
-using Log73.Extensions.Logging;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Newtonsoft.Json.Linq;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Server;
-using RCaron;
 using Serilog;
 
 // ReSharper disable UnusedParameter.Local
 
-namespace SampleServer
+namespace RCaron.LanguageServer
 {
     internal class Program
     {
@@ -40,7 +37,7 @@ namespace SampleServer
 
             IObserver<WorkDoneProgressReport> workDone = null!;
 
-            var server = await LanguageServer.From(
+            var server = await OmniSharp.Extensions.LanguageServer.Server.LanguageServer.From(
                 options =>
                     options
                        .WithInput(Console.OpenStandardInput())

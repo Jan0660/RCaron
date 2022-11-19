@@ -1,9 +1,8 @@
 ﻿using System.Collections.Concurrent;
 using System.Threading.Tasks;
-using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
-namespace SampleServer;
+namespace RCaron.LanguageServer;
 
 public static class Util
 {

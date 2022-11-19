@@ -10,7 +10,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
-namespace SampleServer
+namespace RCaron.LanguageServer
 {
 #pragma warning disable 618
     public class SemanticTokensHandler : SemanticTokensHandlerBase

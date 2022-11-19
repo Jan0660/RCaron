@@ -1,6 +1,4 @@
-using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
@@ -15,13 +13,12 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.WorkDone;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
-using RCaron;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 
 #pragma warning disable CS0618
 
-namespace SampleServer
+namespace RCaron.LanguageServer
 {
     internal class TextDocumentHandler : TextDocumentSyncHandlerBase
     {
