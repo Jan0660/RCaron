@@ -74,6 +74,7 @@ public class PosToken
             TokenType.Dot => true,
             TokenType.Number => true,
             TokenType.VariableIdentifier => true,
+            TokenType.String => true,
             TokenType.Keyword => true,
             TokenType.KeywordCall => true,
             TokenType.Indexer => true,

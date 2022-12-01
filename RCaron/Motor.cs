@@ -100,6 +100,10 @@ public class Motor
 
     public object? Run(int startIndex = 0)
     {
+#if RCARONJIT
+        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { new RCaronRunnerContext(MainFileScope), null, this });
+        return null;
+#endif
         curIndex = startIndex;
         for (; curIndex < Lines.Count; curIndex++)
         {
@@ -126,7 +130,7 @@ public class Motor
             _ => throw new ArgumentOutOfRangeException()
         };
         var raw = fileScope.Raw.AsSpan();
-        for(var i = 0; i < pos; i++)
+        for (var i = 0; i < pos; i++)
         {
             if (raw[i] == '\n')
                 lineNumber++;
@@ -159,7 +163,6 @@ public class Motor
             {
                 case LineType.ForLoop when baseLine is ForLoopLine forLoopLine:
                 {
-                    var falseI = 0;
                     RunLine(forLoopLine.Initializer);
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
@@ -181,7 +184,6 @@ public class Motor
                 }
                 case LineType.QuickForLoop when baseLine is ForLoopLine forLoopLine:
                 {
-                    var falseI = 0;
                     RunLine(forLoopLine.Initializer);
                     var scope = new StackThing(true, false, null, GetFileScope());
                     while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))

@@ -12,4 +12,18 @@ public sealed class ClassDefinition
     {
         (Name, PropertyNames, PropertyInitializers) = (name, propertyNames, propertyInitializers);
     }
+    
+    public int GetPropertyIndex(ReadOnlySpan<char> name)
+    {
+        if(PropertyNames == null) return -1;
+        for (var i = 0; i < PropertyNames.Length; i++)
+        {
+            if (name.Equals(PropertyNames[i], StringComparison.InvariantCultureIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
 }
