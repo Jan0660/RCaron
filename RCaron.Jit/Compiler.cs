@@ -2,10 +2,12 @@
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
+using System.Runtime.CompilerServices;
 using DotNext.Linq.Expressions;
 using Dynamitey.DynamicObjects;
 using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Scripting.Actions;
+using RCaron.Jit.Binders;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.Jit;
@@ -76,17 +78,20 @@ public class Compiler
 
                     return Expression.NewArrayInit(typeof(object), exps);
                 }
+                case CallLikePosToken { Name: "float" } callToken:
+                {
+                    return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(float));
+                }
                 case DotGroupPosToken dotGroup:
                 {
                     var value = GetSingleExpression(dotGroup.Tokens[0]);
                     for (var i = 1; i < dotGroup.Tokens.Length; i++)
                     {
                         var t = dotGroup.Tokens[i];
-                        if (t.Type == TokenType.Dot)
+                        if (t.Type == TokenType.Dot || t.Type == TokenType.Colon)
                             continue;
                         if (t is CallLikePosToken callToken)
                         {
-                            // todo: unreplicate/make you know what
                             var exps = new Expression[callToken.Arguments.Length];
                             for (var j = 0; j < callToken.Arguments.Length; j++)
                             {
@@ -96,7 +101,31 @@ public class Compiler
                                 exps[j] = p;
                             }
 
-                            value = Expression.Call(value, callToken.Name, Array.Empty<Type>(), exps);
+                            value = Expression.Dynamic(
+                                Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null,
+                                    null,
+                                    // todo: doesn't do named arguments
+                                    exps.Select(e => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                                        .ToArray()
+                                    // new[]
+                                    // {
+                                    //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                                    //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null)
+                                    // }
+                                ),
+                                typeof(object),
+                                exps);
+                            // // todo: unreplicate/make you know what
+                            // var exps = new Expression[callToken.Arguments.Length];
+                            // for (var j = 0; j < callToken.Arguments.Length; j++)
+                            // {
+                            //     var p = GetHighExpression(callToken.Arguments[j]);
+                            //     if (p.Type != typeof(object))
+                            //         p = Expression.Convert(p, typeof(object));
+                            //     exps[j] = p;
+                            // }
+                            //
+                            // value = Expression.Call(value, callToken.Name, Array.Empty<Type>(), exps);
                         }
                         else if (t is KeywordToken keywordToken)
                         {
@@ -125,11 +154,16 @@ public class Compiler
                         }
                         else
                         {
-                            throw new Exception("invalid dot group");
+                            throw new Exception($"invalid dot group token: {t.Type}");
                         }
                     }
 
                     return value;
+                }
+                case ExternThingToken externThing:
+                {
+                    return Expression.Dynamic(new RCaronTypeBinder(), typeof(RCaronTypeBinder),
+                        Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
                 }
             }
 
@@ -144,6 +178,7 @@ public class Compiler
             for (var i = 1; i < tokens.Length; i++)
             {
                 var opToken = (ValueOperationValuePosToken)tokens[i];
+
                 void Do(ExpressionType expressionType, in ReadOnlySpan<PosToken> tokens)
                 {
                     exp = Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, null,
@@ -154,6 +189,7 @@ public class Compiler
                             }), typeof(object), exp,
                         GetSingleExpression(tokens[++i]));
                 }
+
                 switch (opToken.Operation)
                 {
                     case OperationEnum.Sum:
@@ -209,7 +245,8 @@ public class Compiler
             Expression DoDynamic(ExpressionType expressionType)
             {
                 // todo: for some reason have to convert to bool instead of the returnType param in the Expression.Dynamic call being typeof(bool)
-                return Expression.Convert(Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, null,
+                return Expression.Convert(Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None,
+                        expressionType, null,
                         new[]
                         {
                             CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
@@ -298,7 +335,8 @@ public class Compiler
                 }
                 case TokenLine { Type: LineType.KeywordPlainCall } tokenLine:
                 {
-                    switch (((KeywordToken)tokenLine.Tokens[0]).String)
+                    var name = ((KeywordToken)tokenLine.Tokens[0]).String;
+                    switch (name)
                     {
                         case "print":
                             for (var i = 1; i < tokenLine.Tokens.Length; i++)
@@ -312,6 +350,14 @@ public class Compiler
                             expressions.Add(Expression.Call(consoleWriteLineMethod.Value));
 
                             break;
+                        case "open":
+                            expressions.Add(Expression.Call(
+                                Expression.Property(Expression.Constant(parsed.FileScope), "UsedNamespaces"), "Add",
+                                null,
+                                Expression.Convert(GetSingleExpression(tokenLine.Tokens[1]), typeof(string))));
+                            break;
+                        default:
+                            throw new($"keyword plain call to '{name}' not implemented");
                     }
 
                     break;
@@ -331,7 +377,8 @@ public class Compiler
                     //         return (true, res);
                     //     }
                     // }
-                    expressions.Add(Expression.IfThen(GetBoolExpression(callToken.Arguments[0]), DoLines(codeBlockToken.Lines)));
+                    expressions.Add(Expression.IfThen(GetBoolExpression(callToken.Arguments[0]),
+                        DoLines(codeBlockToken.Lines)));
 
                     break;
                 }
@@ -362,7 +409,8 @@ public class Compiler
                             //         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
                             //     }), typeof(object), GetVariable(variableName)));
                             expressions.Add(Expression.Assign(varExp,
-                                Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, ExpressionType.Subtract,
+                                Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None,
+                                    ExpressionType.Subtract,
                                     null, new[]
                                     {
                                         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
