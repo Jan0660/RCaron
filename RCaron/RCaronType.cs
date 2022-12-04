@@ -77,8 +77,12 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
                     arguments[i] = argument;
                 }
 
-                var call = Expression.Call(Expression.Convert(Expression, instance.Type), method, arguments);
-                return new DynamicMetaObject(call, restrictions);
+                Expression final = Expression.Call(/*Expression.Convert(Expression, instance.Type)*/null, method, arguments);
+                if (final.Type != binder.ReturnType)
+                {
+                    final = Expression.Convert(final, binder.ReturnType);
+                }
+                return new DynamicMetaObject(final, restrictions);
             }
 
             throw new();

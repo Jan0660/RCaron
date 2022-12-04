@@ -4,6 +4,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using DotNext.Linq.Expressions;
+using Dynamitey;
 using Dynamitey.DynamicObjects;
 using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Scripting.Actions;
@@ -57,14 +58,24 @@ public class Compiler
                     return Expression.Constant(constToken.Value);
                 case VariableToken variableToken:
                 {
+                    switch (variableToken.Name)
+                    {
+                        case "true":
+                            return Expression.Constant(true);
+                        case "false":
+                            return Expression.Constant(false);
+                    }
                     return GetVariable(variableToken.Name);
                     // if (!variables.TryGetValue(variableToken.Name, out var variable))
                     //     throw new Exception("variable not declared");
                     // return variable;
                 }
-
                 case MathValueGroupPosToken mathValueGroupPosToken:
                     return GetMathExpression(mathValueGroupPosToken.ValueTokens);
+                case LogicalOperationValuePosToken logicalToken:
+                    return GetLogicalExpression(logicalToken);
+                case ComparisonValuePosToken comparisonToken:
+                    return GetComparisonExpression(comparisonToken);
                 case CallLikePosToken { Name: "@" } callToken:
                 {
                     var exps = new Expression[callToken.Arguments.Length];
@@ -101,20 +112,57 @@ public class Compiler
                                 exps[j] = p;
                             }
 
+                            // var expsE = exps.Prepend(Expression.Constant(null));
+
+                            // Expression? createContext = null;
+                            // if (value.Type == typeof(RCaronType) || (value is DynamicExpression dexp && dexp.Type == typeof(RCaronType)))
+                            // {
+                            //     createContext = Expression.New(typeof(InvokeContext).GetConstructor(new[]
+                            //         { typeof(Type), typeof(bool), typeof(object) })!, new Expression[]
+                            //     {
+                            //         Expression.Property(value, nameof(RCaronType.Type)),
+                            //         Expression.Constant(true),
+                            //         Expression.Constant(null)
+                            //     });
+                            // }
+                            //
+                            // var name = Expression.Convert(Expression.Constant(callToken.Name), typeof(String_OR_InvokeMemberName));
+                            //
+                            // var args = Expression.NewArrayInit(typeof(object), exps);
+                            //
+                            // value = Expression.Call(null, typeof(Dynamic).GetMethod(nameof(Dynamic.InvokeMember))!,
+                            //     new []{ createContext, name}.Append(args)!
+                            //     );
+
+                            {
+                                var expsNew = new Expression[exps.Length + 1];
+                                expsNew[0] = value;
+                                Array.Copy(exps, 0, expsNew, 1, exps.Length);
+                                exps = expsNew;
+                            }
+
                             value = Expression.Dynamic(
-                                Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null,
-                                    null,
-                                    // todo: doesn't do named arguments
-                                    exps.Select(e => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
-                                        .ToArray()
-                                    // new[]
-                                    // {
-                                    //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                                    //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null)
-                                    // }
-                                ),
+                                new RCaronInvokeMemberBinder(callToken.Name, false, new CallInfo(exps.Length,
+                                    // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
+                                    Array.Empty<string>())),
                                 typeof(object),
                                 exps);
+
+
+                            // value = Expression.Dynamic(
+                            //     Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null,
+                            //         null,
+                            //         // todo: doesn't do named arguments
+                            //         expsE.Select(e => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                            //             .ToArray()
+                            //         // new[]
+                            //         // {
+                            //         //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            //         //     CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.UseCompileTimeType, null)
+                            //         // }
+                            //     ),
+                            //     typeof(object),
+                            //     expsE);
                             // // todo: unreplicate/make you know what
                             // var exps = new Expression[callToken.Arguments.Length];
                             // for (var j = 0; j < callToken.Arguments.Length; j++)
@@ -162,8 +210,12 @@ public class Compiler
                 }
                 case ExternThingToken externThing:
                 {
-                    return Expression.Dynamic(new RCaronTypeBinder(), typeof(RCaronTypeBinder),
-                        Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
+                    // todo(perf): cache directly here
+                    return Expression.New(typeof(RCaronType).GetConstructor(new[] { typeof(Type) }),
+                        Expression.Call(null, typeof(TypeResolver).GetMethod(nameof(TypeResolver.FindType))!,
+                            Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope)));
+                    // return Expression.Dynamic(new RCaronTypeBinder(), typeof(RCaronType),
+                    //     Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
                 }
             }
 
@@ -274,6 +326,21 @@ public class Compiler
             throw new($"GetComparisonExpression for {comparisonToken.ComparisonToken.Type} not implemented");
         }
 
+        Expression GetLogicalExpression(LogicalOperationValuePosToken logicalToken)
+        {
+            var left = GetSingleExpression(logicalToken.Left);
+            var right = GetSingleExpression(logicalToken.Right);
+            switch (logicalToken.ComparisonToken.Operation)
+            {
+                case OperationEnum.And:
+                    return Expression.And(left, right);
+                case OperationEnum.Or:
+                    return Expression.Or(left, right);
+                default:
+                    throw new("GetLogicalExpression for {logicalToken.ComparisonToken.Type} not implemented");
+            }
+        }
+
         Expression GetHighExpression(ReadOnlySpan<PosToken> tokens)
             => tokens.Length switch
             {
@@ -289,6 +356,8 @@ public class Compiler
             {
                 { Length: 1 } when tokens[0] is ComparisonValuePosToken comparisonToken => GetComparisonExpression(
                     comparisonToken),
+                { Length: 1 } when tokens[0] is LogicalOperationValuePosToken logicaltoken => GetLogicalExpression(
+                    logicaltoken),
                 [VariableToken { Name: "true" }] => Expression.Constant(true),
                 [VariableToken { Name: "false" }] => Expression.Constant(false),
                 // todo: variable and constant
@@ -351,6 +420,8 @@ public class Compiler
 
                             break;
                         case "open":
+                            // todo: just going to do this like this for now
+                            parsed.FileScope.UsedNamespaces ??= new();
                             expressions.Add(Expression.Call(
                                 Expression.Property(Expression.Constant(parsed.FileScope), "UsedNamespaces"), "Add",
                                 null,
