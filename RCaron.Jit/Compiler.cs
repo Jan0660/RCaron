@@ -15,15 +15,20 @@ namespace RCaron.Jit;
 
 public class Compiler
 {
-    public static (BlockExpression blockExpression, ParameterExpression? fakedMotor) CompileToBlock(
-        RCaronRunnerContext parsed, bool isMain = false)
+    private static readonly object NoReturnValue = RCaronInsideEnum.NoReturnValue;
+    private static readonly object ReturnWithoutValue = RCaronInsideEnum.ReturnWithoutValue;
+
+    public static BlockExpression CompileToBlock(
+        RCaronRunnerContext parsed, Motor? fakedMotor = null)
     {
         var contextStack = new NiceStack<Context>();
-        var fakedMotor = isMain ? Expression.Parameter(typeof(Motor), "\u0159motor") : null;
+        var fakedMotorConstant = Expression.Constant(fakedMotor, typeof(Motor));
+        // var fakedMotor = isMain ? Expression.Parameter(typeof(Motor), "\u0159motor") : null;
         System.Lazy<MethodInfo> consoleWriteMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.Write), new[] { typeof(object) })!);
         System.Lazy<MethodInfo> consoleWriteLineMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), Array.Empty<Type>())!);
+        var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
 
         ParameterExpression? GetVariableNullable(string name)
         {
@@ -65,6 +70,7 @@ public class Compiler
                         case "false":
                             return Expression.Constant(false);
                     }
+
                     return GetVariable(variableToken.Name);
                     // if (!variables.TryGetValue(variableToken.Name, out var variable))
                     //     throw new Exception("variable not declared");
@@ -217,6 +223,10 @@ public class Compiler
                     // return Expression.Dynamic(new RCaronTypeBinder(), typeof(RCaronType),
                     //     Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
                 }
+                case CallLikePosToken callToken:
+                {
+                    return MethodCall(callToken.Name, callToken: callToken);
+                }
             }
 
             throw new Exception($"Single expression {token.Type} not implemented");
@@ -365,11 +375,76 @@ public class Compiler
                 _ => throw new Exception("what he fuck")
             };
 
+        Expression MethodCall(string name, TokenLine? tokenLine = null, CallLikePosToken? callToken = null)
+        {
+            // todo: doesn't do named arguments won't what
+            // todo(perf): cache CompiledContext
+            var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope));
+            Expression args;
+            var enumerator = tokenLine != null
+                // todo(perf): use ArraySegment
+                ? new ArgumentEnumerator(tokenLine.Tokens[1..])
+                : new ArgumentEnumerator(callToken!);
+            List<Expression> positionalArgs = new();
+            Dictionary<string, Expression> namedArgs = new();
+            while (enumerator.MoveNext())
+            {
+                if (enumerator.CurrentName != null)
+                {
+                    namedArgs.Add(enumerator.CurrentName, GetHighExpression(enumerator.CurrentTokens));
+                }
+                else if (!enumerator.HitNamedArgument)
+                {
+                    positionalArgs.Add(GetHighExpression(enumerator.CurrentTokens));
+                }
+                else
+                {
+                    throw new("hit named argument after positional argument");
+                }
+            }
+
+            args = Expression.New(
+                typeof(KeywordCallCallSite.Arguments).GetConstructors().First(),
+                new Expression[]
+                {
+                    Expression.NewArrayInit(typeof(object), positionalArgs),
+                    Expression.Constant(namedArgs.Select(a => a.Key).ToArray()),
+                    Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value))
+                });
+
+            // if (tokenLine != null)
+            // {
+            //     var args = new Expression[tokenLine.Tokens.Length - 1];
+            //     for (var i = 1; i < tokenLine.Tokens.Length; i++)
+            //     {
+            //         args[i - 1] = GetSingleExpression(tokenLine.Tokens[i]);
+            //     }
+            //
+            //     arr = Expression.NewArrayInit(typeof(object), args);
+            // }
+            // else if (callToken != null)
+            // {
+            //     var args = new Expression[callToken.Arguments];
+            //     for (var i = 1; i < tokenLine.Tokens.Length; i++)
+            //     {
+            //         args[i - 1] = GetSingleExpression(tokenLine.Tokens[i]);
+            //     }
+            //
+            //     arr = Expression.NewArrayInit(typeof(object), args);
+            // }
+            // else
+            // {
+            //     throw new();
+            // }
+
+            return Expression.Call(Expression.Constant(site), nameof(site.Run), null, args);
+        }
+
         void IfFakedAssignVariable(string variableName, Expression varExp, List<Expression> expressions)
         {
             if (fakedMotor != null)
             {
-                expressions.Add(Expression.Call(fakedMotor, typeof(Motor).GetMethod(nameof(Motor.SetVar))!,
+                expressions.Add(Expression.Call(fakedMotorConstant, typeof(Motor).GetMethod(nameof(Motor.SetVar))!,
                     Expression.Constant(variableName), varExp));
             }
         }
@@ -427,10 +502,52 @@ public class Compiler
                                 null,
                                 Expression.Convert(GetSingleExpression(tokenLine.Tokens[1]), typeof(string))));
                             break;
+                        case "return":
+                        {
+                            Context c;
+                            for (var i = contextStack.Count - 1; (c = contextStack.At(i)).ReturnWorthy == false; i--)
+                            {
+                            }
+
+                            // while ((c = contextStack.Pop()).ReturnWorthy == false)
+                            // {
+                            // }
+                            if (tokenLine.Tokens.Length == 1)
+                                expressions.Add(Expression.Return(c.ReturnLabel,
+                                    Expression.Constant(ReturnWithoutValue, typeof(object))));
+                            else
+                                expressions.Add(Expression.Return(c.ReturnLabel,
+                                    GetHighExpression(tokenLine.Tokens.AsSpan()[1..])));
+                            break;
+                        }
+                        case "throw":
+                        {
+                            expressions.Add(Expression.Throw(GetHighExpression(tokenLine.Tokens.AsSpan()[1..])));
+                            break;
+                        }
                         default:
-                            throw new($"keyword plain call to '{name}' not implemented");
+                        {
+                            MethodCall(name, tokenLine: tokenLine);
+                            break;
+                        }
                     }
 
+                    break;
+                }
+                case TokenLine { Type: LineType.KeywordCall } tokenLine when tokenLine.Tokens[0] is CallLikePosToken callToken:
+                {
+                    var name = callToken.Name;
+                    switch (name)
+                    {
+                        case "throw":
+                        {
+                            expressions.Add(Expression.Throw(GetHighExpression(callToken.Arguments[0])));
+                            break;
+                        }
+                        default:
+                            MethodCall(name, callToken: callToken);
+                            break;
+                    }
                     break;
                 }
                 case TokenLine { Type: LineType.IfStatement } tokenLine
@@ -515,7 +632,8 @@ public class Compiler
 
         BlockExpression DoLines(IList<Line> lines, bool returnWorthy = false)
         {
-            var c = new Context { ReturnWorthy = returnWorthy };
+            var c = new Context
+                { ReturnWorthy = returnWorthy, ReturnLabel = returnWorthy ? Expression.Label(typeof(object)) : null };
             contextStack.Push(c);
             var exps = new List<Expression>();
             foreach (var line in lines)
@@ -523,17 +641,54 @@ public class Compiler
                 DoLine(line, exps);
             }
 
+            if (c.ReturnLabel != null)
+                exps.Add(Expression.Label(c.ReturnLabel, Expression.Constant(NoReturnValue, typeof(object))));
+
             var p = contextStack.Pop();
             Debug.Assert(object.ReferenceEquals(c, p));
             return Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
 
+        // do functions
+        if (parsed.FileScope.Functions != null)
+            foreach (var function in parsed.FileScope.Functions)
+            {
+                ParameterExpression[]? argumentsInner = null;
+                if (function.Value.Arguments != null)
+                {
+                    argumentsInner = new ParameterExpression[function.Value.Arguments.Length];
+                    for (var i = 0; i < function.Value.Arguments.Length; i++)
+                    {
+                        argumentsInner[i] = Expression.Variable(typeof(object), function.Value.Arguments[i].Name);
+                    }
+                }
+
+                var argumentsOuter = Expression.Parameter(typeof(object[]));
+                var argsAssigner = new List<Expression>();
+                if (argumentsInner != null)
+                    for (var i = 0; i < argumentsInner.Length; i++)
+                    {
+                        argsAssigner.Add(Expression.Assign(argumentsInner[i],
+                            Expression.ArrayIndex(argumentsOuter, Expression.Constant(i))));
+                    }
+
+                var body = DoLines(function.Value.CodeBlock.Lines, true);
+
+                functions[function.Key] = new CompiledFunction()
+                {
+                    Arguments = argumentsOuter,
+                    Body = Expression.Block(new []{argumentsOuter}.Concat(body.Variables), argsAssigner.Concat(body.Expressions)),
+                    OriginalFunction = function.Value
+                };
+            }
+
+        // do main
         var block = DoLines(parsed.FileScope.Lines);
 
         // if (fakedMotor != null)
         //     variableExpressions = variableExpressions.Concat(new[] { fakedMotor });
 
-        return (block, fakedMotor);
+        return (block);
     }
 
     private static Dictionary<string, ParameterExpression> _newVariableDict()
@@ -543,10 +698,39 @@ public class Compiler
     {
         public Dictionary<string, ParameterExpression>? Variables { get; set; } = null;
         public bool ReturnWorthy { get; init; } = false;
+        public LabelTarget? ReturnLabel { get; set; } = null;
     }
 
     private class LoopContext : Context
     {
         public string? IterationVariableName { get; set; }
     }
+
+    private class FunctionContext : Context
+    {
+        public ParameterExpression[]? ArgumentsInner { get; set; } = null;
+    }
 }
+
+public class CompiledFunction
+{
+    public required ParameterExpression? Arguments { get; init; }
+    public required BlockExpression Body { get; init; }
+    public required Function OriginalFunction { get; init; }
+    private Func<object[], object>? _compiled = null;
+
+    private void PreCompile()
+    {
+        var lambda = Expression.Lambda<Func<object[], object>>(Body, Arguments);
+        _compiled = lambda.Compile();
+    }
+
+    public object Invoke(params object[] args)
+    {
+        if (_compiled == null)
+            PreCompile();
+        return _compiled(args);
+    }
+}
+
+public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope);

@@ -165,6 +165,7 @@ for($i = 0; $i < 3; $i++){
 }
 $h = v();
 ");
+        m.AssertVariableEquals("h", 2L);
     }
 
     [Fact]

@@ -9,12 +9,12 @@ public static class Hook
 {
     public static Motor Run(RCaronRunnerContext ctx, MotorOptions? options = null, Motor? fakeMotor = null)
     {
-        var block = Compiler.CompileToBlock(ctx, true);
-        var lambda = Expression.Lambda(block.blockExpression, parameters: new[] { block.fakedMotor! });
-        var compiled = lambda.Compile();
         fakeMotor ??= new Motor(new RCaronRunnerContext(ctx.FileScope));
+        var block = Compiler.CompileToBlock(ctx, fakeMotor);
+        var lambda = Expression.Lambda(block);
+        var compiled = lambda.Compile();
         Debug.WriteLine(lambda.ToString("C#"));
-        compiled.DynamicInvoke(fakeMotor);
+        compiled.DynamicInvoke();
         return fakeMotor;
     }
 

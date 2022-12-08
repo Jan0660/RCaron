@@ -14,7 +14,7 @@ print 'a string';
 print 'a string'.Length;");
 
 var block = Compiler.CompileToBlock(parsed);
-var lambda = Expression.Lambda(block.blockExpression).Compile();
+var lambda = Expression.Lambda(block).Compile();
 // Microsoft.Scripting.Interpreter
 // var intt =new
 lambda.DynamicInvoke();

@@ -59,12 +59,14 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
         public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
         {
             var instance = (RCaronType)Value!;
+            // todo: doesn't do overloads
             var method = instance.Type.GetMethod(binder.Name);
             if (method != null)
             {
                 var restrictions = GetRestrictions();
                 var parameters = method.GetParameters();
                 var arguments = new Expression[parameters.Length];
+                // todo: doesn't work with optional parameters and named parameters
                 for (var i = 0; i < parameters.Length; i++)
                 {
                     var parameter = parameters[i];
@@ -83,6 +85,11 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
                     final = Expression.Convert(final, binder.ReturnType);
                 }
                 return new DynamicMetaObject(final, restrictions);
+            }
+
+            if (binder.Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+            {
+                
             }
 
             throw new();
