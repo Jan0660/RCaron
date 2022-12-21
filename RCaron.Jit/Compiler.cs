@@ -530,6 +530,26 @@ public class Compiler
                             expressions.Add(Expression.Throw(GetHighExpression(tokenLine.Tokens.AsSpan()[1..])));
                             break;
                         }
+                        case "break":
+                        {
+                            Context c;
+                            for (var i = contextStack.Count - 1; (c = contextStack.At(i)) is not LoopContext; i--)
+                            {
+                            }
+
+                            expressions.Add(Expression.Break(((LoopContext)(c)).BreakLabel));
+                            break;
+                        }
+                        case "continue":
+                        {
+                            Context c;
+                            for (var i = contextStack.Count - 1; (c = contextStack.At(i)) is not LoopContext; i--)
+                            {
+                            }
+
+                            expressions.Add(Expression.Continue(((LoopContext)(c)).ContinueLabel));
+                            break;
+                        }
                         default:
                         {
                             MethodCall(name, tokenLine: tokenLine);
@@ -649,7 +669,26 @@ public class Compiler
                         @continue);
                     expressions.Add(loop);
                     var pop = contextStack.Pop();
-                    Debug.Assert(pop == loopContext);
+                    Assert(pop == loopContext);
+                    break;
+                }
+                case TokenLine { Type: LineType.LoopLoop } tokenLine:
+                {
+                    var cbt = (CodeBlockToken)tokenLine.Tokens[1];
+                    var @break = Expression.Label();
+                    var @continue = Expression.Label();
+                    var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };
+                    contextStack.Push(loopContext);
+                    // expressions.Add(initializer ?? Expression.Empty());
+                    var loop = Expression.Loop(
+                        Expression.Block(
+                            DoLines(cbt.Lines)
+                        ),
+                        @break,
+                        @continue);
+                    expressions.Add(loop);
+                    var pop = contextStack.Pop();
+                    Assert(pop == loopContext);
                     break;
                 }
                 default:
@@ -675,12 +714,13 @@ public class Compiler
                 DoLine(line, exps);
             }
 
-            if (!useCurrent && c.ReturnLabel != null)
-            {
+            if(c?.ReturnLabel != null)
                 exps.Add(Expression.Label(c.ReturnLabel, Expression.Constant(NoReturnValue, typeof(object))));
+            if (!useCurrent)
+            {
 
                 var p = contextStack.Pop();
-                Debug.Assert(object.ReferenceEquals(c, p));
+                Assert(object.ReferenceEquals(c, p));
             }
             return useCurrent ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
@@ -747,6 +787,13 @@ public class Compiler
     private class FunctionContext : Context
     {
         public ParameterExpression[]? ArgumentsInner { get; set; } = null;
+    }
+
+    public static void Assert(bool condition)
+    {
+        if(condition)
+            return;
+        throw new("doesn't pass an assert");
     }
 }
 
