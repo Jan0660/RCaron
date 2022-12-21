@@ -451,22 +451,27 @@ public class Compiler
 
         void DoLine(Line line, List<Expression> expressions)
         {
+            ParameterExpression GetOrNewVariable(string name)
+            {
+                var varExp = GetVariableNullable(name);
+                if (varExp == null)
+                {
+                    var peak = contextStack.Peek();
+                    varExp = Expression.Variable(typeof(object), name);
+                    peak.Variables ??= _newVariableDict();
+                    peak.Variables.Add(name, varExp);
+                }
+
+                return varExp;
+            }
+
             switch (line)
             {
                 // variable
                 case TokenLine { Type: LineType.VariableAssignment } tokenLine:
                 {
                     var vt = (VariableToken)tokenLine.Tokens[0];
-                    ParameterExpression? varExp = null;
-                    varExp = GetVariableNullable(vt.Name);
-                    if (varExp == null)
-                    {
-                        var peak = contextStack.Peek();
-                        varExp = Expression.Variable(typeof(object), vt.Name);
-                        peak.Variables ??= _newVariableDict();
-                        peak.Variables.Add(vt.Name, varExp);
-                        // expressions.Add(varExp);
-                    }
+                    var varExp = GetOrNewVariable(vt.Name);
 
                     var right = GetMathExpression(tokenLine.Tokens.AsSpan()[2..]);
                     if (right.Type != typeof(object))
@@ -534,7 +539,8 @@ public class Compiler
 
                     break;
                 }
-                case TokenLine { Type: LineType.KeywordCall } tokenLine when tokenLine.Tokens[0] is CallLikePosToken callToken:
+                case TokenLine { Type: LineType.KeywordCall } tokenLine
+                    when tokenLine.Tokens[0] is CallLikePosToken callToken:
                 {
                     var name = callToken.Name;
                     switch (name)
@@ -548,6 +554,7 @@ public class Compiler
                             MethodCall(name, callToken: callToken);
                             break;
                     }
+
                     break;
                 }
                 case TokenLine { Type: LineType.IfStatement } tokenLine
@@ -612,41 +619,70 @@ public class Compiler
                 }
                 case { Type: LineType.BlockStuff }:
                     break;
-                // case ForLoopLine { Type: LineType.ForLoop or LineType.QuickForLoop } forLoopLine:
-                // {
-                //     Expression? initializer = null;
-                //     string? iteratorVariableName = null;
-                //     if (forLoopLine.Initializer is not null &&
-                //         forLoopLine.Initializer.Type == LineType.VariableAssignment)
-                //     {
-                //         initializer = GetHighExpression(((TokenLine)forLoopLine.Initializer).Tokens.AsSpan()[2..]);
-                //         iteratorVariableName = ((VariableToken)((TokenLine)forLoopLine.Initializer).Tokens[0]).Name;
-                //     }
-                //
-                //     var loopContext = new LoopContext(iteratorVariableName);
-                // }
+                case ForLoopLine { Type: LineType.ForLoop or LineType.QuickForLoop } forLoopLine:
+                {
+                    Expression? initializer = null;
+                    string? iteratorVariableName = null;
+                    if (forLoopLine.Initializer is not null)
+                    {
+                        expressions.Add(DoLines(new[] { forLoopLine.Initializer }, useCurrent: true));
+                    }
+
+                    var @break = Expression.Label();
+                    var @continue = Expression.Label();
+                    var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };
+                    contextStack.Push(loopContext);
+                    // expressions.Add(initializer ?? Expression.Empty());
+                    var loop = Expression.Loop(
+                        Expression.Block(
+                            Expression.IfThen(
+                                Expression.NotEqual(Expression.Constant(true),
+                                    GetBoolExpression(forLoopLine.CallToken.Arguments[1])),
+                                Expression.Break(@break)),
+                            DoLines(forLoopLine.Body.Lines),
+                            // Expression.Label(@continue),
+                            DoLines(new[] { forLoopLine.Iterator })
+                            // ,
+                            //  Expression.Goto(@break)
+                        ),
+                        @break,
+                        @continue);
+                    expressions.Add(loop);
+                    var pop = contextStack.Pop();
+                    Debug.Assert(pop == loopContext);
+                    break;
+                }
                 default:
                     throw new NotImplementedException($"line type {line.Type} is not implemented");
             }
         }
 
-        BlockExpression DoLines(IList<Line> lines, bool returnWorthy = false)
+        BlockExpression DoLines(IList<Line> lines, bool returnWorthy = false, bool useCurrent = false)
         {
-            var c = new Context
-                { ReturnWorthy = returnWorthy, ReturnLabel = returnWorthy ? Expression.Label(typeof(object)) : null };
-            contextStack.Push(c);
+            Context c = null;
+            if (!useCurrent)
+            {
+                c = new Context
+                {
+                    ReturnWorthy = returnWorthy, ReturnLabel = returnWorthy ? Expression.Label(typeof(object)) : null
+                };
+                contextStack.Push(c);
+            }
+
             var exps = new List<Expression>();
             foreach (var line in lines)
             {
                 DoLine(line, exps);
             }
 
-            if (c.ReturnLabel != null)
+            if (!useCurrent && c.ReturnLabel != null)
+            {
                 exps.Add(Expression.Label(c.ReturnLabel, Expression.Constant(NoReturnValue, typeof(object))));
 
-            var p = contextStack.Pop();
-            Debug.Assert(object.ReferenceEquals(c, p));
-            return Expression.Block(c.Variables?.Select(g => g.Value), exps);
+                var p = contextStack.Pop();
+                Debug.Assert(object.ReferenceEquals(c, p));
+            }
+            return useCurrent ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
 
         // do functions
@@ -677,7 +713,8 @@ public class Compiler
                 functions[function.Key] = new CompiledFunction()
                 {
                     Arguments = argumentsOuter,
-                    Body = Expression.Block(new []{argumentsOuter}.Concat(body.Variables), argsAssigner.Concat(body.Expressions)),
+                    Body = Expression.Block(new[] { argumentsOuter }.Concat(body.Variables),
+                        argsAssigner.Concat(body.Expressions)),
                     OriginalFunction = function.Value
                 };
             }
@@ -703,7 +740,8 @@ public class Compiler
 
     private class LoopContext : Context
     {
-        public string? IterationVariableName { get; set; }
+        public LabelTarget BreakLabel { get; init; }
+        public LabelTarget ContinueLabel { get; init; }
     }
 
     private class FunctionContext : Context
