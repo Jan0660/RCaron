@@ -672,6 +672,28 @@ public class Compiler
                     Assert(pop == loopContext);
                     break;
                 }
+                case TokenLine { Type: LineType.WhileLoop } whileLoopLine when whileLoopLine.Tokens[0] is CallLikePosToken callToken && whileLoopLine.Tokens[1] is CodeBlockToken cbt:
+                {
+                    var @break = Expression.Label();
+                    var @continue = Expression.Label();
+                    var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };
+                    contextStack.Push(loopContext);
+                    // expressions.Add(initializer ?? Expression.Empty());
+                    var loop = Expression.Loop(
+                        Expression.Block(
+                            Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
+                                GetBoolExpression(callToken.Arguments[0])), Expression.Break(@break)),
+                            DoLines(cbt.Lines)
+                            // ,
+                            //  Expression.Goto(@break)
+                        ),
+                        @break,
+                        @continue);
+                    expressions.Add(loop);
+                    var pop = contextStack.Pop();
+                    Assert(pop == loopContext);
+                    break;
+                }
                 case TokenLine { Type: LineType.LoopLoop } tokenLine:
                 {
                     var cbt = (CodeBlockToken)tokenLine.Tokens[1];
