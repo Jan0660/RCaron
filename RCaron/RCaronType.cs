@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
+using Microsoft.CSharp.RuntimeBinder;
 
 namespace RCaron;
 
@@ -89,7 +90,32 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
 
             if (binder.Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
             {
-                
+                var constructor = instance.Type.GetConstructor(args.Select(a => a.LimitType).ToArray());
+                if (constructor != null)
+                {
+                    // todo: these restrictions may not be right for all cases - this call might be reused for the same type but with different constructor arguments
+                    var restrictions = GetRestrictions();
+                    var arguments = args.Select(a => a.Expression).ToArray();
+                    var parameters = constructor.GetParameters();
+                    for (var i = 0; i < parameters.Length; i++)
+                    {
+                        var parameter = parameters[i];
+                        var argument = args[i].Expression;
+                        if (parameter.ParameterType != argument.Type)
+                        {
+                            argument = Expression.Convert(argument, parameter.ParameterType);
+                        }
+
+                        arguments[i] = argument;
+                    }
+                    // todo: use Binder.InvokeConstructor() ?
+                    Expression final = Expression.New(constructor, arguments);
+                    if (final.Type != binder.ReturnType)
+                    {
+                        final = Expression.Convert(final, binder.ReturnType);
+                    }
+                    return new DynamicMetaObject(final, restrictions);
+                }
             }
 
             throw new();

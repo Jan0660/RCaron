@@ -1,4 +1,5 @@
-﻿using System.Diagnostics;
+﻿using System.Collections;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -51,7 +52,7 @@ public class Compiler
         {
             var v = GetVariableNullable(name);
             if (v == null)
-                throw new($"variable {name} not found");
+                throw RCaronException.VariableNotFound(name);
             return v;
         }
 
@@ -148,11 +149,15 @@ public class Compiler
                             }
 
                             value = Expression.Dynamic(
-                                new RCaronInvokeMemberBinder(callToken.Name, false, new CallInfo(exps.Length,
-                                    // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
-                                    Array.Empty<string>())),
-                                typeof(object),
-                                exps);
+                                Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null, null,
+                                    exps.Select(exp => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                                        .ToArray()), typeof(object), exps);
+                            // value = Expression.Dynamic(
+                            //     new RCaronInvokeMemberBinder(callToken.Name, true, new CallInfo(exps.Length,
+                            //         // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
+                            //         Array.Empty<string>())),
+                            //     typeof(object),
+                            //     exps);
 
 
                             // value = Expression.Dynamic(
@@ -377,6 +382,20 @@ public class Compiler
 
         Expression MethodCall(string name, TokenLine? tokenLine = null, CallLikePosToken? callToken = null)
         {
+            if (callToken != null)
+            {
+                switch(callToken.Name.ToLowerInvariant())
+                {
+                    case "int32":
+                        return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(Int32));
+                    case "int64":
+                        return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(Int64));
+                    case "float":
+                        return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(Single));
+                    case "string":
+                        return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(string));
+                }
+            }
             // todo: doesn't do named arguments won't what
             // todo(perf): cache CompiledContext
             var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope));
@@ -407,7 +426,9 @@ public class Compiler
                 typeof(KeywordCallCallSite.Arguments).GetConstructors().First(),
                 new Expression[]
                 {
-                    Expression.NewArrayInit(typeof(object), positionalArgs),
+                    Expression.NewArrayInit(typeof(object), positionalArgs.Select(arg => arg.Type == typeof(object)
+                        ? arg
+                        : Expression.Convert(arg, typeof(object)))),
                     Expression.Constant(namedArgs.Select(a => a.Key).ToArray()),
                     Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value))
                 });
@@ -641,8 +662,6 @@ public class Compiler
                     break;
                 case ForLoopLine { Type: LineType.ForLoop or LineType.QuickForLoop } forLoopLine:
                 {
-                    Expression? initializer = null;
-                    string? iteratorVariableName = null;
                     if (forLoopLine.Initializer is not null)
                     {
                         expressions.Add(DoLines(new[] { forLoopLine.Initializer }, useCurrent: true));
@@ -672,7 +691,9 @@ public class Compiler
                     Assert(pop == loopContext);
                     break;
                 }
-                case TokenLine { Type: LineType.WhileLoop } whileLoopLine when whileLoopLine.Tokens[0] is CallLikePosToken callToken && whileLoopLine.Tokens[1] is CodeBlockToken cbt:
+                case TokenLine { Type: LineType.WhileLoop or LineType.DoWhileLoop } whileLoopLine
+                    when whileLoopLine.Tokens[0] is CallLikePosToken callToken &&
+                         whileLoopLine.Tokens[1] is CodeBlockToken cbt:
                 {
                     var @break = Expression.Label();
                     var @continue = Expression.Label();
@@ -680,17 +701,66 @@ public class Compiler
                     contextStack.Push(loopContext);
                     // expressions.Add(initializer ?? Expression.Empty());
                     var loop = Expression.Loop(
-                        Expression.Block(
-                            Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
-                                GetBoolExpression(callToken.Arguments[0])), Expression.Break(@break)),
-                            DoLines(cbt.Lines)
-                            // ,
-                            //  Expression.Goto(@break)
-                        ),
+                        whileLoopLine.Type == LineType.WhileLoop
+                            ? Expression.Block(
+                                Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
+                                    GetBoolExpression(callToken.Arguments[0])), Expression.Break(@break)),
+                                DoLines(cbt.Lines))
+                            : Expression.Block(
+                                DoLines(cbt.Lines),
+                                Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
+                                    GetBoolExpression(callToken.Arguments[0])), Expression.Break(@break)))
+                        ,
                         @break,
                         @continue);
                     expressions.Add(loop);
                     var pop = contextStack.Pop();
+                    Assert(pop == loopContext);
+                    break;
+                }
+                case TokenLine { Type: LineType.ForeachLoop } whileLoopLine
+                    when whileLoopLine.Tokens[0] is CallLikePosToken callToken &&
+                         whileLoopLine.Tokens[1] is CodeBlockToken cbt:
+                {
+                    var currentVariableName = ((VariableToken)callToken.Arguments[0][0]).Name;
+                    var enumerator = Expression.Variable(typeof(IEnumerator));
+                    contextStack.Peek().Variables ??= _newVariableDict();
+                    contextStack.Peek().Variables.Add("\u0159enumerator", enumerator);
+                    expressions.Add(Expression.Assign(enumerator,
+                        Expression.Call(Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(IEnumerable),
+                                null), typeof(IEnumerable), GetHighExpression(callToken.Arguments[0].AsSpan()[2..])),
+                            "GetEnumerator", Array.Empty<Type>())));
+                    var @break = Expression.Label();
+                    var @continue = Expression.Label();
+                    var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };
+                    contextStack.Push(loopContext);
+                    // expressions.Add(initializer ?? Expression.Empty());
+
+                    var loopBodyContext = new Context();
+                    contextStack.Push(loopBodyContext);
+                    loopBodyContext.Variables ??= _newVariableDict();
+                    var currentVariable = Expression.Variable(typeof(object), "current");
+                    loopBodyContext.Variables.Add(currentVariableName, currentVariable);
+                    Expression loopBody = DoLines(cbt.Lines, useCurrent: true, prependLines: new List<Expression>
+                    {
+                        // currentVariable,
+                        Expression.Assign(currentVariable,
+                            Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(object),
+                                null), typeof(object), Expression.Property(enumerator, "Current")))
+                    }, theCurrentToUse: loopBodyContext);
+                    var pop = contextStack.Pop();
+                    Assert(pop == loopBodyContext);
+
+                    var loop = Expression.Loop(
+                        Expression.Block(
+                            Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
+                                Expression.Call(enumerator, "MoveNext", null)), Expression.Break(@break)),
+                            loopBody
+                        ),
+                        @break,
+                        @continue);
+                    expressions.Add(loop);
+                    pop = contextStack.Pop();
                     Assert(pop == loopContext);
                     break;
                 }
@@ -713,13 +783,18 @@ public class Compiler
                     Assert(pop == loopContext);
                     break;
                 }
+                case TokenLine { Type: LineType.DotGroupCall } tokenLine:
+                    expressions.Add(GetSingleExpression(tokenLine.Tokens[0]));
+                    break;
                 default:
                     throw new NotImplementedException($"line type {line.Type} is not implemented");
             }
         }
 
-        BlockExpression DoLines(IList<Line> lines, bool returnWorthy = false, bool useCurrent = false)
+        BlockExpression DoLines(IList<Line> lines, bool returnWorthy = false, bool useCurrent = false,
+            List<Expression>? prependLines = null, Context? theCurrentToUse = null)
         {
+            var isRoot = contextStack.Count == 0;
             Context c = null;
             if (!useCurrent)
             {
@@ -729,22 +804,35 @@ public class Compiler
                 };
                 contextStack.Push(c);
             }
+            else
+                c = theCurrentToUse;
 
-            var exps = new List<Expression>();
+            var exps = prependLines ?? new List<Expression>();
+            if (isRoot && fakedMotor is { GlobalScope.Variables.Count: > 0 })
+            {
+                c.Variables ??= _newVariableDict();
+                foreach (var (name, value) in fakedMotor.GlobalScope.Variables)
+                {
+                    var variable = Expression.Variable(typeof(object));
+                    c.Variables.Add(name, variable);
+                    exps.Add(Expression.Assign(variable, Expression.Constant(value)));
+                }
+            }
+
             foreach (var line in lines)
             {
                 DoLine(line, exps);
             }
 
-            if(c?.ReturnLabel != null)
+            if (c?.ReturnLabel != null)
                 exps.Add(Expression.Label(c.ReturnLabel, Expression.Constant(NoReturnValue, typeof(object))));
             if (!useCurrent)
             {
-
                 var p = contextStack.Pop();
                 Assert(object.ReferenceEquals(c, p));
             }
-            return useCurrent ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
+
+            return c == null ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
 
         // do functions
@@ -813,7 +901,7 @@ public class Compiler
 
     public static void Assert(bool condition)
     {
-        if(condition)
+        if (condition)
             return;
         throw new("doesn't pass an assert");
     }
