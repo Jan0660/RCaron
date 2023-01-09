@@ -21,8 +21,12 @@ public static class ExtraAssert
     public static Exception ThrowsAnyException([InstantHandle] Action action)
     {
         var exception = Assert.ThrowsAny<Exception>(action);
-        if (exception is TargetInvocationException { InnerException: not null } targetInvocationException)
-            return targetInvocationException.InnerException;
+        while (exception is TargetInvocationException { InnerException: not null } targetInvocationException)
+        {
+            exception = targetInvocationException.InnerException;
+        }
+        // if (exception is TargetInvocationException { InnerException: not null } targetInvocationException)
+        //     return targetInvocationException.InnerException;
         return exception;
     }
 }

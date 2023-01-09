@@ -70,6 +70,8 @@ public class Compiler
                             return Expression.Constant(true);
                         case "false":
                             return Expression.Constant(false);
+                        case "null":
+                            return Expression.Constant(null);
                     }
 
                     return GetVariable(variableToken.Name);
@@ -148,16 +150,17 @@ public class Compiler
                                 exps = expsNew;
                             }
 
-                            value = Expression.Dynamic(
-                                Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null, null,
-                                    exps.Select(exp => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
-                                        .ToArray()), typeof(object), exps);
+                            
                             // value = Expression.Dynamic(
-                            //     new RCaronInvokeMemberBinder(callToken.Name, true, new CallInfo(exps.Length,
-                            //         // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
-                            //         Array.Empty<string>())),
-                            //     typeof(object),
-                            //     exps);
+                            //     Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null, null,
+                            //         exps.Select(exp => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
+                            //             .ToArray()), typeof(object), exps);
+                            value = Expression.Dynamic(
+                                new RCaronInvokeMemberBinder(callToken.Name, true, new CallInfo(exps.Length,
+                                    // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
+                                    Array.Empty<string>()), parsed.FileScope),
+                                typeof(object),
+                                exps);
 
 
                             // value = Expression.Dynamic(
