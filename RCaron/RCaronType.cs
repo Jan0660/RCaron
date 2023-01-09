@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
+using System.Reflection;
 using Microsoft.CSharp.RuntimeBinder;
 
 namespace RCaron;
@@ -22,10 +23,26 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
 
         public override DynamicMetaObject BindGetMember(GetMemberBinder binder)
         {
+            var restrictions = GetRestrictions();
             var instance = (RCaronType)Value!;
-            return new DynamicMetaObject(
-                Expression.PropertyOrField(Expression.Convert(Expression, instance.Type), binder.Name),
-                GetRestrictions());
+            // try property
+            var property = instance.Type.GetProperty(binder.Name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            if (property != null)
+            {
+                var exp = Expression.Property(null, property);
+                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)), restrictions);
+            }
+
+            // try field
+            var field = instance.Type.GetField(binder.Name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            if (field != null)
+            {
+                var exp = Expression.Field(null, field);
+                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)), restrictions);
+            }
+            // return new DynamicMetaObject(
+            //     Expression.PropertyOrField(Expression.Convert(Expression, instance.Type), binder.Name),
+            //     GetRestrictions());
             // {
             //     var restrictions = BindingRestrictions.GetTypeRestriction(Expression, LimitType);
             //     // var propertyValues = Expression.Property(Expression.Constant(instance), nameof(PropertyValues));

@@ -191,6 +191,7 @@ public class Compiler
                         }
                         else if (t is KeywordToken keywordToken)
                         {
+                            // todo: maybe make own GetMember binder
                             value = DynamicExpression.Dynamic(
                                 Binder.GetMember(CSharpBinderFlags.None, keywordToken.String, null,
                                     new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }),
