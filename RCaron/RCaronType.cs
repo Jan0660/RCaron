@@ -26,19 +26,23 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
             var restrictions = GetRestrictions();
             var instance = (RCaronType)Value!;
             // try property
-            var property = instance.Type.GetProperty(binder.Name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            var property = instance.Type.GetProperty(binder.Name,
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
             if (property != null)
             {
                 var exp = Expression.Property(null, property);
-                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)), restrictions);
+                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)),
+                    restrictions);
             }
 
             // try field
-            var field = instance.Type.GetField(binder.Name, BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            var field = instance.Type.GetField(binder.Name,
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
             if (field != null)
             {
                 var exp = Expression.Field(null, field);
-                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)), restrictions);
+                return new DynamicMetaObject(exp.Type == typeof(object) ? exp : Expression.Convert(exp, typeof(object)),
+                    restrictions);
             }
             // return new DynamicMetaObject(
             //     Expression.PropertyOrField(Expression.Convert(Expression, instance.Type), binder.Name),
@@ -54,26 +58,45 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
             return base.BindGetMember(binder);
         }
 
-        // public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
-        // {
-        //     var instance = (ClassInstance)Value!;
-        //     var index = instance.Definition.GetPropertyIndex(binder.Name);
-        //     if (index != -1)
-        //     {
-        //         // var restrictions = BindingRestrictions.GetExpressionRestriction(
-        //         //     Expression.Equal(
-        //         //         Expression.Property(Expression.Convert(Expression, LimitType), nameof(Definition)), Expression.Constant(instance.Definition)));
-        //         var propertyValues =
-        //             Expression.Property(Expression.Convert(Expression, LimitType), nameof(PropertyValues));
-        //         var propertyValue = Expression.ArrayAccess(propertyValues, Expression.Constant(index));
-        //         var assign = Expression.Assign(propertyValue, Expression.Convert(value.Expression, typeof(object)));
-        //         var block = Expression.Block(assign);
-        //         return new DynamicMetaObject(block, GetDefinitionRestriction());
-        //     }
-        //
-        //     return base.BindSetMember(binder, value);
-        // }
-        
+        public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
+        {
+            var instance = (RCaronType)Value!;
+            // var restrictions = BindingRestrictions.GetExpressionRestriction(
+            //     Expression.Equal(
+            //         Expression.Property(Expression.Convert(Expression, LimitType), nameof(Definition)), Expression.Constant(instance.Definition)));
+            var property = instance.Type.GetProperty(binder.Name,
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            if (property != null)
+            {
+                Expression exp = Expression.Assign(Expression.Property(null, property), Expression.Convert(value.Expression, property.PropertyType));
+                if(exp.Type != binder.ReturnType)
+                    exp = Expression.Convert(exp, binder.ReturnType);
+                return new DynamicMetaObject(exp, GetRestrictions());
+            }
+            
+            var field = instance.Type.GetField(binder.Name,
+                BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            if (field != null)
+            {
+                Expression exp = Expression.Assign(Expression.Field(null, field), Expression.Convert(value.Expression, field.FieldType));
+                if(exp.Type != binder.ReturnType)
+                    exp = Expression.Convert(exp, binder.ReturnType);
+                return new DynamicMetaObject(exp, GetRestrictions());
+            }
+            // var h = (MemberInfo?) ??
+            //         (MemberInfo?)instance.Type.GetField(binder.Name,
+            //             BindingFlags.Public | BindingFlags.Static | BindingFlags.IgnoreCase);
+            //
+            
+            // var propertyValues =
+            //     Expression.Property(Expression.Convert(Expression, LimitType), nameof(PropertyValues));
+            // var propertyValue = Expression.ArrayAccess(propertyValues, Expression.Constant(index));
+            // var assign = Expression.Assign(propertyValue, Expression.Convert(value.Expression, typeof(object)));
+            // var block = Expression.Block(assign);
+            // return new DynamicMetaObject(block, GetRestrictions());
+            return base.BindSetMember(binder, value);
+        }
+
         public override DynamicMetaObject BindInvokeMember(InvokeMemberBinder binder, DynamicMetaObject[] args)
         {
             var instance = (RCaronType)Value!;
@@ -97,11 +120,13 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
                     arguments[i] = argument;
                 }
 
-                Expression final = Expression.Call(/*Expression.Convert(Expression, instance.Type)*/null, method, arguments);
+                Expression final = Expression.Call( /*Expression.Convert(Expression, instance.Type)*/null, method,
+                    arguments);
                 if (final.Type != binder.ReturnType)
                 {
                     final = Expression.Convert(final, binder.ReturnType);
                 }
+
                 return new DynamicMetaObject(final, restrictions);
             }
 
@@ -125,12 +150,14 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
 
                         arguments[i] = argument;
                     }
+
                     // todo: use Binder.InvokeConstructor() ?
                     Expression final = Expression.New(constructor, arguments);
                     if (final.Type != binder.ReturnType)
                     {
                         final = Expression.Convert(final, binder.ReturnType);
                     }
+
                     return new DynamicMetaObject(final, restrictions);
                 }
             }
