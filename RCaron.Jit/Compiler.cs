@@ -31,8 +31,17 @@ public class Compiler
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), Array.Empty<Type>())!);
         var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
 
-        ParameterExpression? GetVariableNullable(string name)
+        ParameterExpression? GetVariableNullable(string name, bool mustBeAtCurrent = false)
         {
+            if (mustBeAtCurrent)
+            {
+                if (contextStack.Peek().Variables?.TryGetValue(name, out var variable) ?? false)
+                {
+                    return variable;
+                }
+                return null;
+            }
+
             for (var i = contextStack.Count - 1; i >= 0; i--)
             {
                 var context = contextStack.At(i);
@@ -48,9 +57,9 @@ public class Compiler
             return null;
         }
 
-        ParameterExpression GetVariable(string name)
+        ParameterExpression GetVariable(string name, bool mustBeAtCurrent = false)
         {
-            var v = GetVariableNullable(name);
+            var v = GetVariableNullable(name, mustBeAtCurrent);
             if (v == null)
                 throw RCaronException.VariableNotFound(name);
             return v;
@@ -484,13 +493,13 @@ public class Compiler
 
         void DoLine(Line line, List<Expression> expressions)
         {
-            ParameterExpression GetOrNewVariable(string name)
+            ParameterExpression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type specificType = null)
             {
-                var varExp = GetVariableNullable(name);
+                var varExp = GetVariableNullable(name, mustBeAtCurrent);
                 if (varExp == null)
                 {
                     var peak = contextStack.Peek();
-                    varExp = Expression.Variable(typeof(object), name);
+                    varExp = Expression.Variable(specificType ?? typeof(object), name);
                     peak.Variables ??= _newVariableDict();
                     peak.Variables.Add(name, varExp);
                 }
@@ -634,9 +643,37 @@ public class Compiler
                     //         return (true, res);
                     //     }
                     // }
+                    // todo(perf): make an exceptional case for when it is only `if(){}else{}` to do without the elseState variable and use Expression.IfThenElse
+                    var elseState = GetOrNewVariable("$$elseState", mustBeAtCurrent: true, specificType: typeof(bool));
+                    expressions.Add(Expression.Assign(elseState, Expression.Constant(false)));
                     expressions.Add(Expression.IfThen(GetBoolExpression(callToken.Arguments[0]),
-                        DoLines(codeBlockToken.Lines)));
+                        Expression.Block(
+                            Expression.Assign(elseState, Expression.Constant(true)),
+                            DoLines(codeBlockToken.Lines))));
+                    
 
+                    // expressions.Add(Expression.IfThen(GetBoolExpression(callToken.Arguments[0]),
+                    //     DoLines(codeBlockToken.Lines)));
+
+                    break;
+                }
+                case TokenLine { Type: LineType.ElseIfStatement } tokenLine when tokenLine.Tokens[1] is CallLikePosToken callToken:
+                {
+                    var elseState = GetVariable("$$elseState", mustBeAtCurrent: true);
+                    expressions.Add(Expression.IfThen(Expression.AndAlso(Expression.Not(elseState),
+                            GetBoolExpression(callToken.Arguments[0])),
+                        Expression.Block(
+                            Expression.Assign(elseState, Expression.Constant(true)),
+                            DoLines(((CodeBlockToken)tokenLine.Tokens[2]).Lines))));
+                    break;
+                }
+                case TokenLine { Type: LineType.ElseStatement } tokenLine:
+                {
+                    var elseState = GetVariable("$$elseState", mustBeAtCurrent: true);
+                    expressions.Add(Expression.IfThen(Expression.Not(elseState),
+                        Expression.Block(
+                            Expression.Assign(elseState, Expression.Constant(true)),
+                            DoLines(((CodeBlockToken)tokenLine.Tokens[1]).Lines))));
                     break;
                 }
                 case TokenLine { Type: LineType.UnaryOperation } tokenLine:
