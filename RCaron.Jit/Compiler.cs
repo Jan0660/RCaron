@@ -150,7 +150,7 @@ public class Compiler
                                 exps = expsNew;
                             }
 
-                            
+
                             // value = Expression.Dynamic(
                             //     Binder.InvokeMember(CSharpBinderFlags.None, callToken.Name, null, null,
                             //         exps.Select(exp => CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null))
@@ -202,18 +202,23 @@ public class Compiler
                         {
                             var indexExpression = GetHighExpression(indexerToken.Tokens);
                             value = DynamicExpression.Dynamic(
-                                Binder.GetIndex(CSharpBinderFlags.None, null, new[]
-                                {
-                                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                                    CSharpArgumentInfo.Create(
-                                        indexExpression is ConstantExpression
-                                            ? CSharpArgumentInfoFlags.UseCompileTimeType |
-                                              CSharpArgumentInfoFlags.Constant
-                                            : CSharpArgumentInfoFlags.None, null)
-                                }),
+                                new RCaronGetIndexBinder(new CallInfo(1, Array.Empty<string>()), parsed.FileScope,
+                                    fakedMotor),
                                 typeof(object),
-                                value,
-                                indexExpression);
+                                value, indexExpression);
+                            // value = DynamicExpression.Dynamic(
+                            //     Binder.GetIndex(CSharpBinderFlags.None, null, new[]
+                            //     {
+                            //         CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                            //         CSharpArgumentInfo.Create(
+                            //             indexExpression is ConstantExpression
+                            //                 ? CSharpArgumentInfoFlags.UseCompileTimeType |
+                            //                   CSharpArgumentInfoFlags.Constant
+                            //                 : CSharpArgumentInfoFlags.None, null)
+                            //     }),
+                            //     typeof(object),
+                            //     value,
+                            //     indexExpression);
                         }
                         else
                         {
@@ -388,7 +393,7 @@ public class Compiler
         {
             if (callToken != null)
             {
-                switch(callToken.Name.ToLowerInvariant())
+                switch (callToken.Name.ToLowerInvariant())
                 {
                     case "int32":
                         return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(Int32));
@@ -397,9 +402,12 @@ public class Compiler
                     case "float":
                         return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(Single));
                     case "string":
-                        return Expression.Convert(GetHighExpression(callToken.Arguments[0]), typeof(string));
+                        return Expression.Dynamic(
+                            new RCaronInvokeMemberBinder("ToString", false, new CallInfo(0, Array.Empty<string>()),
+                                parsed.FileScope), typeof(string), GetHighExpression(callToken.Arguments[0]));
                 }
             }
+
             // todo: doesn't do named arguments won't what
             // todo(perf): cache CompiledContext
             var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope));
@@ -529,6 +537,15 @@ public class Compiler
                             parsed.FileScope.UsedNamespaces ??= new();
                             expressions.Add(Expression.Call(
                                 Expression.Property(Expression.Constant(parsed.FileScope), "UsedNamespaces"), "Add",
+                                null,
+                                Expression.Convert(GetSingleExpression(tokenLine.Tokens[1]), typeof(string))));
+                            break;
+                        case "open_ext":
+                            // todo: just going to do this like this for now
+                            parsed.FileScope.UsedNamespacesForExtensionMethods ??= new();
+                            expressions.Add(Expression.Call(
+                                Expression.Property(Expression.Constant(parsed.FileScope),
+                                    "UsedNamespacesForExtensionMethods"), "Add",
                                 null,
                                 Expression.Convert(GetSingleExpression(tokenLine.Tokens[1]), typeof(string))));
                             break;
