@@ -20,6 +20,12 @@ public class RCaronGetIndexBinder : GetIndexBinder
     public override DynamicMetaObject FallbackGetIndex(DynamicMetaObject target, DynamicMetaObject[] indexes,
         DynamicMetaObject? errorSuggestion)
     {
+        if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
+        {
+            return new DynamicMetaObject(
+                Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
+                BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
+        }
         // todo(feat-fullness): if target is IDynamicMetaObjectProvider
         if (target.LimitType.IsArray)
         {

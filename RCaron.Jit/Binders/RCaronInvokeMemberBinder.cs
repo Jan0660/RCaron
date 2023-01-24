@@ -34,7 +34,6 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
     {
         if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
         {
-            // todo: could somehow do extension methods with this?
             return new DynamicMetaObject(
                 Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));

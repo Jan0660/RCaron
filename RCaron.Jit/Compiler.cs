@@ -365,10 +365,8 @@ public class Compiler
                 }
                 else if (t is KeywordToken keywordToken)
                 {
-                    // todo: maybe make own GetMember binder
                     value = DynamicExpression.Dynamic(
-                        Binder.GetMember(CSharpBinderFlags.None, keywordToken.String, null,
-                            new[] { CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null) }),
+                        new RCaronGetMemberBinder(keywordToken.String, true),
                         typeof(object),
                         value);
                 }
@@ -692,13 +690,9 @@ public class Compiler
                     {
                         case KeywordToken keywordToken:
                         {
-                            assign = Expression.Dynamic(Binder.SetMember(CSharpBinderFlags.None, keywordToken.String,
-                                null, new[]
-                                {
-                                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-                                }), typeof(object), assign,
-                                GetHighExpression(tokenLine.Tokens[2..]));
+                            assign = Expression.Dynamic(
+                                new RCaronSetMemberBinder(keywordToken.String, true, parsed.FileScope), typeof(object),
+                                assign, GetHighExpression(tokenLine.Tokens[2..]));
                             break;
                         }
                         case IndexerToken indexerToken:
@@ -716,6 +710,7 @@ public class Compiler
                         default:
                             throw new("Unsupported last token for AssignerAssignment");
                     }
+
                     // expressions.Add(Expression.Assign(assign, GetHighExpression(tokenLine.Tokens[2..])));
                     expressions.Add(assign);
 
