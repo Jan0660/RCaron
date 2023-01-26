@@ -89,7 +89,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     // }
                 }
 
-                return new DynamicMetaObject(GetExpression(),
+                return new DynamicMetaObject(GetExpression().EnsureIsType(ReturnType),
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
                 // return new DynamicMetaObject(Expression.Call(null, methodInfo2,
                 //     argsExpressionArray),

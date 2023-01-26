@@ -17,21 +17,25 @@ public class KeywordCallCallSite
             // todo: call precompile in the Hook
             if (func.Key.Equals(Keyword, StringComparison.InvariantCultureIgnoreCase))
             {
-                var argsFinal = new object[func.Value.OriginalFunction.Arguments.Length];
+                object[]? argsFinal = null;
+                if (func.Value.OriginalFunction.Arguments is not null)
+                {
+                    argsFinal = new object[func.Value.OriginalFunction.Arguments.Length];
                 
-                for (int i = 0; i < argsFinal.Length; i++)
-                {
-                    argsFinal[i] = args.Positional[i];
-                }
-                for (var i = 0; i < args.NamedNames.Length; i++)
-                {
-                    var index = 0;
-                    for (; index < func.Value.OriginalFunction.Arguments.Length; index++)
+                    for (int i = 0; i < argsFinal.Length; i++)
                     {
-                        if (func.Value.OriginalFunction.Arguments[index].Name.SequenceEqual(args.NamedNames[i]))
-                            break;
-                        else if (index == func.Value.OriginalFunction.Arguments.Length - 1)
-                            throw RCaronException.NamedArgumentNotFound(args.NamedNames[i]);
+                        argsFinal[i] = args.Positional[i];
+                    }
+                    for (var i = 0; i < args.NamedNames.Length; i++)
+                    {
+                        var index = 0;
+                        for (; index < func.Value.OriginalFunction.Arguments.Length; index++)
+                        {
+                            if (func.Value.OriginalFunction.Arguments[index].Name.SequenceEqual(args.NamedNames[i]))
+                                break;
+                            else if (index == func.Value.OriginalFunction.Arguments.Length - 1)
+                                throw RCaronException.NamedArgumentNotFound(args.NamedNames[i]);
+                        }
                     }
                 }
 
@@ -39,7 +43,7 @@ public class KeywordCallCallSite
             }
         }
 
-        throw new();
+        throw new RCaronException($"Method of name '{Keyword}' not found", RCaronExceptionCode.MethodNotFound);
     }
     
     public record Arguments(object[] Positional, string[] NamedNames, object[] NamedValues);
