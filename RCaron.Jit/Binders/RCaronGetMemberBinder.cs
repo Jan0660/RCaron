@@ -8,8 +8,10 @@ namespace RCaron.Jit.Binders;
 
 public class RCaronGetMemberBinder : GetMemberBinder
 {
-    public RCaronGetMemberBinder(string name, bool ignoreCase) : base(name, ignoreCase)
+    public FileScope FileScope { get; }
+    public RCaronGetMemberBinder(string name, bool ignoreCase, FileScope fileScope) : base(name, ignoreCase)
     {
+        FileScope = fileScope;
     }
 
     public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject? errorSuggestion)

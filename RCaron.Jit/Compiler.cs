@@ -55,6 +55,20 @@ public class Compiler
                     return variable;
                 }
 
+                if (context.ReturnWorthy && contextStack.At(0) is FunctionContext
+                    {
+                        ArgumentsInner: { Length: > 0 }
+                    } functionContext)
+                {
+                    foreach (var argExpression in functionContext.ArgumentsInner)
+                    {
+                        if (argExpression.Name!.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                        {
+                            return argExpression;
+                        }
+                    }
+                }
+
                 if (context.ReturnWorthy)
                     break;
             }
@@ -370,7 +384,7 @@ public class Compiler
                 else if (t is KeywordToken keywordToken)
                 {
                     value = DynamicExpression.Dynamic(
-                        new RCaronGetMemberBinder(keywordToken.String, true),
+                        new RCaronGetMemberBinder(keywordToken.String, true, parsed.FileScope),
                         typeof(object),
                         value);
                 }
@@ -429,12 +443,13 @@ public class Compiler
                         return Expression.Call(fakedMotorConstant, typeof(Motor).GetMethod(nameof(Motor.GetVar))!,
                             GetHighExpression(callToken.Arguments[0]).EnsureIsType(typeof(string)));
                     case "sum":
-                        return Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, ExpressionType.Add, null,
-                            new[]
-                            {
-                                CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                                CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-                            }), typeof(object),
+                        return Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, ExpressionType.Add,
+                                null,
+                                new[]
+                                {
+                                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+                                    CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+                                }), typeof(object),
                             GetHighExpression(callToken.Arguments[0]),
                             GetHighExpression(callToken.Arguments[1]));
                 }
@@ -454,7 +469,7 @@ public class Compiler
                 {
                     // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
                     var expressions = new List<Expression>();
-                    while(enumerator.MoveNext())
+                    while (enumerator.MoveNext())
                     {
                         expressions.Add(Expression.Call(consoleWriteMethod.Value,
                             // todo(perf): can get the correct write method instead of casting to object
@@ -462,6 +477,7 @@ public class Compiler
                         expressions.Add(Expression.Call(consoleWriteMethod.Value,
                             Expression.Constant(' ', typeof(object))));
                     }
+
                     expressions.Add(Expression.Call(consoleWriteLineMethod.Value));
                     return Expression.Block(expressions);
                 }
@@ -469,15 +485,17 @@ public class Compiler
                 {
                     // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
                     var expressions = new List<Expression>();
-                    while(enumerator.MoveNext())
+                    while (enumerator.MoveNext())
                     {
                         expressions.Add(Expression.Call(consoleWriteLineWithArgMethod.Value,
                             // todo(perf): can get the correct write method instead of casting to object
                             GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
                     }
+
                     return Expression.Block(expressions);
                 }
             }
+
             List<Expression> positionalArgs = new();
             Dictionary<string, Expression> namedArgs = new();
             while (enumerator.MoveNext())
@@ -500,11 +518,10 @@ public class Compiler
                 typeof(KeywordCallCallSite.Arguments).GetConstructors().First(),
                 new Expression[]
                 {
-                    Expression.NewArrayInit(typeof(object), positionalArgs.Select(arg => arg.Type == typeof(object)
-                        ? arg
-                        : Expression.Convert(arg, typeof(object)))),
+                    Expression.NewArrayInit(typeof(object),
+                        positionalArgs.Select(arg => arg.EnsureIsType(typeof(object)))),
                     Expression.Constant(namedArgs.Select(a => a.Key).ToArray()),
-                    Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value))
+                    Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value.EnsureIsType(typeof(object))))
                 });
 
             // if (tokenLine != null)
@@ -544,7 +561,7 @@ public class Compiler
             if (fakedMotor != null)
             {
                 var stillGlobal = true;
-                for (int i = contextStack.Count-1; i >-1; i--)
+                for (int i = contextStack.Count - 1; i > -1; i--)
                 {
                     if (contextStack.At(i).ReturnWorthy)
                     {
@@ -552,7 +569,8 @@ public class Compiler
                         break;
                     }
                 }
-                if(stillGlobal)
+
+                if (stillGlobal)
                     expressions.Add(AssignGlobal(variableName, varExp));
             }
         }
@@ -964,7 +982,7 @@ public class Compiler
                 {
                     var variable = Expression.Variable(typeof(object));
                     c.Variables.Add(name, variable);
-                    exps.Add(Expression.Assign(variable, Expression.Constant(value)));
+                    exps.Add(Expression.Assign(variable, Expression.Constant(value, typeof(object))));
                 }
             }
 
@@ -977,8 +995,7 @@ public class Compiler
                 exps.Add(Expression.Label(c.ReturnLabel, Expression.Constant(NoReturnValue, typeof(object))));
             if (!useCurrent)
             {
-                var p = contextStack.Pop();
-                Assert(object.ReferenceEquals(c, p));
+                Assert(contextStack.Pop() == c);
             }
 
             return c == null ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
@@ -1008,7 +1025,10 @@ public class Compiler
                 //             Expression.ArrayIndex(argumentsOuter, Expression.Constant(i))));
                 //     }
 
+                var c = new FunctionContext() { ArgumentsInner = argumentsInner };
+                contextStack.Push(c);
                 var body = DoLines(function.Value.CodeBlock.Lines, true);
+                Assert(contextStack.Pop() == c);
 
                 functions[function.Key] = new CompiledFunction()
                 {
@@ -1073,14 +1093,16 @@ public class CompiledFunction
     //     _compiled = lambda.Compile();
     // }
 
-    public object Invoke(params object[]? args)
+    public object Invoke(params object?[]? args)
     {
         // if (_compiled == null)
         //     PreCompile();
         // return _compiled(args);
         if (_compiledDelegate == null)
             CompileDelegate();
-        return args is null or {Length:0} ? _compiledDelegate.FastDynamicInvoke() : _compiledDelegate.FastDynamicInvoke(args);
+        return args is null or { Length: 0 }
+            ? _compiledDelegate.FastDynamicInvoke()
+            : _compiledDelegate.FastDynamicInvoke(args);
     }
 
 
