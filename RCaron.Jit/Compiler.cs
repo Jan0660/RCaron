@@ -269,11 +269,12 @@ public class Compiler
             }
         }
 
-        Expression GetHighExpression(ReadOnlySpan<PosToken> tokens)
-            => tokens.Length switch
+        Expression GetHighExpression(ArraySegment<PosToken> tokens)
+            => tokens.Count switch
             {
-                // > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
-                //     argumentTokens: tokens.Segment(1..)),
+                
+                > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
+                    argumentTokens: tokens.Segment(1..)),
                 1 => GetSingleExpression(tokens[0]),
                 > 2 => GetMathExpression(tokens),
                 _ => throw new Exception("what he fuck")
@@ -419,7 +420,7 @@ public class Compiler
             return value;
         }
 
-        Expression MethodCall(string name, TokenLine? tokenLine = null, CallLikePosToken? callToken = null)
+        Expression MethodCall(string name, ArraySegment<PosToken> argumentTokens = default, CallLikePosToken? callToken = null)
         {
             if (callToken != null)
             {
@@ -459,9 +460,8 @@ public class Compiler
             // todo(perf): cache CompiledContext
             var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope));
             Expression args;
-            var enumerator = tokenLine != null
-                // todo(perf): use ArraySegment
-                ? new ArgumentEnumerator(tokenLine.Tokens[1..])
+            var enumerator = callToken == null
+                ? new ArgumentEnumerator(argumentTokens)
                 : new ArgumentEnumerator(callToken!);
             switch (name)
             {
@@ -599,7 +599,8 @@ public class Compiler
                     var vt = (VariableToken)tokenLine.Tokens[0];
                     var varExp = GetOrNewVariable(vt.Name);
 
-                    var right = GetMathExpression(tokenLine.Tokens.AsSpan()[2..]);
+                    var right = GetHighExpression(tokenLine.Tokens.Segment(2..));
+                    // var right = GetMathExpression(tokenLine.Tokens.AsSpan()[2..]);
                     if (right.Type != typeof(object))
                         right = Expression.Convert(right, typeof(object));
                     expressions.Add(Expression.Assign(varExp, right));
@@ -645,12 +646,12 @@ public class Compiler
                                     Expression.Constant(ReturnWithoutValue, typeof(object))));
                             else
                                 expressions.Add(Expression.Return(c.ReturnLabel,
-                                    GetHighExpression(tokenLine.Tokens.AsSpan()[1..])));
+                                    GetHighExpression(tokenLine.Tokens.Segment(1..))));
                             break;
                         }
                         case "throw":
                         {
-                            expressions.Add(Expression.Throw(GetHighExpression(tokenLine.Tokens.AsSpan()[1..])));
+                            expressions.Add(Expression.Throw(GetHighExpression(tokenLine.Tokens.Segment(1..))));
                             break;
                         }
                         case "break":
@@ -675,7 +676,7 @@ public class Compiler
                         }
                         default:
                         {
-                            expressions.Add(MethodCall(name, tokenLine: tokenLine));
+                            expressions.Add(MethodCall(name, argumentTokens: tokenLine.Tokens.Segment(1..)));
                             break;
                         }
                     }
@@ -895,7 +896,7 @@ public class Compiler
                     contextStack.Peek().Variables.Add("\u0159enumerator", enumerator);
                     expressions.Add(Expression.Assign(enumerator,
                         Expression.Call(Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(IEnumerable),
-                                null), typeof(IEnumerable), GetHighExpression(callToken.Arguments[0].AsSpan()[2..])),
+                                null), typeof(IEnumerable), GetHighExpression(callToken.Arguments[0].Segment(2..))),
                             "GetEnumerator", Array.Empty<Type>())));
                     var @break = Expression.Label();
                     var @continue = Expression.Label();
