@@ -510,7 +510,7 @@ public class Compiler
                 }
                 else
                 {
-                    throw new("hit named argument after positional argument");
+                    throw new RCaronException("hit positional argument after named argument", RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
                 }
             }
 

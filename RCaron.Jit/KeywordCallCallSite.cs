@@ -30,6 +30,11 @@ public class KeywordCallCallSite
 
                     for (int i = 0; i < args.Positional.Length; i++)
                     {
+                        if(i >= l)
+                        {
+                            throw new RCaronException("Left over positional arguments",
+                                RCaronExceptionCode.LeftOverPositionalArgument);
+                        }
                         argsFinal[i] = args.Positional[i];
                         assigned[i] = true;
                     }
