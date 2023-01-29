@@ -9,15 +9,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\RCaron\RCaron.csproj"/>
+        <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="DotNext.Metaprogramming" Version="4.7.5"/>
-        <PackageReference Include="DynamicLanguageRuntime" Version="1.3.2"/>
-        <PackageReference Include="ExpressionTreeToString" Version="3.4.71"/>
-        <PackageReference Include="Microsoft.CSharp" Version="4.7.0"/>
-        <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0"/>
+        <PackageReference Include="DotNext.Metaprogramming" Version="4.7.5" />
+        <PackageReference Include="DynamicLanguageRuntime" Version="1.3.2" />
+        <PackageReference Include="ExpressionTreeToString" Version="3.4.71" />
+        <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
+        <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
     </ItemGroup>
 
 </Project>

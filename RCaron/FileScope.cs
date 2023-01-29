@@ -7,6 +7,7 @@ public class FileScope
     public string? FileName { get; set; }
     public string Raw { get; set; }
     public IList<Line> Lines { get; set; }
+    public List<IRCaronModule>? Modules { get; set; }
     public List<ClassDefinition>? ClassDefinitions { get; set; }
     public Dictionary<string, Function>? Functions { get; set; }
     public List<string>? UsedNamespaces { get; set; }

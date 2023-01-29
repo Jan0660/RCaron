@@ -197,8 +197,7 @@ switch(name){");
                             source.AppendLine("}");
                             source.AppendLine("""
 else
-    throw new RCaronException("hit positional argument after a named one",
-        RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+    throw RCaronException.PositionalArgumentAfterNamedArgument();
 """);
                             source.AppendLine("}");
                         }

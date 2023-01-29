@@ -66,7 +66,6 @@ public class Motor
     public NiceStack<StackThing> BlockStack { get; set; } = new();
     public FileScope MainFileScope { get; set; }
     public MotorOptions Options { get; }
-    public List<IRCaronModule> Modules { get; set; }
 
     /// <summary>
     /// If true and meets an else(if), it will be skipped.
@@ -81,14 +80,17 @@ public class Motor
     {
         UseContext(runnerContext);
         Options = options ?? new();
-        Modules = new List<IRCaronModule>(1) { new LoggingModule() };
+        // Modules = new List<IRCaronModule>(1) { new LoggingModule() };
     }
 
     public void UseContext(RCaronRunnerContext runnerContext, bool withFileScope = true)
     {
         Lines = runnerContext.FileScope?.Lines;
         if (withFileScope)
+        {
             MainFileScope = runnerContext.FileScope;
+            MainFileScope.Modules ??= new List<IRCaronModule>(1) { new LoggingModule() };
+        }
     }
 
     /// <summary>
@@ -583,6 +585,7 @@ public class Motor
         , object? instance = null
     )
     {
+        FileScope? fileScope = null;
         // // lowercase the string if not all characters are lowercase
         // for (var i = 0; i < name.Length; i++)
         // {
@@ -686,7 +689,7 @@ public class Motor
                 throw (Exception)At(argumentTokens, 0);
         }
 
-        if (TryGetFunction(nameArg, GetFileScope(), out var func))
+        if (TryGetFunction(nameArg, (fileScope ??= GetFileScope()), out var func))
             return FunctionCall(func, callToken, argumentTokens);
 
         if (name[0] == '#' || instance != null)
@@ -711,7 +714,8 @@ public class Motor
             }
 
             resolveMethod: ;
-            var (bestMethod, needsNumericConversion, isExtensionMethod) = MethodResolver.Resolve(name, type, GetFileScope(), instance, args);
+            var (bestMethod, needsNumericConversion, isExtensionMethod) =
+                MethodResolver.Resolve(name, type, (fileScope ??= GetFileScope()), instance, args);
 
             if (isExtensionMethod)
             {
@@ -783,12 +787,13 @@ public class Motor
             return bestMethod.Invoke(target, args);
         }
 
-        foreach (var module in Modules)
-        {
-            var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
-            if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? false)
-                return v;
-        }
+        if ((fileScope ??= GetFileScope()).Modules != null)
+            foreach (var module in GetFileScope().Modules)
+            {
+                var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
+                if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? false)
+                    return v;
+            }
 
         throw new RCaronException($"method '{name}' not found", ExceptionCode.MethodNotFound);
     }
@@ -1219,8 +1224,7 @@ public class Motor
                     }
                 }
                 else
-                    throw new RCaronException("hit positional argument after a named one",
-                        RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+                    throw RCaronException.PositionalArgumentAfterNamedArgument();
             }
 
             // assign default values
@@ -1424,144 +1428,146 @@ public class Motor
 // todo: move somewhere else or something, make a Util class?
 public class MethodResolver
 {
-    public static (MethodBase, bool needsNumericConversion, bool IsExtension) Resolve(ReadOnlySpan<char> name, Type type, FileScope fileScope, object? instance, object?[] args)
+    public static (MethodBase, bool needsNumericConversion, bool IsExtension) Resolve(ReadOnlySpan<char> name,
+        Type type, FileScope fileScope, object? instance, object?[] args)
     {
         var methodsOrg = type.GetMethods()!;
-            var methodsLength = methodsOrg.Length;
-            var arr = ArrayPool<MethodBase>.Shared.Rent(methodsLength);
-            var count = 0;
-            for (var i = 0; i < methodsLength; i++)
+        var methodsLength = methodsOrg.Length;
+        var arr = ArrayPool<MethodBase>.Shared.Rent(methodsLength);
+        var count = 0;
+        for (var i = 0; i < methodsLength; i++)
+        {
+            var method = methodsOrg[i];
+            if (!MemoryExtensions.Equals(method.Name, name, StringComparison.InvariantCultureIgnoreCase))
+                continue;
+            arr[count++] = method;
+        }
+
+        var methods = arr.Segment(..count);
+        // constructors
+        if (MemoryExtensions.Equals(name, "new", StringComparison.InvariantCultureIgnoreCase))
+        {
+            var foundMethods = methods.ToList();
+            foreach (var constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
             {
-                var method = methodsOrg[i];
-                if (!MemoryExtensions.Equals(method.Name, name, StringComparison.InvariantCultureIgnoreCase))
-                    continue;
-                arr[count++] = method;
+                foundMethods.Add(constructor);
             }
 
-            var methods = arr.Segment(..count);
-            // constructors
-            if (MemoryExtensions.Equals(name, "new", StringComparison.InvariantCultureIgnoreCase))
+            methods = foundMethods.ToArray();
+        }
+
+        // todo(death): would miss out on extension methods that share their name with instance methods
+        // todo(perf): could search for valid extension methods after doing first pass with instance methods
+        var isExtensionMethods = false;
+        if (methods.Count == 0)
+        {
+            isExtensionMethods = true;
+            if (fileScope.UsedNamespacesForExtensionMethods is not null or
+                { Count: 0 } /* && instance is not RCaronType or null*/)
             {
-                var foundMethods = methods.ToList();
-                foreach (var constructor in type.GetConstructors(BindingFlags.Public | BindingFlags.Instance))
+                var foundMethods = new List<MethodBase>();
+                // extension methods
+                args = args.Prepend(instance!).ToArray();
+                // Type? endingMatch =  null;
+                var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+                foreach (var ass in assemblies)
                 {
-                    foundMethods.Add(constructor);
+                    foreach (var exportedType in ass.GetTypes())
+                    {
+                        if (!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
+                            continue;
+                        if (!(fileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
+                              false))
+                            continue;
+                        // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
+                        // {
+                        //     endingMatch = type;
+                        // }
+                        // exact match
+                        foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                        {
+                            if (MemoryExtensions.Equals(method.Name, name,
+                                    StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                foundMethods.Add(method);
+                            }
+                        }
+                    }
                 }
 
                 methods = foundMethods.ToArray();
             }
+        }
 
-            // todo(death): would miss out on extension methods that share their name with instance methods
-            // todo(perf): could search for valid extension methods after doing first pass with instance methods
-            var isExtensionMethods = false;
-            if (methods.Count == 0)
+        Span<uint> scores = stackalloc uint[methods.Count];
+        Span<bool> needsNumericConversions = stackalloc bool[methods.Count];
+        for (var i = 0; i < methods.Count; i++)
+        {
+            uint score = 0;
+            var method = methods[i];
+            var parameters = method.GetParameters();
+            if (parameters.Length == 0 && args.Length == 0)
             {
-                isExtensionMethods = true;
-                if (fileScope.UsedNamespacesForExtensionMethods is not null or { Count: 0 }/* && instance is not RCaronType or null*/)
-                {
-                    var foundMethods = new List<MethodBase>();
-                    // extension methods
-                    args = args.Prepend(instance!).ToArray();
-                    // Type? endingMatch =  null;
-                    var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-                    foreach (var ass in assemblies)
-                    {
-                        foreach (var exportedType in ass.GetTypes())
-                        {
-                            if (!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
-                                continue;
-                            if (!(fileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
-                                  false))
-                                continue;
-                            // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
-                            // {
-                            //     endingMatch = type;
-                            // }
-                            // exact match
-                            foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
-                            {
-                                if (MemoryExtensions.Equals(method.Name, name,
-                                        StringComparison.InvariantCultureIgnoreCase))
-                                {
-                                    foundMethods.Add(method);
-                                }
-                            }
-                        }
-                    }
+                score = uint.MaxValue;
+            }
 
-                    methods = foundMethods.ToArray();
+            for (var j = 0; j < parameters.Length && j < args.Length; j++)
+            {
+                if (parameters[j].ParameterType == args[j].GetType())
+                {
+                    score += 100;
+                }
+                else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
+                {
+                    score += 10;
+                }
+                // todo: support actual generic parameters constraints
+                else if (parameters[j].ParameterType.IsGenericType
+                         && ListEx.IsAssignableToGenericType(args[j].GetType(),
+                             parameters[j].ParameterType.GetGenericTypeDefinition()))
+                    // parameters[j].ParameterType.GetGenericParameterConstraints()
+                {
+                    score += 10;
+                }
+                else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
+                {
+                    score += 10;
+                    needsNumericConversions[i] = true;
+                }
+                else if (parameters[j].ParameterType.IsGenericParameter)
+                {
+                    score += 5;
+                }
+                else
+                {
+                    score = 0;
+                    break;
                 }
             }
 
-            Span<uint> scores = stackalloc uint[methods.Count];
-            Span<bool> needsNumericConversions = stackalloc bool[methods.Count];
-            for (var i = 0; i < methods.Count; i++)
+            scores[i] = score;
+        }
+
+        var g = 0;
+        uint best = 0;
+        var bestIndex = 0;
+        for (; g < scores.Length; g++)
+        {
+            if (scores[g] > best)
             {
-                uint score = 0;
-                var method = methods[i];
-                var parameters = method.GetParameters();
-                if (parameters.Length == 0 && args.Length == 0)
-                {
-                    score = uint.MaxValue;
-                }
-
-                for (var j = 0; j < parameters.Length && j < args.Length; j++)
-                {
-                    if (parameters[j].ParameterType == args[j].GetType())
-                    {
-                        score += 100;
-                    }
-                    else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
-                    {
-                        score += 10;
-                    }
-                    // todo: support actual generic parameters constraints
-                    else if (parameters[j].ParameterType.IsGenericType
-                             && ListEx.IsAssignableToGenericType(args[j].GetType(),
-                                 parameters[j].ParameterType.GetGenericTypeDefinition()))
-                        // parameters[j].ParameterType.GetGenericParameterConstraints()
-                    {
-                        score += 10;
-                    }
-                    else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
-                    {
-                        score += 10;
-                        needsNumericConversions[i] = true;
-                    }
-                    else if (parameters[j].ParameterType.IsGenericParameter)
-                    {
-                        score += 5;
-                    }
-                    else
-                    {
-                        score = 0;
-                        break;
-                    }
-                }
-
-                scores[i] = score;
+                best = scores[g];
+                bestIndex = g;
             }
+        }
 
-            var g = 0;
-            uint best = 0;
-            var bestIndex = 0;
-            for (; g < scores.Length; g++)
-            {
-                if (scores[g] > best)
-                {
-                    best = scores[g];
-                    bestIndex = g;
-                }
-            }
+        if (best == 0)
+            throw new RCaronException($"cannot find a match for method '{name}'",
+                ExceptionCode.MethodNoSuitableMatch);
 
-            if (best == 0)
-                throw new RCaronException($"cannot find a match for method '{name}'",
-                    ExceptionCode.MethodNoSuitableMatch);
-            
-            var bestMethod = methods[bestIndex];
+        var bestMethod = methods[bestIndex];
 
-            // attention: do not use arr or methods after this point
-            ArrayPool<MethodBase>.Shared.Return(arr, true);
-            return (bestMethod, needsNumericConversions[bestIndex], isExtensionMethods);
+        // attention: do not use arr or methods after this point
+        ArrayPool<MethodBase>.Shared.Return(arr, true);
+        return (bestMethod, needsNumericConversions[bestIndex], isExtensionMethods);
     }
 }

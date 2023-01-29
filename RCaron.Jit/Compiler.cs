@@ -12,6 +12,7 @@ using Dynamitey.DynamicObjects;
 using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Scripting.Actions;
 using RCaron.Jit.Binders;
+using RCaron.LibrarySourceGenerator;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.Jit;
@@ -457,10 +458,6 @@ public class Compiler
                 }
             }
 
-            // todo: doesn't do named arguments won't what
-            // todo(perf): cache CompiledContext
-            var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope));
-            Expression args;
             var enumerator = callToken == null
                 ? new ArgumentEnumerator(argumentTokens)
                 : new ArgumentEnumerator(callToken!);
@@ -497,6 +494,10 @@ public class Compiler
                 }
             }
 
+            // todo: doesn't do named arguments won't what
+            // todo(perf): cache CompiledContext
+            // var site = new KeywordCallCallSite(name, new CompiledContext(functions, parsed.FileScope, fakedMotorConstant));
+            Expression args;
             List<Expression> positionalArgs = new();
             Dictionary<string, Expression> namedArgs = new();
             while (enumerator.MoveNext())
@@ -511,20 +512,23 @@ public class Compiler
                 }
                 else
                 {
-                    throw new RCaronException("hit positional argument after named argument",
-                        RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+                    throw RCaronException.PositionalArgumentAfterNamedArgument();
                 }
             }
 
-            args = Expression.New(
-                typeof(KeywordCallCallSite.Arguments).GetConstructors().First(),
-                new Expression[]
-                {
-                    Expression.NewArrayInit(typeof(object),
-                        positionalArgs.Select(arg => arg.EnsureIsType(typeof(object)))),
-                    Expression.Constant(namedArgs.Select(a => a.Key).ToArray()),
-                    Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value.EnsureIsType(typeof(object))))
-                });
+            var arguments = new RCaronOtherBinder.FunnyArguments(positionalArgs.ToArray(), namedArgs);
+
+            // args = Expression.New(
+            //     typeof(KeywordCallCallSite.Arguments).GetConstructors().First(),
+            //     new Expression[]
+            //     {
+            //         Expression.NewArrayInit(typeof(object),
+            //             positionalArgs.Select(arg => arg.EnsureIsType(typeof(object)))),
+            //         Expression.Constant(namedArgs.Select(a => a.Key).ToArray()),
+            //         Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value.EnsureIsType(typeof(object))))
+            //     });
+            return Expression.Dynamic(
+                new RCaronOtherBinder(new CompiledContext(functions, parsed.FileScope, fakedMotorConstant), name, arguments), typeof(object), Expression.Constant(arguments));
 
             // if (tokenLine != null)
             // {
@@ -551,7 +555,7 @@ public class Compiler
             //     throw new();
             // }
 
-            return Expression.Call(Expression.Constant(site), nameof(site.Run), null, args);
+            // return Expression.Call(Expression.Constant(site), nameof(site.Run), null, args);
         }
 
         Expression AssignGlobal(string name, Expression value)
@@ -1123,4 +1127,4 @@ public class CompiledFunction
     }
 }
 
-public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope);
+public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope, ConstantExpression FakedMotorConstant);
