@@ -126,7 +126,10 @@ $h = ForUnitTests;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 $h = ForUnitTests -b 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
-$h = ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+$h = ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+$h = ForUnitTests 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
     }
 
     [Fact]
