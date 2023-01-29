@@ -110,8 +110,8 @@ return rootCommand.Invoke(args);
 
 void AddFun(Motor motor)
 {
-    motor.Modules.Add(new FunModule());
-    motor.Modules.Add(new JsonModule());
+    motor.MainFileScope.Modules.Add(new FunModule());
+    motor.MainFileScope.Modules.Add(new JsonModule());
     motor.MainFileScope.IndexerImplementations ??= new();
     motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());
     motor.MainFileScope.PropertyAccessors ??= new();

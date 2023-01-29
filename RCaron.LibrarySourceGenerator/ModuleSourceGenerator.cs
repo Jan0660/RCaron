@@ -144,6 +144,7 @@ switch(name){");
                         }
 
                         // actual arguments parsing
+                        if(parameters.Length != 0)
                         {
                             source.AppendLine(@"var enumerator = callToken != null
                                 ? new ArgumentEnumerator(callToken)
@@ -200,20 +201,20 @@ else
     throw RCaronException.PositionalArgumentAfterNamedArgument();
 """);
                             source.AppendLine("}");
-                        }
-                        // check all parameters without a default value are assigned
-                        if (parameters.Length != 0)
-                        {
-                            source.AppendLine("if(true");
-                            foreach (var param in parameters)
+                            // check all parameters without a default value are assigned
+                            if (parameters.Length != 0)
                             {
-                                if (param.HasExplicitDefaultValue)
-                                    continue;
-                                source.AppendLine($"&& !{param.Name}_hasValue");
-                            }
+                                source.AppendLine("if(true");
+                                foreach (var param in parameters)
+                                {
+                                    if (param.HasExplicitDefaultValue)
+                                        continue;
+                                    source.AppendLine($"&& !{param.Name}_hasValue");
+                                }
 
-                            source.AppendLine(@"){
+                                source.AppendLine(@"){
     throw RCaronException.ArgumentsLeftUnassigned(); }");
+                            }
                         }
 
                         if (!methodSymbol.ReturnsVoid)

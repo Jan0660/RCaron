@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using DotNext.Linq.Expressions;
 using Dynamitey;
 using Dynamitey.DynamicObjects;
+using JetBrains.Annotations;
 using Microsoft.CSharp.RuntimeBinder;
 using Microsoft.Scripting.Actions;
 using RCaron.Jit.Binders;
@@ -1105,6 +1106,7 @@ public class CompiledFunction
     //     _compiled = lambda.Compile();
     // }
 
+    [UsedImplicitly]
     public object Invoke(params object?[]? args)
     {
         // if (_compiled == null)
