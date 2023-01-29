@@ -272,7 +272,6 @@ public class Compiler
         Expression GetHighExpression(ArraySegment<PosToken> tokens)
             => tokens.Count switch
             {
-                
                 > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
                     argumentTokens: tokens.Segment(1..)),
                 1 => GetSingleExpression(tokens[0]),
@@ -420,7 +419,8 @@ public class Compiler
             return value;
         }
 
-        Expression MethodCall(string name, ArraySegment<PosToken> argumentTokens = default, CallLikePosToken? callToken = null)
+        Expression MethodCall(string name, ArraySegment<PosToken> argumentTokens = default,
+            CallLikePosToken? callToken = null)
         {
             if (callToken != null)
             {
@@ -435,7 +435,8 @@ public class Compiler
                     case "string":
                         return Expression.Dynamic(
                             new RCaronInvokeMemberBinder("ToString", false, new CallInfo(0, Array.Empty<string>()),
-                                parsed.FileScope), typeof(string), GetHighExpression(callToken.Arguments[0]));
+                                parsed.FileScope), /* todo: wtf can't do typeof(string)*/ typeof(object),
+                            GetHighExpression(callToken.Arguments[0])).EnsureIsType(typeof(string));
                     case "globalset":
                         return Expression.Call(fakedMotorConstant, typeof(Motor).GetMethod(nameof(Motor.SetVar))!,
                             GetHighExpression(callToken.Arguments[0]).EnsureIsType(typeof(string)),
@@ -510,7 +511,8 @@ public class Compiler
                 }
                 else
                 {
-                    throw new RCaronException("hit positional argument after named argument", RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+                    throw new RCaronException("hit positional argument after named argument",
+                        RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
                 }
             }
 
