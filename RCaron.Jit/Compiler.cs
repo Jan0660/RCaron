@@ -609,6 +609,11 @@ public class Compiler
 
                     break;
                 }
+                case CodeBlockLine codeBlockLine:
+                {
+                    expressions.Add(DoLines(codeBlockLine.Token.Lines));
+                    break;
+                }
                 case TokenLine { Type: LineType.KeywordPlainCall } tokenLine:
                 {
                     var name = ((KeywordToken)tokenLine.Tokens[0]).String;
@@ -646,7 +651,7 @@ public class Compiler
                                     Expression.Constant(ReturnWithoutValue, typeof(object))));
                             else
                                 expressions.Add(Expression.Return(c.ReturnLabel,
-                                    GetHighExpression(tokenLine.Tokens.Segment(1..))));
+                                    GetHighExpression(tokenLine.Tokens.Segment(1..)).EnsureIsType(c.ReturnLabel.Type)));
                             break;
                         }
                         case "throw":
