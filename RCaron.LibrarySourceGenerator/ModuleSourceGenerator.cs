@@ -152,7 +152,7 @@ switch(name){");
                             source.AppendLine(@"while (enumerator.MoveNext())");
                             source.AppendLine("{");
 
-
+                            // do named arguments
                             source.AppendLine(@"if (enumerator.CurrentName != null)
 {");
                             for (var i = 0; i < parameters.Length; i++)
@@ -176,6 +176,7 @@ switch(name){");
                                 "else { throw RCaronException.NamedArgumentNotFound(enumerator.CurrentName); }");
                             source.AppendLine("}");
 
+                            // do positional arguments
                             source.AppendLine(@"else if(!enumerator.HitNamedArgument)
 {");
                             for (var i = 0; i < parameters.Length; i++)
@@ -199,92 +200,8 @@ else
     throw new RCaronException("hit positional argument after a named one",
         RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
 """);
-                            //     var index = 0;
-                            //     for (; index < function.Arguments.Length; index++)
-                            //     {
-                            //         if (function.Arguments[index].Name.SequenceEqual(enumerator.CurrentName))
-                            //             break;
-                            //         else if (index == function.Arguments.Length - 1)
-                            //             throw RCaronException.NamedArgumentNotFound(enumerator.CurrentName);
-                            //     }
-                            //
-                            //     scope.Variables ??= new();
-                            //     scope.Variables[function.Arguments[index].Name] =
-                            //         SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
-                            //     assignedArguments[index] = true;
-                            // }
-                            // else if (!enumerator.HitNamedArgument)
-                            // {
-                            //     scope.Variables ??= new();
-                            //     for (var i = 0; i < function.Arguments.Length; i++)
-                            //     {
-                            //         if (!scope.Variables.ContainsKey(function.Arguments[i].Name))
-                            //         {
-                            //             scope.Variables[function.Arguments[i].Name] =
-                            //                 SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
-                            //             assignedArguments[i] = true;
-                            //             break;
-                            //         }
-                            //         else if (i == function.Arguments.Length - 1)
-                            //             throw RCaronException.LeftOverPositionalArgument();
-                            //     }
-                            // }
-                            // else
-                            //     throw new RCaronException("hit positional argument after a named one",
-                            //         RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
-
                             source.AppendLine("}");
                         }
-//                         source.AppendLine(@"for (var i = 0; i < arguments.Length; i++)
-// {
-//     if (arguments[i] is ValueOperationValuePosToken { Operation: OperationEnum.Subtract } &&
-//                         arguments[i + 1] is KeywordToken keywordToken)
-//     {
-//         var argName = keywordToken.String;");
-//                         for (var i = 0; i < parameters.Length; i++)
-//                         {
-//                             var param = parameters[i];
-//                             if (i != 0)
-//                                 source.Append("else ");
-//                             source.AppendLine(
-//                                 $@"if(argName.Equals(""{param.Name.ToLowerInvariant()}"", StringComparison.InvariantCultureIgnoreCase))
-// {{");
-//                             source.AppendLine($"{param.Name}_hasValue = true;");
-//
-//                             source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-//                             AppendArgumentGet(false, param);
-//                             source.AppendLine("i += 2;");
-//                             source.AppendLine("}");
-//                         }
-//                         if (parameters.Length != 0)
-//                             source.AppendLine(@"else { throw RCaronException.NamedArgumentNotFound(argName); }");
-//
-//                         source.AppendLine("}");
-//
-
-
-//                         if (parameters.Length == 0)
-//                             source.AppendLine(
-//                                 @"if(arguments.Length != 0){ throw RCaronException.LeftOverPositionalArgument(); }");
-//                         if (parameters.Length != 0)
-//                         {
-//                             source.AppendLine("else{");
-//                             for (var i = 0; i < parameters.Length; i++)
-//                             {
-//                                 var param = parameters[i];
-//                                 if (i != 0)
-//                                     source.Append("else ");
-//                                 source.AppendLine($"if(!{param.Name}_hasValue){{");
-//                                 source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-//                                 AppendArgumentGet(true, param);
-//                                 source.AppendLine($@"{param.Name}_hasValue = true;
-// }}");
-//                             }
-//
-//                             source.AppendLine(@"else { throw RCaronException.LeftOverPositionalArgument(); }");
-//                             source.AppendLine("}");
-
-                        // source.AppendLine("}");
                         // check all parameters without a default value are assigned
                         if (parameters.Length != 0)
                         {
