@@ -303,10 +303,10 @@ $l5 = 5;"), new MotorOptions() { EnableDebugging = true });
     public void Throw()
     {
         var m = new Motor(RCaronRunner.Parse("throw(#System.Exception:new('funny'));"));
-        var exc = Assert.Throws<Exception>(() => { m.Run(); });
+        var exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
         Assert.Equal("funny", exc.Message);
         m = new Motor(RCaronRunner.Parse("throw #System.Exception:new('funny');"));
-        exc = Assert.Throws<Exception>(() => { m.Run(); });
+        exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
         Assert.Equal("funny", exc.Message);
     }
 
@@ -343,7 +343,7 @@ finally {
     $h = $h + 2;
 }
 $h = $h + 1;"));
-        Assert.Throws<Exception>(() => m.Run());
+        ExtraAssert.Throws<Exception>(() => m.Run());
         m.AssertVariableEquals("h", 2L);
         Assert.Equal(0, m.BlockStack.Count);
     }

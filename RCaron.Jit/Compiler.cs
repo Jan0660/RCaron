@@ -1,19 +1,11 @@
 ﻿using System.Collections;
-using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
-using System.Runtime.CompilerServices;
-using System.Runtime.InteropServices;
-using DotNext.Linq.Expressions;
 using Dynamitey;
-using Dynamitey.DynamicObjects;
 using JetBrains.Annotations;
 using Microsoft.CSharp.RuntimeBinder;
-using Microsoft.Scripting.Actions;
 using RCaron.Jit.Binders;
-using RCaron.LibrarySourceGenerator;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.Jit;
@@ -55,6 +47,11 @@ public class Compiler
                 if (context.Variables?.TryGetValue(name, out var variable) ?? false)
                 {
                     return variable;
+                }
+                
+                if (context is ContextWithSpecialVariables spec && spec.SpecialVariables.TryGetValue(name, out var specialVariable))
+                {
+                    return specialVariable;
                 }
 
                 if (context.ReturnWorthy && contextStack.At(0) is FunctionContext
@@ -529,7 +526,8 @@ public class Compiler
             //         Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value.EnsureIsType(typeof(object))))
             //     });
             return Expression.Dynamic(
-                new RCaronOtherBinder(new CompiledContext(functions, parsed.FileScope, fakedMotorConstant), name, arguments), typeof(object), Expression.Constant(arguments));
+                new RCaronOtherBinder(new CompiledContext(functions, parsed.FileScope, fakedMotorConstant), name,
+                    arguments), typeof(object), Expression.Constant(arguments));
 
             // if (tokenLine != null)
             // {
@@ -582,7 +580,7 @@ public class Compiler
             }
         }
 
-        void DoLine(Line line, List<Expression> expressions)
+        void DoLine(Line line, List<Expression> expressions, IList<Line> lines, ref int index)
         {
             ParameterExpression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type specificType = null)
             {
@@ -760,6 +758,53 @@ public class Compiler
                         Expression.Block(
                             Expression.Assign(elseState, Expression.Constant(true)),
                             DoLines(((CodeBlockToken)tokenLine.Tokens[1]).Lines))));
+                    break;
+                }
+                case TokenLine { Type: LineType.TryBlock } tokenLine
+                    when tokenLine.Tokens[1] is CodeBlockToken codeBlockToken:
+                {
+                    bool TryGetFrom(int index, LineType what, out CodeBlockToken? cbt)
+                    {
+                        var l = lines[index];
+                        if (l is TokenLine tokenLine && tokenLine.Type == what &&
+                            tokenLine.Tokens[1] is CodeBlockToken cbt2)
+                        {
+                            cbt = cbt2;
+                            return true;
+                        }
+
+                        cbt = null;
+                        return false;
+                    }
+
+                    var catchBlock = TryGetFrom(index + 1, LineType.CatchBlock, out var cbt) ? cbt : null;
+                    var finallyBlock = TryGetFrom(index + (catchBlock is null ? 1 : 2), LineType.FinallyBlock, out cbt)
+                        ? cbt
+                        : null;
+
+                    CatchBlock? catchExp = null;
+                    if (catchBlock != null)
+                    {
+                        var expVar = Expression.Variable(typeof(Exception), "exception");
+                        var c = new ContextWithSpecialVariables
+                        {
+                            SpecialVariables = _newVariableDict()
+                        };
+                        c.SpecialVariables.Add("exception", expVar);
+                        contextStack.Push(c);
+                        catchExp = Expression.Catch(expVar, DoLines(catchBlock.Lines, useCurrent: true,
+                            theCurrentToUse: c));
+                        Assert(contextStack.Pop() == c);
+                    }
+
+                    var tryBlock = Expression.TryCatchFinally(
+                        DoLines(codeBlockToken.Lines),
+                        finallyBlock is null ? null : DoLines(finallyBlock.Lines),
+                        catchExp is null
+                            ? null
+                            : new[] { catchExp });
+                    index += catchBlock is null ? 1 : (finallyBlock is null ? 1 : 2);
+                    expressions.Add(tryBlock);
                     break;
                 }
                 case TokenLine { Type: LineType.AssignerAssignment } tokenLine
@@ -999,9 +1044,9 @@ public class Compiler
                 }
             }
 
-            foreach (var line in lines)
+            for (var i = 0; i < lines.Count; i++)
             {
-                DoLine(line, exps);
+                DoLine(lines[i], exps, lines, ref i);
             }
 
             if (c?.ReturnLabel != null)
@@ -1073,6 +1118,10 @@ public class Compiler
         public LabelTarget? ReturnLabel { get; set; } = null;
     }
 
+    private class ContextWithSpecialVariables : Context
+    {
+        public required Dictionary<string, ParameterExpression> SpecialVariables { get; init; }
+    }
     private class LoopContext : Context
     {
         public LabelTarget BreakLabel { get; init; }
@@ -1129,4 +1178,5 @@ public class CompiledFunction
     }
 }
 
-public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope, ConstantExpression FakedMotorConstant);
+public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope,
+    ConstantExpression FakedMotorConstant);
