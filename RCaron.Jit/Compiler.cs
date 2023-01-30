@@ -807,6 +807,31 @@ public class Compiler
                     expressions.Add(tryBlock);
                     break;
                 }
+                case TokenLine { Type: LineType.SwitchStatement } tokenLine:
+                {
+                    var switchValue = GetHighExpression(((CallLikePosToken)tokenLine.Tokens[0]).Arguments[0]);
+                    var cases = new List<SwitchCase>();
+                    var casesBlock = (CodeBlockToken)tokenLine.Tokens[1];
+                    Expression? defaultBody = null;
+                    for (var i = 1; i < casesBlock.Lines.Count - 1; i++)
+                    {
+                        var caseLine = ((TokenLine)casesBlock.Lines[i]);
+                        var caseBlock = (CodeBlockToken)caseLine.Tokens[1];
+                        var body = DoLines(caseBlock.Lines);
+                        if (caseLine.Tokens[0] is KeywordToken { String: "default" })
+                        {
+                            defaultBody = body;
+                            continue;
+                        }
+                        var caseValue = GetSingleExpression(caseLine.Tokens[0]);
+                        cases.Add(Expression.SwitchCase(body, caseValue));
+                    }
+
+                    // todo: I guess will have to make switch cases compile to else ifs but keep this special case when every case is a constant
+                    switchValue = switchValue.EnsureIsType(cases[0].TestValues[0].Type);
+                    expressions.Add(Expression.Switch(switchValue, defaultBody, cases.ToArray()));
+                    break;
+                }
                 case TokenLine { Type: LineType.AssignerAssignment } tokenLine
                     when tokenLine.Tokens[0] is DotGroupPosToken dotGroupPosToken:
                 {
