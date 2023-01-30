@@ -48,8 +48,9 @@ public class Compiler
                 {
                     return variable;
                 }
-                
-                if (context is ContextWithSpecialVariables spec && spec.SpecialVariables.TryGetValue(name, out var specialVariable))
+
+                if (context is ContextWithSpecialVariables spec &&
+                    spec.SpecialVariables.TryGetValue(name, out var specialVariable))
                 {
                     return specialVariable;
                 }
@@ -490,6 +491,21 @@ public class Compiler
 
                     return Expression.Block(expressions);
                 }
+                case "dbg_assert_is_one" when fakedMotor.Options.EnableDebugging:
+                {
+                    return AssignGlobal("$$assertResult", Expression.Equal(
+                        GetHighExpression(argumentTokens).EnsureIsType(typeof(long)),
+                        Expression.Constant(1L)));
+                }
+                case "dbg_sum_three" when fakedMotor.Options.EnableDebugging:
+                {
+                    return AssignGlobal("$$assertResult",
+                        Expression.Add(
+                            Expression.Add(GetSingleExpression(argumentTokens[0]).EnsureIsType(typeof(long)),
+                                GetSingleExpression(argumentTokens[1]).EnsureIsType(typeof(long))
+                                    .EnsureIsType(typeof(long))),
+                            GetSingleExpression(argumentTokens[2]).EnsureIsType(typeof(long))));
+                }
             }
 
             // todo: doesn't do named arguments won't what
@@ -823,6 +839,7 @@ public class Compiler
                             defaultBody = body;
                             continue;
                         }
+
                         var caseValue = GetSingleExpression(caseLine.Tokens[0]);
                         cases.Add(Expression.SwitchCase(body, caseValue));
                     }
@@ -1147,6 +1164,7 @@ public class Compiler
     {
         public required Dictionary<string, ParameterExpression> SpecialVariables { get; init; }
     }
+
     private class LoopContext : Context
     {
         public LabelTarget BreakLabel { get; init; }

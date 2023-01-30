@@ -9,7 +9,7 @@ public static class Hook
 {
     public static Motor Run(RCaronRunnerContext ctx, MotorOptions? options = null, Motor? fakeMotor = null)
     {
-        fakeMotor ??= new Motor(new RCaronRunnerContext(ctx.FileScope));
+        fakeMotor ??= new Motor(new RCaronRunnerContext(ctx.FileScope), options);
         var block = Compiler.CompileToBlock(ctx, fakeMotor);
         var lambda = Expression.Lambda(block);
         var compiled = lambda.Compile();
