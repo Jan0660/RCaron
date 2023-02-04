@@ -53,18 +53,19 @@ namespace RCaron.LibrarySourceGenerator
                 var source = new StringBuilder();
                 source.AppendLine($@"
 using RCaron;
+using System.Linq;
 #nullable enable
 
 namespace {classSymbol.ContainingNamespace.ToDisplayString()};
 
 public partial class {classSymbol.Name}{{");
                 source.AppendLine(
-                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ReadOnlySpan<PosToken> arguments, CallLikePosToken callToken){
+                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken callToken){
 switch(name){");
 
-                void AppendArgumentThing(bool isPositional, IParameterSymbol param)
+                void AppendArgumentGet(bool isPositional, IParameterSymbol param)
                 {
-                    bool InheritsPosToken(ITypeSymbol typeSymbol)
+                    bool AssignableToPosToken(ITypeSymbol typeSymbol)
                     {
                         if (typeSymbol.BaseType == null)
                             return false;
@@ -73,15 +74,20 @@ switch(name){");
                             return true;
                         if (str == "System.Object")
                             return false;
-                        return InheritsPosToken(typeSymbol.BaseType);
+                        return AssignableToPosToken(typeSymbol.BaseType);
                     }
 
                     var g = isPositional ? string.Empty : " + 2";
-                    if(InheritsPosToken(param.Type))
-                        source.AppendLine($"arguments[i{g}];");
+                    const string index = "enumerator.Index";
+                    // const string index = "i";
+                    if (AssignableToPosToken(param.Type) || param.Type.ToDisplayString() == "RCaron.PosToken")
+                        // source.AppendLine($"arguments[{index}{g}];");
+                        source.AppendLine($"enumerator.CurrentTokens[0];");
                     else
-                        source.AppendLine($"motor.SimpleEvaluateExpressionSingle(arguments[i{g}]);");
+                        source.AppendLine($"motor.SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);");
+                    // source.AppendLine($"motor.SimpleEvaluateExpressionSingle(arguments[{index}{g}]);");
                 }
+
                 foreach (var member in classSymbol.GetMembers())
                 {
                     if (member is not IMethodSymbol methodSymbol)
@@ -121,7 +127,7 @@ switch(name){");
                                         true), param.Locations.FirstOrDefault()));
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
                             source.Append($"{param.Type.ToDisplayString()} {param.Name} = ");
-                            
+
                             if (param.HasExplicitDefaultValue)
                             {
                                 if (param.ExplicitDefaultValue is string str)
@@ -137,68 +143,78 @@ switch(name){");
                             source.AppendLine(";");
                         }
 
-                        source.AppendLine(@"for (var i = 0; i < arguments.Length; i++)
-{
-    if (arguments[i] is ValueOperationValuePosToken { Operation: OperationEnum.Subtract } &&
-                        arguments[i + 1] is KeywordToken keywordToken)
-    {
-        var argName = keywordToken.String;");
-                        for (var i = 0; i < parameters.Length; i++)
+                        // actual arguments parsing
+                        if(parameters.Length != 0)
                         {
-                            var param = parameters[i];
-                            if (i != 0)
-                                source.Append("else ");
-                            source.AppendLine(
-                                $@"if(argName.Equals(""{param.Name.ToLowerInvariant()}"", StringComparison.InvariantCultureIgnoreCase))
-{{");
-                            source.AppendLine($"{param.Name}_hasValue = true;");
+                            source.AppendLine(@"var enumerator = callToken != null
+                                ? new ArgumentEnumerator(callToken)
+                                : new ArgumentEnumerator(arguments);");
 
-                            source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-                            AppendArgumentThing(false, param);
-                            source.AppendLine("i += 2;");
-                            source.AppendLine("}");
-                        }
-                        if (parameters.Length != 0)
-                            source.AppendLine(@"else { throw RCaronException.NamedArgumentNotFound(argName); }");
+                            source.AppendLine(@"while (enumerator.MoveNext())");
+                            source.AppendLine("{");
 
-                        source.AppendLine("}");
-
-                        if (parameters.Length == 0)
-                            source.AppendLine(
-                                @"if(arguments.Length != 0){ throw RCaronException.LeftOverPositionalArgument(); }");
-                        if (parameters.Length != 0)
-                        {
-                            source.AppendLine("else{");
+                            // do named arguments
+                            source.AppendLine(@"if (enumerator.CurrentName != null)
+{");
                             for (var i = 0; i < parameters.Length; i++)
                             {
                                 var param = parameters[i];
                                 if (i != 0)
                                     source.Append("else ");
-                                source.AppendLine($"if(!{param.Name}_hasValue){{");
+                                source.AppendLine(
+                                    $@"if (enumerator.CurrentName.Equals(""{param.Name.ToLowerInvariant()}"", StringComparison.InvariantCultureIgnoreCase))");
+                                source.AppendLine("{");
+
+                                source.AppendLine($"{param.Name}_hasValue = true;");
+
                                 source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-                                AppendArgumentThing(true, param);
-                                source.AppendLine($@"{param.Name}_hasValue = true;
-}}");
+                                AppendArgumentGet(false, param);
+
+                                source.AppendLine("}");
                             }
 
-                            source.AppendLine(@"else { throw RCaronException.LeftOverPositionalArgument(); }");
+                            source.AppendLine(
+                                "else { throw RCaronException.NamedArgumentNotFound(enumerator.CurrentName); }");
                             source.AppendLine("}");
-                        }
 
-                        source.AppendLine("}");
-                        // check all parameters without a default value are assigned
-                        if (parameters.Length != 0)
-                        {
-                            source.AppendLine("if(true");
-                            foreach (var param in parameters)
+                            // do positional arguments
+                            source.AppendLine(@"else if(!enumerator.HitNamedArgument)
+{");
+                            for (var i = 0; i < parameters.Length; i++)
                             {
-                                if (param.HasExplicitDefaultValue)
-                                    continue;
-                                source.AppendLine($"&& !{param.Name}_hasValue");
+                                var param = parameters[i];
+                                if (i != 0)
+                                    source.Append("else ");
+                                source.AppendLine($@"if(!{param.Name}_hasValue)
+{{");
+                                source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
+                                AppendArgumentGet(true, param);
+                                source.AppendLine($@"{param.Name}_hasValue = true;");
+                                source.AppendLine("}");
                             }
 
-                            source.AppendLine(@"){
+                            source.AppendLine("else { throw RCaronException.LeftOverPositionalArgument(); }");
+
+                            source.AppendLine("}");
+                            source.AppendLine("""
+else
+    throw RCaronException.PositionalArgumentAfterNamedArgument();
+""");
+                            source.AppendLine("}");
+                            // check all parameters without a default value are assigned
+                            if (parameters.Length != 0)
+                            {
+                                source.AppendLine("if(true");
+                                foreach (var param in parameters)
+                                {
+                                    if (param.HasExplicitDefaultValue)
+                                        continue;
+                                    source.AppendLine($"&& !{param.Name}_hasValue");
+                                }
+
+                                source.AppendLine(@"){
     throw RCaronException.ArgumentsLeftUnassigned(); }");
+                            }
                         }
 
                         if (!methodSymbol.ReturnsVoid)

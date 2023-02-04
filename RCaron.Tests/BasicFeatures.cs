@@ -43,7 +43,11 @@ if ($true){ $h2 = 1; }");
         ExtraAssert.ThrowsCode(() => new Motor(p).Run(), RCaronExceptionCode.MethodNotFound);
     }
 
-    [Fact]
+    [Fact
+#if RCARONJIT
+            (Skip = "JIT does not plan to support this")
+#endif
+    ]
     public void GateDumb()
     {
         var p = RCaronRunner.Parse("goto_line 0;");
@@ -165,6 +169,7 @@ for($i = 0; $i < 3; $i++){
 }
 $h = v();
 ");
+        m.AssertVariableEquals("h", 2L);
     }
 
     [Fact]
@@ -295,13 +300,6 @@ $i0 = $a[0];
 $i5 = $a[5];");
         m.AssertVariableEquals("i0", (long)0);
         m.AssertVariableEquals("i5", (long)5);
-    }
-
-    [Fact]
-    public void CodeBlockTokenEvaluate()
-    {
-        var m = RCaronRunner.Run(@"$h = 1 + {return 2;};");
-        m.AssertVariableEquals("h", (long)3);
     }
 
     [Fact]

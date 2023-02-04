@@ -41,7 +41,12 @@ public class VariableAccess
         m.AssertVariableEquals("i0", 0);
         m.AssertVariableEquals("i2", 2);
         // todo(error clarity): throw a RCaronException when index is out of bounds
-        Assert.Throws<IndexOutOfRangeException>(() => m.RunWithCode("$i10 = $array[10];"));
+        ExtraAssert.Throws<IndexOutOfRangeException>(() =>
+        {
+            var m2 = new Motor(RCaronRunner.Parse("$i10 = $array[10];"));
+            m2.GlobalScope.SetVariable("array", new[] { 0, 1, 2, 3, 4, 5 });
+            m2.Run();
+        });
     }
 
     [Fact]

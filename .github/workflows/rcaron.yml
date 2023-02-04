@@ -1,6 +1,6 @@
 name: rcaron
 
-on: [push, pull_request]
+on: [ push, pull_request ]
 
 jobs:
   rcaron-build:
@@ -32,6 +32,22 @@ jobs:
         run: dotnet build RCaron.Tests --no-restore
       - name: test
         run: dotnet test RCaron.Tests --no-build
+  rcaron-jit-test:
+    needs: rcaron-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 7.0.x
+          include-prerelease: true
+      - name: restore
+        run: dotnet restore RCaron.Jit.Tests
+      - name: build
+        run: dotnet build RCaron.Jit.Tests --no-restore
+      - name: test
+        run: dotnet test RCaron.Jit.Tests --no-build
   cli-build:
     needs: rcaron-build
     runs-on: ubuntu-latest

@@ -11,7 +11,7 @@ public static class MotorPool
         void Prepare(Motor motor)
         {
             motor.Lines = parent.Lines;
-            motor.Modules = parent.Modules;
+            // motor.Modules = parent.Modules;
             motor.MainFileScope = parent.MainFileScope;
             motor.GlobalScope.SetVariable("parentMotor", parent);
         }

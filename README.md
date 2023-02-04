@@ -4,6 +4,7 @@ An interpreted .NET language. You can also call it ř or Ř.
 Documentation for the language is available at [rcaron.jan0660.dev](https://rcaron.jan0660.dev).
 
 This repository contains the following projects:
+
 - `Rcaron`: The language itself
 - `Rcaron.Cli`: A command line interface
 - `RCaron.LibrarySourceGenerator`: A source generator for creating libraries

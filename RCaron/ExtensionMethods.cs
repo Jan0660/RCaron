@@ -1,7 +1,7 @@
 ﻿namespace RCaron;
 
 // https://stackoverflow.com/a/18159076/12520276
-static class ListEx
+public static class ListEx
 {
     public static void RemoveFrom<T>(this List<T> lst, int from)
     {
@@ -22,13 +22,13 @@ static class ListEx
         return arr;
     }
 
-    internal static ArraySegment<T> Segment<T>(this T[] array, Range range)
+    public static ArraySegment<T> Segment<T>(this T[] array, Range range)
     {
         var (start, length) = range.GetOffsetAndLength(array.Length);
         return new ArraySegment<T>(array, start, length);
     }
 
-    internal static ArraySegment<T> Segment<T>(this ArraySegment<T> segment, Range range)
+    public static ArraySegment<T> Segment<T>(this ArraySegment<T> segment, Range range)
     {
         var (start, length) = range.GetOffsetAndLength(segment.Count);
         return new ArraySegment<T>(segment.Array, segment.Offset + start, length);

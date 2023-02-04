@@ -126,7 +126,10 @@ $h = ForUnitTests;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 $h = ForUnitTests -b 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
         ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
-$h = ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+$h = ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+$h = ForUnitTests 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
     }
 
     [Fact]
@@ -257,7 +260,11 @@ $ff = $false || $false;
         m.AssertVariableEquals("ff", false);
     }
 
-    [Fact]
+    [Fact
+#if RCARONJIT
+            (Skip = "JIT does not plan to support this")
+#endif
+    ]
     public void GetLineNumber()
     {
         var m = RCaronRunner.Run(@"$l1 = 1;
@@ -300,10 +307,10 @@ $l5 = 5;"), new MotorOptions() { EnableDebugging = true });
     public void Throw()
     {
         var m = new Motor(RCaronRunner.Parse("throw(#System.Exception:new('funny'));"));
-        var exc = Assert.Throws<Exception>(() => { m.Run(); });
+        var exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
         Assert.Equal("funny", exc.Message);
         m = new Motor(RCaronRunner.Parse("throw #System.Exception:new('funny');"));
-        exc = Assert.Throws<Exception>(() => { m.Run(); });
+        exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
         Assert.Equal("funny", exc.Message);
     }
 
@@ -340,7 +347,7 @@ finally {
     $h = $h + 2;
 }
 $h = $h + 1;"));
-        Assert.Throws<Exception>(() => m.Run());
+        ExtraAssert.Throws<Exception>(() => m.Run());
         m.AssertVariableEquals("h", 2L);
         Assert.Equal(0, m.BlockStack.Count);
     }
