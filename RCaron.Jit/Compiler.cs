@@ -5,6 +5,7 @@ using System.Reflection;
 using Dynamitey;
 using JetBrains.Annotations;
 using Microsoft.CSharp.RuntimeBinder;
+using RCaron.Classes;
 using RCaron.Jit.Binders;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
@@ -28,6 +29,8 @@ public class Compiler
         System.Lazy<MethodInfo> consoleWriteLineWithArgMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(object) })!);
         var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
+        var classes = new List<CompiledClass>();
+        var compiledContext = new CompiledContext(functions, parsed.FileScope, fakedMotorConstant, classes);
 
         ParameterExpression? GetVariableNullable(string name, bool mustBeAtCurrent = false)
         {
@@ -134,10 +137,13 @@ public class Compiler
                     return GetDotGroupExpression(dotGroup);
                 case ExternThingToken externThing:
                 {
+                    return Expression.Call(null,
+                        typeof(ClassOrTypeResolver).GetMethod(nameof(ClassOrTypeResolver.ResolveForUse))!,
+                        Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
                     // todo(perf): cache directly here
-                    return Expression.New(typeof(RCaronType).GetConstructor(new[] { typeof(Type) }),
-                        Expression.Call(null, typeof(TypeResolver).GetMethod(nameof(TypeResolver.FindType))!,
-                            Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope)));
+                    // return Expression.New(typeof(RCaronType).GetConstructor(new[] { typeof(Type) }),
+                    //     Expression.Call(null, typeof(TypeResolver).GetMethod(nameof(TypeResolver.FindType))!,
+                    //         Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope)));
                     // return Expression.Dynamic(new RCaronTypeBinder(), typeof(RCaronType),
                     //     Expression.Constant(externThing.String), Expression.Constant(parsed.FileScope));
                 }
@@ -350,7 +356,7 @@ public class Compiler
                     value = Expression.Dynamic(
                         new RCaronInvokeMemberBinder(callToken.Name, true, new CallInfo(exps.Length,
                             // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
-                            Array.Empty<string>()), parsed.FileScope),
+                            Array.Empty<string>()), compiledContext),
                         typeof(object),
                         exps);
 
@@ -435,7 +441,7 @@ public class Compiler
                     case "string":
                         return Expression.Dynamic(
                             new RCaronInvokeMemberBinder("ToString", false, new CallInfo(0, Array.Empty<string>()),
-                                parsed.FileScope), /* todo: wtf can't do typeof(string)*/ typeof(object),
+                                compiledContext), /* todo: wtf can't do typeof(string)*/ typeof(object),
                             GetHighExpression(callToken.Arguments[0])).EnsureIsType(typeof(string));
                     case "globalset":
                         return Expression.Call(fakedMotorConstant, typeof(Motor).GetMethod(nameof(Motor.SetVar))!,
@@ -542,7 +548,7 @@ public class Compiler
             //         Expression.NewArrayInit(typeof(object), namedArgs.Select(a => a.Value.EnsureIsType(typeof(object))))
             //     });
             return Expression.Dynamic(
-                new RCaronOtherBinder(new CompiledContext(functions, parsed.FileScope, fakedMotorConstant), name,
+                new RCaronOtherBinder(compiledContext, name,
                     arguments), typeof(object), Expression.Constant(arguments));
 
             // if (tokenLine != null)
@@ -1141,6 +1147,24 @@ public class Compiler
                 };
             }
 
+        // do class property initializers
+        if (parsed.FileScope.ClassDefinitions != null)
+            foreach (var definition in parsed.FileScope.ClassDefinitions)
+            {
+                if (definition.PropertyInitializers is null or { Length: 0 })
+                    continue;
+                var initializers = new Expression?[definition.PropertyInitializers.Length];
+                var i = 0;
+                foreach (var initializer in definition.PropertyInitializers)
+                {
+                    if (initializer is null)
+                        continue;
+                    initializers[i++] = GetHighExpression(initializer);
+                }
+
+                classes.Add(new CompiledClass { Definition = definition, PropertyInitializers = initializers });
+            }
+
         // do main
         var block = DoLines(parsed.FileScope.Lines);
 
@@ -1221,5 +1245,25 @@ public class CompiledFunction
     }
 }
 
+public class CompiledClass
+{
+    public required ClassDefinition Definition { get; init; }
+    public Expression?[]? PropertyInitializers { get; init; }
+}
+
 public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope,
-    ConstantExpression FakedMotorConstant);
+    ConstantExpression FakedMotorConstant,
+    IList<CompiledClass> Classes /*Dictionary<ClassDefinition, Expression?[]> ClassPropertyInitializers*/)
+{
+    public CompiledClass? GetClass(ClassDefinition definition)
+    {
+        for (var i = 0; i < Classes.Count; i++)
+        {
+            var compiledClass = Classes[i];
+            if (compiledClass.Definition == definition)
+                return compiledClass;
+        }
+
+        return null;
+    }
+}

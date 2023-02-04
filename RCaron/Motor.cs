@@ -86,7 +86,7 @@ public class Motor
     public void UseContext(RCaronRunnerContext runnerContext, bool withFileScope = true)
     {
         Lines = runnerContext.FileScope?.Lines;
-        if (withFileScope)
+        if (withFileScope && runnerContext.FileScope != null)
         {
             MainFileScope = runnerContext.FileScope;
             MainFileScope.Modules ??= new List<IRCaronModule>(1) { new LoggingModule() };
@@ -1378,7 +1378,7 @@ public class Motor
     public FileScope GetFileScope()
         => BlockStack.Count == 0 ? MainFileScope : BlockStack.Peek().FileScope;
 
-    private bool TryGetClassDefinition(string name, FileScope fileScope,
+    public static bool TryGetClassDefinition(string name, FileScope fileScope,
         [MaybeNullWhen(false)] out ClassDefinition classDefinition)
     {
         if (TryGetClassDefinition(fileScope.ClassDefinitions, name, out classDefinition))
@@ -1394,7 +1394,7 @@ public class Motor
     }
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public bool TryGetClassDefinition(List<ClassDefinition>? classDefinitions, string name,
+    public static bool TryGetClassDefinition(List<ClassDefinition>? classDefinitions, string name,
         [MaybeNullWhen(false)] out ClassDefinition classDefinition)
     {
         if (classDefinitions != null)

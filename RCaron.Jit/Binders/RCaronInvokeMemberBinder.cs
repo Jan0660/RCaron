@@ -4,17 +4,20 @@ using System.Linq.Expressions;
 using System.Reflection;
 using DotNext.Reflection;
 using Dynamitey;
+using RCaron.Classes;
 
 namespace RCaron.Jit.Binders;
 
 public class RCaronInvokeMemberBinder : InvokeMemberBinder
 {
-    public FileScope FileScope { get; }
+    public CompiledContext Context { get; }
+    public FileScope FileScope => Context.FileScope;
 
-    public RCaronInvokeMemberBinder(string name, bool ignoreCase, CallInfo callInfo, FileScope fileScope) : base(name,
+    public RCaronInvokeMemberBinder(string name, bool ignoreCase, CallInfo callInfo, CompiledContext context) : base(
+        name,
         ignoreCase, callInfo)
     {
-        FileScope = fileScope;
+        Context = context;
     }
 
     public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args,
@@ -32,6 +35,35 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
     private DynamicMetaObject _do(DynamicMetaObject target, DynamicMetaObject[] args,
         DynamicMetaObject? errorSuggestion)
     {
+        if (target.RuntimeType == typeof(ClassDefinition) &&
+            Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
+        {
+            var classDefinition = (ClassDefinition)target.Value!;
+            var expressions = new List<Expression>(classDefinition.PropertyNames?.Length + 2 ?? 2);
+            var classVar = Expression.Variable(typeof(ClassInstance), "classInstance");
+            expressions.Add(Expression.Assign(classVar,
+                Expression.New(typeof(ClassInstance).GetConstructor(new[] { typeof(ClassDefinition) })!,
+                    Expression.Constant(classDefinition))));
+            if (classDefinition.PropertyInitializers != null)
+            {
+                var compiledClass = Context.GetClass(classDefinition);
+                Debug.Assert(compiledClass.PropertyInitializers != null);
+                for (var j = 0; j < compiledClass.PropertyInitializers.Length; j++)
+                {
+                    var bruh = nameof(ClassInstance.PropertyValues);
+                    if (compiledClass.PropertyInitializers[j] != null)
+                        expressions.Add(Expression.Assign(
+                            Expression.ArrayAccess(Expression.Property(classVar, nameof(ClassInstance.PropertyValues)),
+                                Expression.Constant(j)),
+                            compiledClass.PropertyInitializers[j].EnsureIsType(typeof(object))));
+                }
+            }
+            expressions.Add(classVar);
+
+            var block = Expression.Block(typeof(ClassInstance), new[] { classVar }, expressions);
+            return new DynamicMetaObject(block, BindingRestrictions.Empty);
+        }
+
         if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
         {
             return new DynamicMetaObject(
@@ -55,13 +87,16 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     // todo(perf): probably not the fastest
                     var t = method.DeclaringType!;
 
-                    var endTarget = method.IsStatic ? Expression.Constant(t)/*Expression.Constant(InvokeContext.CreateStatic(t))*/ : target.Expression;
+                    var endTarget = method.IsStatic
+                        ? Expression.Constant(t) /*Expression.Constant(InvokeContext.CreateStatic(t))*/
+                        : target.Expression;
 
                     var mi = (MethodInfo)method;
                     var c = CacheableInvocation.CreateCall(
                         mi.ReturnType == typeof(void) ? InvocationKind.InvokeMemberAction : InvocationKind.InvokeMember,
-                        mi.Name, new CallInfo(argsExpressionArray.Length/* todo: named args */), method.IsStatic ? InvokeContext.CreateStatic(t) : null);
-                    
+                        mi.Name, new CallInfo(argsExpressionArray.Length /* todo: named args */),
+                        method.IsStatic ? InvokeContext.CreateStatic(t) : null);
+
                     return Expression.Call(Expression.Constant(c), "Invoke", Array.Empty<Type>(), endTarget,
                         Expression.NewArrayInit(typeof(object), argsExpressionArray));
                     //
