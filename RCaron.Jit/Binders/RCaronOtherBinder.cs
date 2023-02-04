@@ -24,7 +24,6 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
         // RCaron function
         foreach (var func in CompiledContext.Functions)
         {
-            // todo: call precompile in the Hook
             if (func.Key.Equals(Name, StringComparison.InvariantCultureIgnoreCase))
             {
                 Expression?[]? exps = null;

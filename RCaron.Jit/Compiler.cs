@@ -298,8 +298,7 @@ public class Compiler
                     logicalToken),
                 [VariableToken { Name: "true" }] => Expression.Constant(true),
                 [VariableToken { Name: "false" }] => Expression.Constant(false),
-                // todo: variable and constant
-                // { Length: 1 } when tokens[0] is ValuePosToken => (bool)SimpleEvaluateExpressionSingle(tokens[0])!,
+                [VariableToken variable] => GetVariable(variable.Name).EnsureIsType(typeof(bool)),
                 _ => throw new Exception("what he fuck")
             };
 
