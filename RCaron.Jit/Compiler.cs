@@ -28,6 +28,8 @@ public class Compiler
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), Array.Empty<Type>())!);
         System.Lazy<MethodInfo> consoleWriteLineWithArgMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(object) })!);
+        System.Lazy<MethodInfo> log73Debug =
+            new(() => typeof(Log73.Console).GetMethod(nameof(Log73.Console.Debug), new[] { typeof(object) })!);
         var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
         var classes = new List<CompiledClass>();
         var compiledContext = new CompiledContext(functions, parsed.FileScope, fakedMotorConstant, classes);
@@ -503,6 +505,17 @@ public class Compiler
                     {
                         expressions.Add(Expression.Call(consoleWriteLineWithArgMethod.Value,
                             // todo(perf): can get the correct write method instead of casting to object
+                            GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
+                    }
+
+                    return Expression.Block(expressions);
+                }
+                case "dbg_println" when fakedMotor.Options.EnableDebugging:
+                {
+                    var expressions = new List<Expression>();
+                    while (enumerator.MoveNext())
+                    {
+                        expressions.Add(Expression.Call(log73Debug.Value,
                             GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
                     }
 

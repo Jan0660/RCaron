@@ -1085,9 +1085,9 @@ public class Motor
                 return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.Name, callToken: callToken);
-            case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
-                BlockStack.Push(new(false, true, null, GetFileScope()));
-                return RunCodeBlock(codeBlockToken);
+            // case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
+            //     BlockStack.Push(new(false, true, null, GetFileScope()));
+            //     return RunCodeBlock(codeBlockToken);
             case TokenType.Keyword when token is KeywordToken keywordToken:
                 return keywordToken.String;
             case TokenType.DotGroup:

@@ -7,11 +7,13 @@
 
         <IsPackable>false</IsPackable>
         <EnablePreviewFeatures>True</EnablePreviewFeatures>
+        
+        <DefineConstants>RCARONJIT</DefineConstants>
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2" />
-        <PackageReference Include="xunit" Version="2.4.2" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.3.2"/>
+        <PackageReference Include="xunit" Version="2.4.2"/>
         <PackageReference Include="xunit.runner.visualstudio" Version="2.4.5">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
@@ -23,7 +25,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <Compile Include="..\RCaron.Tests\*.cs" />
+        <Compile Include="..\RCaron.Tests\*.cs"/>
         <ProjectReference Include="..\RCaron.Jit\RCaron.Jit.csproj">
             <Properties>DefineConstants=RCARONJIT</Properties>
         </ProjectReference>

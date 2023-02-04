@@ -260,7 +260,11 @@ $ff = $false || $false;
         m.AssertVariableEquals("ff", false);
     }
 
-    [Fact]
+    [Fact
+#if RCARONJIT
+            (Skip = "JIT does not plan to support this")
+#endif
+    ]
     public void GetLineNumber()
     {
         var m = RCaronRunner.Run(@"$l1 = 1;
