@@ -64,11 +64,15 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
                 }
 
                 return new DynamicMetaObject(
-                    Expression.Call(Expression.Constant(func.Value), func.Value.GetType().GetMethod("Invoke")!,
-                        exps == null ? Expression.Constant(null, typeof(object[])) : Expression.NewArrayInit(
-                    typeof(object), exps.Select(x => x!.EnsureIsType(typeof(object))!))).EnsureIsType(ReturnType),
-                BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
-                    Expression.Constant(Arguments))));
+                    Expression.Call(Expression.Constant(func.Value),
+                            typeof(CompiledFunction).GetMethod(nameof(CompiledFunction.Invoke))!,
+                            exps == null
+                                ? Expression.Constant(null, typeof(object[]))
+                                : Expression.NewArrayInit(
+                                    typeof(object), exps.Select(x => x!.EnsureIsType(typeof(object))!)))
+                        .EnsureIsType(ReturnType),
+                    BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
+                        Expression.Constant(Arguments))));
             }
         }
 

@@ -58,10 +58,26 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                             compiledClass.PropertyInitializers[j].EnsureIsType(typeof(object))));
                 }
             }
+
             expressions.Add(classVar);
 
             var block = Expression.Block(typeof(ClassInstance), new[] { classVar }, expressions);
-            return new DynamicMetaObject(block, BindingRestrictions.Empty);
+            return new DynamicMetaObject(block,
+                BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
+                    Expression.Constant(classDefinition))));
+        }
+
+        if (target.RuntimeType == typeof(ClassInstance))
+        {
+            var classInstance = (ClassInstance)target.Value!;
+            var compiledClass = Context.GetClass(classInstance.Definition);
+            var compiledFunction = compiledClass.Functions[Name];
+            return new DynamicMetaObject(Expression.Call(Expression.Constant(compiledFunction),
+                    typeof(CompiledFunction).GetMethod(nameof(CompiledFunction.Invoke))!,
+                    Expression.NewArrayInit(typeof(object), args.Select(x => x.Expression).Prepend(target.Expression))),
+                BindingRestrictions.GetExpressionRestriction(Expression.Equal(
+                    Expression.Property(target.Expression.EnsureIsType(typeof(ClassInstance)), "Definition"),
+                    Expression.Constant(classInstance.Definition))));
         }
 
         if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))

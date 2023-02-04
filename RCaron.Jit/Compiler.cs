@@ -32,7 +32,7 @@ public class Compiler
         var classes = new List<CompiledClass>();
         var compiledContext = new CompiledContext(functions, parsed.FileScope, fakedMotorConstant, classes);
 
-        ParameterExpression? GetVariableNullable(string name, bool mustBeAtCurrent = false)
+        Expression? GetVariableNullable(string name, bool mustBeAtCurrent = false)
         {
             if (mustBeAtCurrent)
             {
@@ -58,16 +58,27 @@ public class Compiler
                     return specialVariable;
                 }
 
-                if (context.ReturnWorthy && contextStack.At(0) is FunctionContext
-                    {
-                        ArgumentsInner: { Length: > 0 }
-                    } functionContext)
+                if (context.ReturnWorthy && contextStack.At(0) is FunctionContext functionContext)
                 {
-                    foreach (var argExpression in functionContext.ArgumentsInner)
-                    {
-                        if (argExpression.Name!.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    // function arguments
+                    if (functionContext.ArgumentsInner is not null or { Length: 0 })
+                        foreach (var argExpression in functionContext.ArgumentsInner)
                         {
-                            return argExpression;
+                            if (argExpression.Name!.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                            {
+                                return argExpression;
+                            }
+                        }
+
+                    // class properties
+                    if (functionContext.ClassDefinition is not null)
+                    {
+                        var propertyIndex = functionContext.ClassDefinition.GetPropertyIndex(name);
+                        if (propertyIndex != -1)
+                        {
+                            var classInstance = functionContext.ArgumentsInner![0];
+                            return Expression.ArrayAccess(Expression.Property(classInstance, "PropertyValues"),
+                                Expression.Constant(propertyIndex));
                         }
                     }
                 }
@@ -79,7 +90,7 @@ public class Compiler
             return null;
         }
 
-        ParameterExpression GetVariable(string name, bool mustBeAtCurrent = false)
+        Expression GetVariable(string name, bool mustBeAtCurrent = false)
         {
             var v = GetVariableNullable(name, mustBeAtCurrent);
             if (v == null)
@@ -604,15 +615,16 @@ public class Compiler
 
         void DoLine(Line line, List<Expression> expressions, IList<Line> lines, ref int index)
         {
-            ParameterExpression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type specificType = null)
+            Expression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type specificType = null)
             {
                 var varExp = GetVariableNullable(name, mustBeAtCurrent);
                 if (varExp == null)
                 {
                     var peak = contextStack.Peek();
-                    varExp = Expression.Variable(specificType ?? typeof(object), name);
+                    var @var = Expression.Variable(specificType ?? typeof(object), name);
+                    varExp = @var;
                     peak.Variables ??= _newVariableDict();
-                    peak.Variables.Add(name, varExp);
+                    peak.Variables.Add(name, @var);
                 }
 
                 return varExp;
@@ -1107,62 +1119,77 @@ public class Compiler
             return c == null ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
 
+        CompiledFunction DoFunction(Function function, ClassDefinition? classDefinition = null)
+        {
+            ParameterExpression[]? argumentsInner = null;
+            if (function.Arguments != null || classDefinition != null)
+            {
+                argumentsInner =
+                    new ParameterExpression[0 + (function.Arguments?.Length ?? 0) + (classDefinition != null ? 1 : 0)];
+                if (classDefinition != null)
+                    argumentsInner[0] = Expression.Parameter(typeof(ClassInstance), "this");
+                if (function.Arguments != null)
+                    for (var i = classDefinition != null ? 1 : 0;
+                         i - (classDefinition != null ? 1 : 0) < function.Arguments.Length;
+                         i++)
+                    {
+                        argumentsInner[i] = Expression.Parameter(typeof(object),
+                            function.Arguments[i - (classDefinition != null ? 1 : 0)].Name);
+                    }
+            }
+
+            var c = new FunctionContext() { ArgumentsInner = argumentsInner, ClassDefinition = classDefinition };
+            contextStack.Push(c);
+            var body = DoLines(function.CodeBlock.Lines, true);
+            Assert(contextStack.Pop() == c);
+            return new CompiledFunction()
+            {
+                Arguments = argumentsInner,
+                Body = body,
+                OriginalFunction = function
+            };
+        }
+
         // do functions
         // todo(perf): could parallelize this in the future
         if (parsed.FileScope.Functions != null)
             foreach (var function in parsed.FileScope.Functions)
-            {
-                ParameterExpression[]? argumentsInner = null;
-                if (function.Value.Arguments != null)
-                {
-                    argumentsInner = new ParameterExpression[function.Value.Arguments.Length];
-                    for (var i = 0; i < function.Value.Arguments.Length; i++)
-                    {
-                        argumentsInner[i] = Expression.Parameter(typeof(object), function.Value.Arguments[i].Name);
-                    }
-                }
+                functions[function.Key] = DoFunction(function.Value);
 
-                // var argumentsOuter = Expression.Parameter(typeof(object[]));
-                // var argsAssigner = new List<Expression>();
-                // if (argumentsInner is not null or {Length:0})
-                //     for (var i = 0; i < argumentsInner.Length; i++)
-                //     {
-                //         argsAssigner.Add(Expression.Assign(argumentsInner[i],
-                //             Expression.ArrayIndex(argumentsOuter, Expression.Constant(i))));
-                //     }
-
-                var c = new FunctionContext() { ArgumentsInner = argumentsInner };
-                contextStack.Push(c);
-                var body = DoLines(function.Value.CodeBlock.Lines, true);
-                Assert(contextStack.Pop() == c);
-
-                functions[function.Key] = new CompiledFunction()
-                {
-                    Arguments = argumentsInner,
-                    Body = body,
-                    // Body = Expression.Block(body.Variables),
-                    // Body = Expression.Block(new[] { argumentsOuter }.Concat(body.Variables),
-                    //     argsAssigner.Concat(body.Expressions)),
-                    OriginalFunction = function.Value
-                };
-            }
-
-        // do class property initializers
+        // do classes
         if (parsed.FileScope.ClassDefinitions != null)
             foreach (var definition in parsed.FileScope.ClassDefinitions)
             {
-                if (definition.PropertyInitializers is null or { Length: 0 })
-                    continue;
-                var initializers = new Expression?[definition.PropertyInitializers.Length];
-                var i = 0;
-                foreach (var initializer in definition.PropertyInitializers)
+                Expression?[]? initializers = null;
+                Dictionary<string, CompiledFunction>? classFunctions = null;
+                // do property initializers
+                if (definition.PropertyInitializers is not null or { Length: 0 })
                 {
-                    if (initializer is null)
-                        continue;
-                    initializers[i++] = GetHighExpression(initializer);
+                    initializers = new Expression?[definition.PropertyInitializers.Length];
+                    var i = 0;
+                    foreach (var initializer in definition.PropertyInitializers)
+                    {
+                        if (initializer is null)
+                            continue;
+                        initializers[i++] = GetHighExpression(initializer);
+                    }
                 }
 
-                classes.Add(new CompiledClass { Definition = definition, PropertyInitializers = initializers });
+                // do functions
+                if (definition.Functions is not null or { Count: 0 })
+                {
+                    classFunctions =
+                        new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
+                    foreach (var function in definition.Functions)
+                    {
+                        var compiledFunction = DoFunction(function.Value, definition);
+                        classFunctions[function.Key] = compiledFunction;
+                    }
+                }
+
+
+                classes.Add(new CompiledClass
+                    { Definition = definition, PropertyInitializers = initializers, Functions = classFunctions });
             }
 
         // do main
@@ -1197,7 +1224,8 @@ public class Compiler
 
     private class FunctionContext : Context
     {
-        public ParameterExpression[]? ArgumentsInner { get; set; } = null;
+        public ParameterExpression[]? ArgumentsInner { get; init; } = null;
+        public ClassDefinition? ClassDefinition { get; init; } = null;
     }
 
     public static void Assert(bool condition)
@@ -1249,6 +1277,7 @@ public class CompiledClass
 {
     public required ClassDefinition Definition { get; init; }
     public Expression?[]? PropertyInitializers { get; init; }
+    public Dictionary<string, CompiledFunction>? Functions { get; init; }
 }
 
 public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope,
