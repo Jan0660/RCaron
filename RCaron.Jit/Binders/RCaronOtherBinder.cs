@@ -135,6 +135,5 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
         throw new RCaronException($"Method of name '{Name}' not found", RCaronExceptionCode.MethodNotFound);
     }
 
-    // public record Arguments(object[] Positional, string[] NamedNames, object[] NamedValues);
     public record FunnyArguments(Expression[] Positional, Dictionary<string, Expression> Named);
 }

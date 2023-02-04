@@ -115,36 +115,10 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
 
                     return Expression.Call(Expression.Constant(c), "Invoke", Array.Empty<Type>(), endTarget,
                         Expression.NewArrayInit(typeof(object), argsExpressionArray));
-                    //
-                    // // static class
-                    // if (t.IsSealed && t.IsAbstract)
-                    // {
-                    //     var staticContext = InvokeContext.CreateStatic;
-                    //     if (method is MethodInfo mi && mi.ReturnType == typeof(void))
-                    //     {
-                    //         Dynamic.InvokeMemberAction(target, method.Name, args);
-                    //         return RCaronInsideEnum.NoReturnValue;
-                    //     }
-                    //
-                    //     return Dynamic.InvokeMember(staticContext(t), method.Name, args);
-                    // }
-                    // else
-                    // {
-                    //     if (method is MethodInfo mi && mi.ReturnType == typeof(void))
-                    //     {
-                    //         Dynamic.InvokeMemberAction(target, method.Name, args);
-                    //         return RCaronInsideEnum.NoReturnValue;
-                    //     }
-                    //
-                    //     return Dynamic.InvokeMember(target, method.Name, args);
-                    // }
                 }
 
                 return new DynamicMetaObject(GetExpression().EnsureIsType(ReturnType),
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
-                // return new DynamicMetaObject(Expression.Call(null, methodInfo2,
-                //     argsExpressionArray),
-                // BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
             }
 
             return method is ConstructorInfo ? throw new() :

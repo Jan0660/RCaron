@@ -27,8 +27,6 @@ public class RCaronSetMemberBinder : SetMemberBinder
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (property != null)
         {
-            // return new DynamicMetaObject(Expression.Property(target.Expression, property).EnsureIsType(ReturnType),
-            //     GetRestrictions(target));
             var exp = Expression
                 .Assign(Expression.Property(target.Expression, property),
                     Expression.Convert(value.Expression, property.PropertyType)).EnsureIsType(ReturnType);
