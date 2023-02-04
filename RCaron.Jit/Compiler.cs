@@ -403,7 +403,7 @@ public class Compiler
                 else if (t is KeywordToken keywordToken)
                 {
                     value = DynamicExpression.Dynamic(
-                        new RCaronGetMemberBinder(keywordToken.String, true, parsed.FileScope),
+                        new RCaronGetMemberBinder(keywordToken.String, true, compiledContext),
                         typeof(object),
                         value);
                 }

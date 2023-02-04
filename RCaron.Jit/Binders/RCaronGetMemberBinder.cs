@@ -8,10 +8,11 @@ namespace RCaron.Jit.Binders;
 
 public class RCaronGetMemberBinder : GetMemberBinder
 {
-    public FileScope FileScope { get; }
-    public RCaronGetMemberBinder(string name, bool ignoreCase, FileScope fileScope) : base(name, ignoreCase)
+    public CompiledContext Context { get; }
+    public FileScope FileScope => Context.FileScope;
+    public RCaronGetMemberBinder(string name, bool ignoreCase, CompiledContext context) : base(name, ignoreCase)
     {
-        FileScope = fileScope;
+        Context = context;
     }
 
     public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject? errorSuggestion)
@@ -47,6 +48,20 @@ public class RCaronGetMemberBinder : GetMemberBinder
                     typeof(IDictionary).GetMethod("get_Item")!,
                     Expression.Constant(Name)),
                 GetRestrictions(target));
+        }
+
+        if (FileScope.PropertyAccessors != null && target.HasValue)
+        {
+            var motor = (Motor)Context.FakedMotorConstant.Value!;
+            var value = target.Value;
+            var type = target.RuntimeType;
+            foreach (var propertyAccessor in FileScope.PropertyAccessors)
+            {
+                if (propertyAccessor.Do(motor, Name, ref value, ref type))
+                {
+                    return new DynamicMetaObject(Expression.Constant(value), Util.GetValidOnceRestriction());
+                }
+            }
         }
 
         throw new RCaronException($"Unable to find property or field {Name} on type {target.RuntimeType.Name}", RCaronExceptionCode.CannotResolveInDotThing);
