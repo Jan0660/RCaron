@@ -371,4 +371,25 @@ $h = $h + 1;");
         m.AssertVariableEquals("h", 7L);
         Assert.Equal(0, m.BlockStack.Count);
     }
+
+    [Fact]
+    public void LetVariable()
+    {
+        var m = RCaronRunner.Run(@"
+let $h = 1;
+$h = $h + 1;");
+        m.AssertVariableEquals("h", 2L);
+        ExtraAssert.ThrowsCode(() =>
+        {
+            var m = RCaronRunner.Run(@"
+let $h = 1;
+$h = 1.2;");
+        }, RCaronExceptionCode.LetVariableTypeMismatch);
+        ExtraAssert.ThrowsCode(() =>
+        {
+            var m = RCaronRunner.Run(@"
+let $h = 1;
+$h = $null;");
+        }, RCaronExceptionCode.LetVariableTypeMismatch);
+    }
 }

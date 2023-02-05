@@ -11,6 +11,8 @@ public class LocalScope
     {
         if (Variables == null || !Variables.TryGetValue(name, out var value))
             return RCaronInsideEnum.VariableNotFound;
+        if(value is LetVariableValue letVal)
+            value = letVal.Value;
         return value;
     }
 
@@ -23,7 +25,12 @@ public class LocalScope
     public virtual void SetVariable(string name, in object? value)
     {
         Variables ??= new();
-        Variables[name] = value;
+        ref var r = ref CollectionsMarshal.GetValueRefOrAddDefault(Variables, name, out var exists);
+        if (exists && r is LetVariableValue letVal && !letVal.Type.IsInstanceOfType(value))
+        {
+            throw RCaronException.LetVariableTypeMismatch(name, letVal.Type, value?.GetType() ?? typeof(object));
+        }
+        r = value;
     }
 
     public virtual ref object? GetVariableRef(string name)

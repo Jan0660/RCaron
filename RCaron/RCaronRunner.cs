@@ -462,6 +462,17 @@ public static class RCaronRunner
             res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
             i = endingIndex;
         }
+        // let variable assignment
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "let") &&
+                 tokens[i + 1] is VariableToken && tokens[i + 2].Type == TokenType.Operation &&
+                 tokens[i + 2].EqualsString(text, "="))
+        {
+            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
+            if (endingIndex == -1)
+                endingIndex = tokens.Length;
+            res = new TokenLine(tokens[i..(endingIndex)], LineType.LetVariableAssignment);
+            i = endingIndex;
+        }
         else if (callToken != null && callToken.NameEquals(text, "switch"))
         {
             res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchStatement);

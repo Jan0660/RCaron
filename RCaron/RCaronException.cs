@@ -26,6 +26,7 @@ public enum RCaronExceptionCode
 
     // todo(current): remove support for positional arguments after named arguments in LibrarySourceGenerator
     PositionalArgumentAfterNamedArgument,
+    LetVariableTypeMismatch,
 }
 
 public class RCaronException : Exception
@@ -64,4 +65,8 @@ public class RCaronException : Exception
     public static RCaronException PositionalArgumentAfterNamedArgument()
         => new("hit positional argument after a named one",
             RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
+
+    public static RCaronException LetVariableTypeMismatch(string name, Type type, Type valueType)
+        => new($"let-variable '{name}' is of type '{type}' and cannot be assigned a value of type '{valueType}'",
+            RCaronExceptionCode.LetVariableTypeMismatch);
 }

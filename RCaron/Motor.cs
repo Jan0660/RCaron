@@ -223,6 +223,14 @@ public class Motor
                 Debug.WriteLine($"variable '{variableName}' set to '{obj}'");
                 break;
             }
+            case LineType.LetVariableAssignment:
+            {
+                var variableName = ((VariableToken)line.Tokens[1]).Name;
+                var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(3..));
+                SetVar(variableName, new LetVariableValue(obj?.GetType() ?? typeof(object), obj));
+                Debug.WriteLine($"let-variable '{variableName}' set to '{obj}'");
+                break;
+            }
             case LineType.AssignerAssignment:
             {
                 IAssigner assigner = null;

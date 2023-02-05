@@ -536,9 +536,24 @@ public class Compiler
                     var varExp = GetOrNewVariable(vt.Name);
 
                     var right = GetHighExpression(tokenLine.Tokens.Segment(2..));
-                    // var right = GetMathExpression(tokenLine.Tokens.AsSpan()[2..]);
-                    if (right.Type != typeof(object))
-                        right = Expression.Convert(right, typeof(object));
+                    if (varExp.Type != typeof(object) && varExp.Type != right.Type)
+                        right = Expression.Condition(Expression.TypeIs(right, varExp.Type), right.EnsureIsType(varExp.Type),
+                            Expression.Throw(Expression.Call(typeof(RCaronException).GetMethod(nameof(RCaronException.LetVariableTypeMismatch))!,
+                                Expression.Constant(vt.Name),
+                                Expression.Constant(varExp.Type), Expression.Constant(right.Type)), varExp.Type));
+                    else
+                        right = right.EnsureIsType(varExp.Type);
+                    expressions.Add(Expression.Assign(varExp, right));
+
+                    IfFakedAssignVariable(vt.Name, varExp, expressions);
+
+                    break;
+                }
+                case TokenLine { Type: LineType.LetVariableAssignment } tokenLine:
+                {
+                    var right = GetHighExpression(tokenLine.Tokens.Segment(3..));
+                    var vt = (VariableToken)tokenLine.Tokens[1];
+                    var varExp = GetOrNewVariable(vt.Name, specificType: right.Type);
                     expressions.Add(Expression.Assign(varExp, right));
 
                     IfFakedAssignVariable(vt.Name, varExp, expressions);
