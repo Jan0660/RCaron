@@ -169,39 +169,8 @@ public class Compiler
             {
                 var opToken = (ValueOperationValuePosToken)tokens[i];
 
-                void Do(ExpressionType expressionType, in ReadOnlySpan<PosToken> tokens)
-                {
-                    exp = Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None, expressionType, null,
-                            new[]
-                            {
-                                CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                                CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-                            }), typeof(object), exp,
-                        GetSingleExpression(tokens[++i]));
-                }
-
                 switch (opToken.Operation)
                 {
-                    case OperationEnum.Sum:
-                        Do(ExpressionType.Add, tokens);
-                        // exp = Expression.Add(exp, GetSingleExpression(tokens[++i]));
-                        break;
-                    case OperationEnum.Subtract:
-                        Do(ExpressionType.Subtract, tokens);
-                        // exp = Expression.Subtract(exp, GetSingleExpression(tokens[++i]));
-                        break;
-                    case OperationEnum.Divide:
-                        Do(ExpressionType.Divide, tokens);
-                        // exp = Expression.Divide(exp, GetSingleExpression(tokens[++i]));
-                        break;
-                    case OperationEnum.Multiply:
-                        Do(ExpressionType.Multiply, tokens);
-                        // exp = Expression.Multiply(exp, GetSingleExpression(tokens[++i]));
-                        break;
-                    case OperationEnum.Modulo:
-                        Do(ExpressionType.Modulo, tokens);
-                        // exp = Expression.Modulo(exp, GetSingleExpression(tokens[++i]));
-                        break;
                     case OperationEnum.Range:
                     {
                         if (exp is ConstantExpression constantExpression)
@@ -222,6 +191,12 @@ public class Compiler
                             }
                         }
 
+                        break;
+                    }
+                    default:
+                    {
+                        exp = Expression.Dynamic(RCaronUtil.GetBinaryOperationBinder(opToken.Operation), typeof(object), exp,
+                            GetSingleExpression(tokens[++i]));
                         break;
                     }
                 }

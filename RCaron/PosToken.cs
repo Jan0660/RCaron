@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace RCaron;
 
@@ -258,6 +259,7 @@ public class IndexerToken : PosToken
 public class ValueOperationValuePosToken : ValuePosToken
 {
     public OperationEnum Operation { get; }
+    public CallSite<Func<CallSite, object, object, object>>? CallSite { get; set; }
 
     public ValueOperationValuePosToken(TokenType type, (int Start, int End) position, OperationEnum operation) : base(
         type, position)

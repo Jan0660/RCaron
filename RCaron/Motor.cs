@@ -3,14 +3,17 @@ using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Globalization;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
+using Microsoft.CSharp.RuntimeBinder;
 using RCaron.BaseLibrary;
 using RCaron.Classes;
+using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 using Console = Log73.Console;
 using ExceptionCode = RCaron.RCaronExceptionCode;
 
@@ -1140,21 +1143,6 @@ public class Motor
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
             switch (op.Operation)
             {
-                case OperationEnum.Sum:
-                    Horrors.AddTo(ref value, second);
-                    break;
-                case OperationEnum.Subtract:
-                    value = Horrors.Subtract(value, second);
-                    break;
-                case OperationEnum.Multiply:
-                    value = Horrors.Multiply(value, second);
-                    break;
-                case OperationEnum.Divide:
-                    value = Horrors.Divide(value, second);
-                    break;
-                case OperationEnum.Modulo:
-                    value = Horrors.Modulo(value, second);
-                    break;
                 case OperationEnum.Range:
                 {
                     var long1 = value as long?;
@@ -1167,7 +1155,9 @@ public class Motor
                     break;
                 }
                 default:
-                    throw new Exception($"invalid operation: {op}");
+                    op.CallSite ??= RCaronUtil.GetBinaryOperationCallSite(op.Operation);
+                    value = op.CallSite.Target(op.CallSite, value, second);
+                    break;
             }
 
             index += 2;
