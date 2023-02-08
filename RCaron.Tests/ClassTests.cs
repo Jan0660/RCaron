@@ -94,4 +94,35 @@ $h = #Funny:New().Function(4);
 ");
         m.AssertVariableEquals("h", 6L);
     }
+
+    [Fact]
+    public void ClassFunctionNotFound()
+    {
+        ExtraAssert.ThrowsCode(() =>
+        {
+            RCaronRunner.Run(@"
+class Funny {
+}
+$h = #Funny:New().Function();");
+        }, RCaronExceptionCode.ClassFunctionNotFound);
+    }
+
+    [Fact]
+    public void ClassPropertyNotFound()
+    {
+        ExtraAssert.ThrowsCode(() =>
+        {
+            RCaronRunner.Run(@"
+class Funny {
+}
+$h = #Funny:New().noprop;");
+        }, RCaronExceptionCode.ClassPropertyNotFound);
+        ExtraAssert.ThrowsCode(() =>
+        {
+            RCaronRunner.Run(@"
+class Funny {
+}
+#Funny:New().noprop = 0;");
+        }, RCaronExceptionCode.ClassPropertyNotFound);
+    }
 }

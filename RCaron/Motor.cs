@@ -2,6 +2,7 @@ using System.Buffers;
 using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
+using System.Dynamic;
 using System.Globalization;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -12,6 +13,7 @@ using JetBrains.Annotations;
 using Log73;
 using Microsoft.CSharp.RuntimeBinder;
 using RCaron.BaseLibrary;
+using RCaron.Binders;
 using RCaron.Classes;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 using Console = Log73.Console;
@@ -720,14 +722,14 @@ public class Motor
                     target = obj;
                     type = obj.GetType();
                 }
-
+        
                 goto resolveMethod;
             }
-
+        
             resolveMethod: ;
             var (bestMethod, needsNumericConversion, isExtensionMethod) =
                 MethodResolver.Resolve(name, type, (fileScope ??= GetFileScope()), instance, args);
-
+        
             if (isExtensionMethod)
             {
                 var argsNew = new object[args.Length + 1];
@@ -735,7 +737,7 @@ public class Motor
                 argsNew[0] = target;
                 args = argsNew;
             }
-
+        
             // mismatch count arguments -> equate it out with default values
             // is equate even a word?
             var paramss = bestMethod.GetParameters();
@@ -747,10 +749,10 @@ public class Motor
                 {
                     argsNew[i] = paramss[i].DefaultValue!;
                 }
-
+        
                 args = argsNew;
             }
-
+        
             // numeric conversions
             if (needsNumericConversion)
             {
@@ -760,7 +762,7 @@ public class Motor
                         args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
                 }
             }
-
+        
             // generic method handling aaa
             if (bestMethod.IsGenericMethod)
             {
@@ -775,7 +777,7 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
-
+        
                     return Dynamic.InvokeMember(staticContext(t), bestMethod.Name, args);
                 }
                 else
@@ -785,16 +787,16 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
-
+        
                     return Dynamic.InvokeMember(target, bestMethod.Name, args);
                 }
             }
-
+        
             if (bestMethod is ConstructorInfo constructorInfo)
             {
                 return constructorInfo.Invoke(args);
             }
-
+        
             return bestMethod.Invoke(target, args);
         }
 
@@ -831,12 +833,11 @@ public class Motor
                 if (val is ClassInstance classInstance)
                 {
                     if (classInstance.PropertyValues == null)
-                        throw new RCaronException("Class has no properties", RCaronExceptionCode.ClassNoProperties);
+                        throw RCaronException.ClassPropertyNotFound();
                     var i = classInstance.GetPropertyIndex(keywordToken.String);
                     if (i != -1)
                         return new ClassAssigner(classInstance, i);
-                    throw new RCaronException($"Class property of name '{keywordToken.String}' not found",
-                        RCaronExceptionCode.ClassPropertyNotFound);
+                    throw RCaronException.ClassPropertyNotFound(keywordToken.String);
                 }
 
                 str = keywordToken.String;
@@ -895,63 +896,12 @@ public class Motor
             {
                 var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
 
-                var fileScope = GetFileScope();
-                if (fileScope.IndexerImplementations != null)
-                {
-                    var broke = false;
-                    for (var j = 0; j < fileScope.IndexerImplementations.Count; j++)
-                    {
-                        if (fileScope.IndexerImplementations[j].Do(this, evaluated, ref val, ref type))
-                        {
-                            broke = true;
-                            break;
-                        }
-                    }
-
-                    if (broke)
-                        continue;
-                }
-
-                if (val is IDictionary dict)
-                {
-                    var args = type.GetGenericArguments();
-                    var keyType = args[0];
-                    val = dict[Convert.ChangeType(evaluated, keyType)!];
-                    type = val?.GetType();
-                    continue;
-                }
-
-                // todo(perf): for some reason non-throwing Convert methods don't exist
-                object? asInt;
-                try
-                {
-                    asInt = Convert.ChangeType(evaluated, typeof(int));
-                }
-                catch (FormatException)
-                {
-                    asInt = null;
-                }
-
-                if (asInt != null)
-                {
-                    var intIndex = (int)asInt;
-                    if (val is IList list)
-                    {
-                        val = list[intIndex];
-                        type = val?.GetType();
-                        continue;
-                    }
-
-                    if (val is Array array)
-                    {
-                        val = array.GetValue(intIndex);
-                        type = val?.GetType();
-                        continue;
-                    }
-                }
-
-                throw new RCaronException("could not get array accessor",
-                    RCaronExceptionCode.NoSuitableIndexerImplementation);
+                arrayAccessorToken.CallSite ??=
+                    CallSite<Func<CallSite, object?, object?, object?>>.Create(
+                        new RCaronGetIndexBinder(new CallInfo(1), GetFileScope(), this));
+                val = arrayAccessorToken.CallSite.Target(arrayAccessorToken.CallSite, val, evaluated);
+                type = val?.GetType();
+                continue;
             }
 
             if (instanceTokens[i] is CallLikePosToken callLikePosToken)
@@ -976,8 +926,7 @@ public class Motor
                 {
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)
-                        throw new RCaronException($"Class function '{callLikePosToken.Name}' not found",
-                            RCaronExceptionCode.ClassFunctionNotFound);
+                        throw RCaronException.ClassFunctionNotFound(callLikePosToken.Name);
                     val = FunctionCall(func, callLikePosToken, classInstance: classInstance);
                     type = val?.GetType();
                     continue;
@@ -991,8 +940,13 @@ public class Motor
 
             if (val is ClassInstance classInstance1)
             {
-                val = classInstance1.PropertyValues[
-                    classInstance1.GetPropertyIndex(((KeywordToken)instanceTokens[i]).String)];
+                if (classInstance1.PropertyValues == null)
+                    throw RCaronException.ClassPropertyNotFound();
+                var name = ((KeywordToken)instanceTokens[i]).String;
+                var index = classInstance1.GetPropertyIndex(name);
+                if (index == -1)
+                    throw RCaronException.ClassPropertyNotFound(name);
+                val = classInstance1.PropertyValues[index];
                 type = val?.GetType();
                 continue;
             }
@@ -1155,7 +1109,7 @@ public class Motor
                     break;
                 }
                 default:
-                    op.CallSite ??= RCaronUtil.GetBinaryOperationCallSite(op.Operation);
+                    op.CallSite ??= BinderUtil.GetBinaryOperationCallSite(op.Operation);
                     value = op.CallSite.Target(op.CallSite, value, second);
                     break;
             }

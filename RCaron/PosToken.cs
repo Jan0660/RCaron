@@ -248,6 +248,7 @@ public class DotGroupPosToken : ValuePosToken
 public class IndexerToken : PosToken
 {
     public PosToken[] Tokens { get; }
+    public CallSite<Func<CallSite, object?, object?, object?>>? CallSite { get; set; }
 
     public IndexerToken(PosToken[] tokens) : base(TokenType.Indexer,
         (tokens[0].Position.Start, tokens[^1].Position.End))

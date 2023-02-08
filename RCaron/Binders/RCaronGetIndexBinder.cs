@@ -1,10 +1,11 @@
 ﻿using System.Buffers;
+using System.Diagnostics;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using ZSpitz.Util;
 
-namespace RCaron.Jit.Binders;
+namespace RCaron.Binders;
 
 public class RCaronGetIndexBinder : GetIndexBinder
 {
@@ -26,7 +27,6 @@ public class RCaronGetIndexBinder : GetIndexBinder
                 Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
-        // todo(feat-fullness): if target is IDynamicMetaObjectProvider
         if (target.LimitType.IsArray)
         {
             Expression ix = Expression.ArrayIndex(Expression.Convert(target.Expression, target.LimitType),
@@ -113,7 +113,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
                             // todo: make another interface that allows the indexer to specify its own restrictions
                             BindingRestrictions.GetInstanceRestriction(target.Expression, target.Value)
                                 .Merge(BindingRestrictions.GetExpressionRestriction(
-                                    Expression.Equal(indexes[0].Expression, Expression.Constant(indexes[0].Value)))));
+                                    Expression.Equal(indexes[0].Expression.EnsureIsType(indexes[0].RuntimeType), Expression.Constant(indexes[0].Value)))));
                     }
                 }
             }
@@ -132,7 +132,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
             }
             else
             {
-                args[i] = Expression.Convert(indexes[i].Expression, @params[i].ParameterType);
+                args[i] = Expression.Convert(indexes[i].Expression.EnsureIsType(indexes[i].LimitType), @params[i].ParameterType);
             }
         }
 
