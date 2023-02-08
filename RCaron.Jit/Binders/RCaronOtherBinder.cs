@@ -2,6 +2,7 @@
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
+using RCaron.Binders;
 using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.Jit.Binders;
@@ -30,7 +31,6 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
                 if (func.Value.OriginalFunction.Arguments is not null)
                 {
                     var arguments = func.Value.OriginalFunction.Arguments;
-                    // var exps = new Expression?[arguments.Length];
                     if (Arguments.Positional.Length > arguments.Length)
                         throw RCaronException.LeftOverPositionalArgument();
                     exps = new Expression?[arguments.Length];

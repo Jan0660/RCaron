@@ -1,6 +1,7 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
+using RCaron.Binders;
 
 namespace RCaron.Jit.Binders;
 
@@ -16,10 +17,10 @@ public class RCaronSetMemberBinder : SetMemberBinder
     public override DynamicMetaObject FallbackSetMember(DynamicMetaObject target, DynamicMetaObject value,
         DynamicMetaObject? errorSuggestion)
     {
-        if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
+        if (target.LimitType.IsAssignableTo(typeof(IDynamicMetaObjectProvider)))
         {
             return new DynamicMetaObject(
-                Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
+                Expression.Call(target.Expression.EnsureIsType(target.LimitType), "GetMetaObject", Array.Empty<Type>(), Expression.Constant(target.Expression)),
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
 

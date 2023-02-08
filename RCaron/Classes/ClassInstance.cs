@@ -60,15 +60,7 @@ public sealed class ClassInstance : IDynamicMetaObjectProvider
                     ),
                     GetDefinitionRestriction());
             }
-            // {
-            //     var restrictions = BindingRestrictions.GetTypeRestriction(Expression, LimitType);
-            //     // var propertyValues = Expression.Property(Expression.Constant(instance), nameof(PropertyValues));
-            //     // var propertyValue = Expression.ArrayAccess(propertyValues, Expression.Constant(index));
-            //     // return new DynamicMetaObject(propertyValue, restrictions);
-            //     return new DynamicMetaObject(Expression.Constant(value), restrictions);
-            // }
-
-            return base.BindGetMember(binder);
+            throw RCaronException.ClassPropertyNotFound(binder.Name);
         }
 
         public override DynamicMetaObject BindSetMember(SetMemberBinder binder, DynamicMetaObject value)
@@ -87,8 +79,7 @@ public sealed class ClassInstance : IDynamicMetaObjectProvider
                 var block = Expression.Block(assign);
                 return new DynamicMetaObject(block, GetDefinitionRestriction());
             }
-
-            return base.BindSetMember(binder, value);
+            throw RCaronException.ClassPropertyNotFound(binder.Name);
         }
         
         private BindingRestrictions GetDefinitionRestriction()

@@ -7,6 +7,7 @@ using JetBrains.Annotations;
 using Microsoft.CSharp.RuntimeBinder;
 using RCaron.Classes;
 using RCaron.Jit.Binders;
+using RCaron.Binders;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.Jit;
@@ -195,7 +196,8 @@ public class Compiler
                     }
                     default:
                     {
-                        exp = Expression.Dynamic(RCaronUtil.GetBinaryOperationBinder(opToken.Operation), typeof(object), exp,
+                        exp = Expression.Dynamic(BinderUtil.GetBinaryOperationBinder(opToken.Operation), typeof(object),
+                            exp,
                             GetSingleExpression(tokens[++i]));
                         break;
                     }
@@ -512,8 +514,10 @@ public class Compiler
 
                     var right = GetHighExpression(tokenLine.Tokens.Segment(2..));
                     if (varExp.Type != typeof(object) && varExp.Type != right.Type)
-                        right = Expression.Condition(Expression.TypeIs(right, varExp.Type), right.EnsureIsType(varExp.Type),
-                            Expression.Throw(Expression.Call(typeof(RCaronException).GetMethod(nameof(RCaronException.LetVariableTypeMismatch))!,
+                        right = Expression.Condition(Expression.TypeIs(right, varExp.Type),
+                            right.EnsureIsType(varExp.Type),
+                            Expression.Throw(Expression.Call(
+                                typeof(RCaronException).GetMethod(nameof(RCaronException.LetVariableTypeMismatch))!,
                                 Expression.Constant(vt.Name),
                                 Expression.Constant(varExp.Type), Expression.Constant(right.Type)), varExp.Type));
                     else

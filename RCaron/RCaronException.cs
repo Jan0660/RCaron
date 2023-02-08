@@ -19,7 +19,6 @@ public enum RCaronExceptionCode
     CannotResolveInDotThing,
     TypeNotFound,
     ClassFunctionNotFound,
-    ClassNoProperties,
     ClassPropertyNotFound,
     NoSuitableIndexerImplementation,
     InvalidEscape,
@@ -69,4 +68,14 @@ public class RCaronException : Exception
     public static RCaronException LetVariableTypeMismatch(string name, Type type, Type valueType)
         => new($"let-variable '{name}' is of type '{type}' and cannot be assigned a value of type '{valueType}'",
             RCaronExceptionCode.LetVariableTypeMismatch);
+
+    public static RCaronException ClassPropertyNotFound()
+        => new("Class has no properties", RCaronExceptionCode.ClassPropertyNotFound);
+
+    public static RCaronException ClassPropertyNotFound(string propertyName)
+        => new($"Class property of name '{propertyName}' not found", RCaronExceptionCode.ClassPropertyNotFound);
+
+    public static RCaronException ClassFunctionNotFound(string functionName)
+        => new($"Class function '{functionName}' not found",
+            RCaronExceptionCode.ClassFunctionNotFound);
 }

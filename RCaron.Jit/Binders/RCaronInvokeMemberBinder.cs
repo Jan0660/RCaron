@@ -2,8 +2,8 @@
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
-using DotNext.Reflection;
 using Dynamitey;
+using RCaron.Binders;
 using RCaron.Classes;
 
 namespace RCaron.Jit.Binders;
@@ -11,7 +11,6 @@ namespace RCaron.Jit.Binders;
 public class RCaronInvokeMemberBinder : InvokeMemberBinder
 {
     public CompiledContext Context { get; }
-    public FileScope FileScope => Context.FileScope;
 
     public RCaronInvokeMemberBinder(string name, bool ignoreCase, CallInfo callInfo, CompiledContext context) : base(
         name,
@@ -71,7 +70,9 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
         {
             var classInstance = (ClassInstance)target.Value!;
             var compiledClass = Context.GetClass(classInstance.Definition);
-            var compiledFunction = compiledClass.Functions[Name];
+            var compiledFunction = compiledClass?.Functions?[Name];
+            if (compiledFunction == null)
+                throw RCaronException.ClassFunctionNotFound(Name);
             return new DynamicMetaObject(Expression.Call(Expression.Constant(compiledFunction),
                     typeof(CompiledFunction).GetMethod(nameof(CompiledFunction.Invoke))!,
                     Expression.NewArrayInit(typeof(object), args.Select(x => x.Expression).Prepend(target.Expression))),
@@ -89,7 +90,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
 
         {
             var (method, needsNumericConversion, isExtensionMethod) = MethodResolver.Resolve(Name, target.LimitType,
-                FileScope, target.Value, args.Select(x => x.Value).ToArray());
+                Context.FileScope, target.Value, args.Select(x => x.Value).ToArray());
             var argsExpressionEnumerable = args.Select(x => x.Expression);
             var argsExpressionArray = isExtensionMethod
                 ? argsExpressionEnumerable.Prepend(target.Expression).ToArray()

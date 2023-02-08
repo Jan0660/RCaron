@@ -3,6 +3,7 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using Dynamitey.DynamicObjects;
+using RCaron.Binders;
 
 namespace RCaron.Jit.Binders;
 
@@ -10,6 +11,7 @@ public class RCaronGetMemberBinder : GetMemberBinder
 {
     public CompiledContext Context { get; }
     public FileScope FileScope => Context.FileScope;
+
     public RCaronGetMemberBinder(string name, bool ignoreCase, CompiledContext context) : base(name, ignoreCase)
     {
         Context = context;
@@ -17,10 +19,11 @@ public class RCaronGetMemberBinder : GetMemberBinder
 
     public override DynamicMetaObject FallbackGetMember(DynamicMetaObject target, DynamicMetaObject? errorSuggestion)
     {
-        if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
+        if (target.LimitType.IsAssignableTo(typeof(IDynamicMetaObjectProvider)))
         {
             return new DynamicMetaObject(
-                Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
+                Expression.Call(target.Expression.EnsureIsType(target.LimitType), "GetMetaObject", Array.Empty<Type>(),
+                    Expression.Constant(target.Expression)),
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
 
@@ -28,7 +31,9 @@ public class RCaronGetMemberBinder : GetMemberBinder
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (property != null)
         {
-            return new DynamicMetaObject(Expression.Property(target.Expression.EnsureIsType(target.RuntimeType), property).EnsureIsType(ReturnType),
+            return new DynamicMetaObject(
+                Expression.Property(target.Expression.EnsureIsType(target.RuntimeType), property)
+                    .EnsureIsType(ReturnType),
                 GetRestrictions(target));
         }
 
@@ -36,7 +41,8 @@ public class RCaronGetMemberBinder : GetMemberBinder
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (field != null)
         {
-            return new DynamicMetaObject(Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field).EnsureIsType(ReturnType),
+            return new DynamicMetaObject(
+                Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field).EnsureIsType(ReturnType),
                 GetRestrictions(target));
         }
 
@@ -59,12 +65,13 @@ public class RCaronGetMemberBinder : GetMemberBinder
             {
                 if (propertyAccessor.Do(motor, Name, ref value, ref type))
                 {
-                    return new DynamicMetaObject(Expression.Constant(value), Util.GetValidOnceRestriction());
+                    return new DynamicMetaObject(Expression.Constant(value), BinderUtil.GetValidOnceRestriction());
                 }
             }
         }
 
-        throw new RCaronException($"Unable to find property or field {Name} on type {target.RuntimeType.Name}", RCaronExceptionCode.CannotResolveInDotThing);
+        throw new RCaronException($"Unable to find property or field {Name} on type {target.RuntimeType.Name}",
+            RCaronExceptionCode.CannotResolveInDotThing);
     }
 
     private BindingRestrictions GetRestrictions(DynamicMetaObject target)
