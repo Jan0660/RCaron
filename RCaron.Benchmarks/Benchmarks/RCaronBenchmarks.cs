@@ -9,7 +9,7 @@ namespace RCaron.Benchmarks.Benchmarks;
 public class RCaronBenchmarks
 {
     public const string SimpleMathOp = "$h = 2 * (2 + 3);";
-    public const string FibbonaciCode = @"
+    public const string FibonacciCode = @"
 $a = 0; $b = 1; $c = 0;
 
 for($i = 0; $i < 2; $i++) {
@@ -19,17 +19,21 @@ for($i = 0; $i < 2; $i++) {
 }
 ";
     public Motor SimpleMathOpMotor { get; set; }
-    public Motor FibbonaciMotor { get; set; }
+    public Motor FibonacciMotor { get; set; }
     public Delegate SimpleMathOpCompiled { get; set; }
-    public Delegate FibbonaciCompiled { get; set; }
+    public Delegate FibonacciCompiled { get; set; }
+    public Delegate SimpleMathOpInterpreted { get; set; }
+    public Delegate FibonacciInterpreted { get; set; }
 
     [GlobalSetup]
     public void GlobalSetup()
     {
         SimpleMathOpMotor = new Motor(RCaronRunner.Parse(SimpleMathOp));
-        FibbonaciMotor = new Motor(RCaronRunner.Parse(FibbonaciCode));
+        FibonacciMotor = new Motor(RCaronRunner.Parse(FibonacciCode));
         SimpleMathOpCompiled = Hook.CompileWithNoMotor(SimpleMathOp);
-        FibbonaciCompiled = Hook.CompileWithNoMotor(FibbonaciCode);
+        FibonacciCompiled = Hook.CompileWithNoMotor(FibonacciCode);
+        SimpleMathOpInterpreted = Hook.MakeInterpretedWithNoMotor(SimpleMathOp, int.MaxValue);
+        FibonacciInterpreted = Hook.MakeInterpretedWithNoMotor(FibonacciCode, int.MaxValue);
     }
     [Benchmark(Baseline = true)]
     public void SimpleMathOpFull()
@@ -43,15 +47,15 @@ for($i = 0; $i < 2; $i++) {
         SimpleMathOpMotor.Run();
     }
     [Benchmark]
-    public void FibbonaciFull()
+    public void FibonacciFull()
     {
-        RCaronRunner.Run(FibbonaciCode);
+        RCaronRunner.Run(FibonacciCode);
     }
 
     [Benchmark]
-    public void FibbonaciParsed()
+    public void FibonacciParsed()
     {
-        FibbonaciMotor.Run();
+        FibonacciMotor.Run();
     }
     
     [Benchmark]
@@ -66,14 +70,37 @@ for($i = 0; $i < 2; $i++) {
         SimpleMathOpCompiled.DynamicInvoke();
     }
     [Benchmark]
-    public void FibbonaciFull_Jit()
+    public void FibonacciFull_Jit()
     {
-        Hook.RunWithNoMotor(FibbonaciCode);
+        Hook.RunWithNoMotor(FibonacciCode);
     }
 
     [Benchmark]
-    public void FibbonaciParsed_Jit()
+    public void FibonacciParsed_Jit()
     {
-        FibbonaciCompiled.DynamicInvoke();
+        FibonacciCompiled.DynamicInvoke();
+    }
+    
+    [Benchmark]
+    public void SimpleMathOpFull_JitInterpret()
+    {
+        Hook.MakeInterpretedWithNoMotor(SimpleMathOp).DynamicInvoke();
+    }
+
+    [Benchmark]
+    public void SimpleMathOpParsed_JitInterpret()
+    {
+        SimpleMathOpInterpreted.DynamicInvoke();
+    }
+    [Benchmark]
+    public void FibonacciFull_JitInterpret()
+    {
+        Hook.MakeInterpretedWithNoMotor(FibonacciCode).DynamicInvoke();
+    }
+
+    [Benchmark]
+    public void FibonacciParsed_JitInterpret()
+    {
+        FibonacciInterpreted.DynamicInvoke();
     }
 }

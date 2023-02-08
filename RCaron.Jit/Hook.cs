@@ -2,11 +2,18 @@
 using System.Diagnostics;
 using System.Linq.Expressions;
 using ExpressionTreeToString;
+using Microsoft.Scripting.Generation;
 
 namespace RCaron.Jit;
 
 public static class Hook
 {
+    public static Delegate MakeInterpretedWithNoMotor(string code, int compilationThreshold = -1)
+    {
+        var block = Compiler.CompileToBlock(RCaronRunner.Parse(code));
+        var lambda = Expression.Lambda(block);
+        return lambda.LightCompile(compilationThreshold);
+    }
     public static Delegate CompileWithNoMotor(string code)
     {
         var block = Compiler.CompileToBlock(RCaronRunner.Parse(code));

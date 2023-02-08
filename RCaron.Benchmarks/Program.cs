@@ -34,13 +34,13 @@ switch (args[0])
     case "rcaron":
         BenchmarkRunner.Run<RCaronBenchmarks>();
         break;
-    case "dotTraceFibbonaciParsedRun":
+    case "dotTraceFibonacciParsedRun":
     {
         var benchmark = new RCaronBenchmarks();
         benchmark.GlobalSetup();
         for (var i = 0; i < 100_000_000; i++)
         {
-            benchmark.FibbonaciParsed();
+            benchmark.FibonacciParsed();
         }
 
         break;
