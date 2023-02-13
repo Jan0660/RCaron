@@ -1240,15 +1240,15 @@ public class Motor
 
     public bool EvaluateLogicalOperation(LogicalOperationValuePosToken comparisonValuePosToken)
     {
-        var val1 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left)!;
-        var val2 = (bool)SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right)!;
+        bool Evaluate(ValuePosToken token)
+            => (bool)SimpleEvaluateExpressionSingle(token)!;
         var op = comparisonValuePosToken.ComparisonToken;
         switch (op.Operation)
         {
             case OperationEnum.And:
-                return val1 && val2;
+                return Evaluate(comparisonValuePosToken.Left) && Evaluate(comparisonValuePosToken.Right);
             case OperationEnum.Or:
-                return val1 || val2;
+                return Evaluate(comparisonValuePosToken.Left) || Evaluate(comparisonValuePosToken.Right);
             default:
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
         }
