@@ -140,6 +140,6 @@ public class RCaronGetIndexBinder : GetIndexBinder
             Expression.MakeIndex(
                 target.Expression.Type == target.LimitType
                     ? target.Expression
-                    : Expression.Convert(target.Expression, target.LimitType), bestIndexer, args), target.Restrictions);
+                    : Expression.Convert(target.Expression, target.LimitType), bestIndexer, args).EnsureIsType(ReturnType), target.Restrictions);
     }
 }
