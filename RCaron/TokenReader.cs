@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Globalization;
 using Log73;
 
 namespace RCaron;
@@ -116,9 +117,9 @@ public class TokenReader
             position += index;
             if (isDecimal)
                 return new ConstToken(TokenType.DecimalNumber,
-                    (initialPosition, position), Decimal.Parse(text[initialPosition..position]));
+                    (initialPosition, position), Decimal.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
             return new ConstToken(TokenType.Number, (initialPosition, position),
-                Int64.Parse(text[initialPosition..position]));
+                Int64.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
         }
         // single line comment
         else if (txt[position] == '/' && txt[position + 1] == '/')
