@@ -18,7 +18,7 @@
         <PackageReference Include="ExpressionTreeToString" Version="3.4.71" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
-        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" />
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>
