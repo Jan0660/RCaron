@@ -3,9 +3,11 @@
     <PropertyGroup>
         <TargetFramework>netstandard2.0</TargetFramework>
         <LangVersion>11</LangVersion>
+        <IncludeBuildOutput>false</IncludeBuildOutput>
     </PropertyGroup>
 
     <ItemGroup>
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator.Attributes\RCaron.LibrarySourceGenerator.Attributes.csproj" />
         <PackageReference Include="IndexRange" Version="1.0.2" />
         <PackageReference Include="IsExternalInit" Version="1.0.3">
           <PrivateAssets>all</PrivateAssets>
@@ -18,9 +20,9 @@
         </PackageReference>
     </ItemGroup>
     
-    <ItemGroup>
-        <EmbeddedResource Include="MethodAttribute.cs" />
-        <EmbeddedResource Include="ModuleAttribute.cs" />
+    <ItemGroup><!--        <EmbeddedResource Include="MethodAttribute.cs" />-->
+<!--        <EmbeddedResource Include="ModuleAttribute.cs" />-->
+        <None Include="$(OutputPath)\$(AssemblyName).dll" Pack="true" PackagePath="analyzers/dotnet/cs" Visible="false" />
     </ItemGroup>
 
 </Project>

@@ -58,7 +58,7 @@ public class RCaronGetMemberBinder : GetMemberBinder
 
         if (FileScope.PropertyAccessors != null && target.HasValue)
         {
-            var motor = (Motor)Context.FakedMotorConstant.Value!;
+            var motor = Context.FakedMotor!;
             var value = target.Value;
             var type = target.RuntimeType;
             foreach (var propertyAccessor in FileScope.PropertyAccessors)

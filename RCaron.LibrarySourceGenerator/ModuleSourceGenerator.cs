@@ -59,6 +59,11 @@ using System.Linq;
 namespace {classSymbol.ContainingNamespace.ToDisplayString()};
 
 public partial class {classSymbol.Name}{{");
+                var moduleAttribute = classSymbol.GetAttributes().First(att =>
+                    att.AttributeClass.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute");
+                if (moduleAttribute.NamedArguments
+                    .Any(pair => pair is { Key: "ImplementModuleRun", Value.Value: false }))
+                    goto afterImplementModuleRun;
                 source.AppendLine(
                     @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken callToken){
 switch(name){");
@@ -92,8 +97,7 @@ switch(name){");
                 {
                     if (member is not IMethodSymbol methodSymbol)
                         continue;
-                    var att = member.GetAttributes().FirstOrDefault(att =>
-                        att.AttributeClass?.ToDisplayString() == "RCaron.LibrarySourceGenerator.MethodAttribute");
+                    var att = GetMethodAttribute(member);
                     if (att == null)
                         continue;
                     var name = (string)att.ConstructorArguments[0].Value;
@@ -128,23 +132,13 @@ switch(name){");
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
                             source.Append($"{param.Type.ToDisplayString()} {param.Name} = ");
 
-                            if (param.HasExplicitDefaultValue)
-                            {
-                                if (param.ExplicitDefaultValue is string str)
-                                    source.Append('"' + str + '"');
-                                if (param.ExplicitDefaultValue is bool boolean)
-                                    source.Append(boolean.ToString().ToLowerInvariant());
-                                else
-                                    source.Append(param.ExplicitDefaultValue?.ToString() ?? "default");
-                            }
-                            else
-                                source.Append("default");
+                            source.Append(GetDefaultValueString(param));
 
                             source.AppendLine(";");
                         }
 
                         // actual arguments parsing
-                        if(parameters.Length != 0)
+                        if (parameters.Length != 0)
                         {
                             source.AppendLine(@"var enumerator = callToken != null
                                 ? new ArgumentEnumerator(callToken)
@@ -234,8 +228,45 @@ else
                 source.AppendLine("}");
 
                 source.AppendLine("return RCaronInsideEnum.MethodNotFound;");
-                // method, class
+                // method
                 source.AppendLine("}");
+                afterImplementModuleRun: ;
+
+                foreach (var member in classSymbol.GetMembers())
+                {
+                    if (member is not IMethodSymbol { ReturnsVoid: true } methodSymbol)
+                        continue;
+                    if (GetMethodAttribute(member) == null)
+                        continue;
+                    source.Append(
+                        $"public object {methodSymbol.Name}_ReturnsNoReturnValue(");
+                    for (var i = 0; i < methodSymbol.Parameters.Length; i++)
+                    {
+                        var param = methodSymbol.Parameters[i];
+                        if (i != 0)
+                            source.Append(", ");
+                        source.Append($"{param.Type.ToDisplayString()} {param.Name}");
+                        if (param.HasExplicitDefaultValue)
+                            source.Append($" = {GetDefaultValueString(param)}");
+                    }
+
+                    source.Append(")");
+                    source.AppendLine("{");
+                    source.Append($@"{methodSymbol.Name}(");
+                    for (var i = 0; i < methodSymbol.Parameters.Length; i++)
+                    {
+                        var param = methodSymbol.Parameters[i];
+                        if (i != 0)
+                            source.Append(", ");
+                        source.Append($"{param.Name}: {param.Name}");
+                    }
+
+                    source.AppendLine(");");
+                    source.AppendLine("return (object)RCaronInsideEnum.NoReturnValue;");
+                    source.AppendLine("}");
+                }
+
+                // class
                 source.AppendLine("}");
                 context.AddSource($"{classSymbol.Name}.g.cs", source.ToString());
             }
@@ -243,22 +274,26 @@ else
 
         public void Initialize(GeneratorInitializationContext context)
         {
-            // Register the attribute sources
-            context.RegisterForPostInitialization((i) =>
-            {
-                void AddSource(string name)
-                {
-                    var assembly = typeof(ModuleSourceGenerator).Assembly;
-                    using var resource = assembly.GetManifestResourceStream($"RCaron.LibrarySourceGenerator.{name}.cs");
-                    using var reader = new StreamReader(resource);
-                    i.AddSource($"{name}.g.cs", reader.ReadToEnd());
-                }
-
-                AddSource("ModuleAttribute");
-                AddSource("MethodAttribute");
-            });
-
             context.RegisterForSyntaxNotifications(() => new SyntaxReceiver());
+        }
+
+        public static AttributeData GetMethodAttribute(ISymbol symbol)
+            => symbol.GetAttributes().FirstOrDefault(att =>
+                att.AttributeClass?.ToDisplayString() == "RCaron.LibrarySourceGenerator.MethodAttribute");
+
+        public static string GetDefaultValueString(IParameterSymbol param)
+        {
+            if (param.HasExplicitDefaultValue)
+            {
+                if (param.ExplicitDefaultValue is string str)
+                    return '"' + str + '"';
+                if (param.ExplicitDefaultValue is bool boolean)
+                    return boolean.ToString().ToLowerInvariant();
+                else
+                    return param.ExplicitDefaultValue?.ToString() ?? "default";
+            }
+
+            return "default";
         }
     }
 }

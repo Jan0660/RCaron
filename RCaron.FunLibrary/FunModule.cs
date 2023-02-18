@@ -48,49 +48,6 @@ public partial class FunModule : IRCaronModule
         Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
     }
 
-    [Method("Open-File")]
-    public void OpenFile(Motor motor, string path, string[]? functions = null, string[]? classes = null,
-        bool noRun = false)
-    {
-        var fileScope = motor.GetFileScope();
-        var p = RCaronRunner.Parse(File.ReadAllText(path));
-        p.FileScope.FileName = Path.GetFullPath(path);
-        if (!noRun)
-        {
-            var s = new Motor.StackThing(false, true, null, p.FileScope);
-            motor.BlockStack.Push(s);
-            motor.RunLinesList(p.FileScope.Lines);
-            if (motor.BlockStack.Peek() == s)
-                motor.BlockStack.Pop();
-        }
-
-        if (functions == null && classes == null)
-        {
-            fileScope.ImportedFileScopes ??= new();
-            fileScope.ImportedFileScopes.Add(p.FileScope);
-        }
-
-        if (functions != null)
-        {
-            fileScope.ImportedFunctions ??= new(StringComparer.InvariantCultureIgnoreCase);
-            foreach (var function in functions)
-            {
-                var f = p.FileScope.Functions[function];
-                fileScope.ImportedFunctions.Add(function, f);
-            }
-        }
-
-        if (classes != null)
-        {
-            fileScope.ImportedClassDefinitions ??= new();
-            foreach (var classDef in p.FileScope.ClassDefinitions)
-            {
-                if (classes.Contains(classDef.Name, StringComparer.InvariantCultureIgnoreCase))
-                    fileScope.ImportedClassDefinitions.Add(classDef);
-            }
-        }
-    }
-
     [Method("Convert-Array")]
     public object ConvertArray(Motor _, object[] array, RCaronType type)
     {

@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -19,6 +20,10 @@ public class Compiler
 
     public static BlockExpression CompileToBlock(
         RCaronRunnerContext parsed, Motor? fakedMotor = null)
+        => Compile(parsed, fakedMotor).blockExpression;
+
+    public static (BlockExpression blockExpression, CompiledContext compiledContext) Compile(
+        RCaronRunnerContext parsed, Motor? fakedMotor = null)
     {
         var contextStack = new NiceStack<Context>();
         var fakedMotorConstant = Expression.Constant(fakedMotor, typeof(Motor));
@@ -32,7 +37,9 @@ public class Compiler
             new(() => typeof(Log73.Console).GetMethod(nameof(Log73.Console.Debug), new[] { typeof(object) })!);
         var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
         var classes = new List<CompiledClass>();
-        var compiledContext = new CompiledContext(functions, parsed.FileScope, fakedMotorConstant, classes);
+        var compiledContext = new CompiledContext(functions, parsed.FileScope, fakedMotorConstant, classes, fakedMotor,
+            new() { new MultiFileMethods() });
+        compiledContext.CompiledContextConstant = Expression.Constant(compiledContext);
 
         Expression? GetVariableNullable(string name, bool mustBeAtCurrent = false)
         {
@@ -165,7 +172,7 @@ public class Compiler
         {
             if (tokens.Length == 1 && tokens[0] is MathValueGroupPosToken mathToken)
                 return GetMathExpression(mathToken.ValueTokens);
-            Expression exp = GetSingleExpression(tokens[0]);
+            var exp = GetSingleExpression(tokens[0]);
             for (var i = 1; i < tokens.Length; i++)
             {
                 var opToken = (ValueOperationValuePosToken)tokens[i];
@@ -438,30 +445,52 @@ public class Compiler
                 }
             }
 
-            Expression args;
-            List<Expression> positionalArgs = new();
-            Dictionary<string, Expression> namedArgs = new();
+            // List<Expression> positionalArgs = new();
+            // Dictionary<string, Expression> namedArgs = new();
+            var args = new List<Expression>();
+            var argNames = new List<string>();
             while (enumerator.MoveNext())
             {
+                var exp = GetHighExpression(enumerator.CurrentTokens);
+                args.Add(exp);
                 if (enumerator.CurrentName != null)
                 {
-                    namedArgs.Add(enumerator.CurrentName, GetHighExpression(enumerator.CurrentTokens));
+                    // namedArgs.Add(enumerator.CurrentName, exp);
+                    // args.Add(exp);
+                    argNames.Add(enumerator.CurrentName);
                 }
-                else if (!enumerator.HitNamedArgument)
-                {
-                    positionalArgs.Add(GetHighExpression(enumerator.CurrentTokens));
-                }
-                else
+                // else if (!enumerator.HitNamedArgument)
+                // {
+                //     // positionalArgs.Add(exp);
+                //     args.Add(exp);
+                // }
+                else if (enumerator.HitNamedArgument)
                 {
                     throw RCaronException.PositionalArgumentAfterNamedArgument();
                 }
             }
 
-            var arguments = new RCaronOtherBinder.FunnyArguments(positionalArgs.ToArray(), namedArgs);
+            // var arguments = new RCaronOtherBinder.FunnyArguments(positionalArgs.ToArray(), namedArgs);
+            var callInfo = new CallInfo(args.Count, argNames.ToArray());
+            var ensureSameCallWhateveThe = new object();
+            var argsOver = args.Prepend(Expression.Constant(ensureSameCallWhateveThe));
+
+            // args[0] = Expression.Constant(arguments);
+            // for (int i = 0; i < positionalArgs.Count; i++)
+            // {
+            //     args[i + 1] = positionalArgs[i];
+            // }
+            //
+            // var index = positionalArgs.Count + 1;
+            // foreach (var namedArg in namedArgs)
+            // {
+            //     args[index++] = namedArg.Value;
+            // }
+
 
             return Expression.Dynamic(
                 new RCaronOtherBinder(compiledContext, name,
-                    arguments), typeof(object), Expression.Constant(arguments));
+                    callInfo, ensureSameCallWhateveThe), typeof(object), argsOver);
         }
 
         Expression AssignGlobal(string name, Expression value)
@@ -1049,7 +1078,7 @@ public class Compiler
         // do main
         var block = DoLines(parsed.FileScope.Lines);
 
-        return (block);
+        return (block, compiledContext);
     }
 
     private static Dictionary<string, ParameterExpression> _newVariableDict()
@@ -1122,15 +1151,62 @@ public class CompiledClass
 }
 
 public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope,
-    ConstantExpression FakedMotorConstant, IList<CompiledClass> Classes)
+    ConstantExpression FakedMotorConstant, IList<CompiledClass> Classes, Motor? FakedMotor,
+    List<object> OverrideModules)
 {
-    public CompiledClass? GetClass(ClassDefinition definition)
+    public List<CompiledContext>? ImportedContexts { get; set; }
+    public Dictionary<string, CompiledFunction>? ImportedFunctions { get; set; }
+    public List<CompiledClass>? ImportedClasses { get; set; }
+    public ConstantExpression CompiledContextConstant { get; set; } = null!;
+
+    public CompiledClass? GetClass(ClassDefinition definition, bool includeImported = true)
     {
         for (var i = 0; i < Classes.Count; i++)
         {
             var compiledClass = Classes[i];
             if (compiledClass.Definition == definition)
                 return compiledClass;
+        }
+
+        if (includeImported)
+        {
+            if (ImportedContexts is not null or { Count: 0 })
+                foreach (var importedContext in ImportedContexts)
+                {
+                    var compiledClass = importedContext.GetClass(definition, false);
+                    if (compiledClass != null)
+                        return compiledClass;
+                }
+
+            if (ImportedClasses is not null or { Count: 0 })
+                foreach (var importedClass in ImportedClasses)
+                {
+                    if (importedClass.Definition == definition)
+                        return importedClass;
+                }
+        }
+
+        return null;
+    }
+
+    public CompiledFunction? GetFunction(string name, bool includeImported = true)
+    {
+        if (Functions.TryGetValue(name, out var function))
+            return function;
+
+        if (includeImported)
+        {
+            if (ImportedContexts is not null or { Count: 0 })
+                foreach (var importedContext in ImportedContexts)
+                {
+                    var function2 = importedContext.GetFunction(name, false);
+                    if (function2 != null)
+                        return function2;
+                }
+
+            if (ImportedFunctions is not null or { Count: 0 })
+                if (ImportedFunctions.TryGetValue(name, out var function3))
+                    return function3;
         }
 
         return null;
