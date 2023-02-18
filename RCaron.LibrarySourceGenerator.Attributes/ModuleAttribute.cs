@@ -10,4 +10,5 @@ public sealed class ModuleAttribute : Attribute
         Name = name;
     }
     public string Name { get; set; }
+    public bool ImplementModuleRun { get; set; } = true;
 }

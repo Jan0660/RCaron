@@ -26,6 +26,7 @@ public enum RCaronExceptionCode
     // todo(current): remove support for positional arguments after named arguments in LibrarySourceGenerator
     PositionalArgumentAfterNamedArgument,
     LetVariableTypeMismatch,
+    ImportNotFound,
 }
 
 public class RCaronException : Exception
@@ -78,4 +79,12 @@ public class RCaronException : Exception
     public static RCaronException ClassFunctionNotFound(string functionName)
         => new($"Class function '{functionName}' not found",
             RCaronExceptionCode.ClassFunctionNotFound);
+    
+    public static RCaronException FunctionToImportNotFound(string functionName)
+        => new($"Function '{functionName}' to import not found",
+            RCaronExceptionCode.ImportNotFound);
+    
+    public static RCaronException ClassToImportNotFound(string className)
+        => new($"Class '{className}' to import not found",
+            RCaronExceptionCode.ImportNotFound);
 }
