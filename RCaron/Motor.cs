@@ -40,7 +40,6 @@ public enum RCaronInsideEnum : byte
 public class MotorOptions
 {
     public bool EnableDebugging { get; set; } = false;
-    public bool EnableDumb { get; set; } = false;
 }
 
 public class Motor
@@ -495,14 +494,6 @@ public class Motor
                             return (true, RCaronInsideEnum.NoReturnValue);
                         case "dbg_throw":
                             throw new("dbg_throw");
-                    }
-
-                if (Options.EnableDumb)
-                    switch (keywordString)
-                    {
-                        case "goto_line":
-                            curIndex = (int)SimpleEvaluateExpressionSingle(args[0]).Expect<long>();
-                            return (false, RCaronInsideEnum.NoReturnValue);
                     }
 
                 if (TryGetFunction(keywordString, GetFileScope(), out var func))

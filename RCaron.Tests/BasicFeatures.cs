@@ -43,18 +43,6 @@ if ($true){ $h2 = 1; }");
         ExtraAssert.ThrowsCode(() => new Motor(p).Run(), RCaronExceptionCode.MethodNotFound);
     }
 
-    [Fact
-#if RCARONJIT
-            (Skip = "JIT does not plan to support this")
-#endif
-    ]
-    public void GateDumb()
-    {
-        var p = RCaronRunner.Parse("goto_line 0;");
-        new Motor(p, new MotorOptions { EnableDumb = true }).Run();
-        ExtraAssert.ThrowsCode(() => new Motor(p).Run(), RCaronExceptionCode.MethodNotFound);
-    }
-
     [Fact]
     public void LoopLoopAndBreak()
     {
