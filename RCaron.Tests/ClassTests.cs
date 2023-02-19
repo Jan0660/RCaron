@@ -83,16 +83,20 @@ $h = $f.prop;
     }
 
     [Fact]
-    public void FunctionWithParameter()
+    public void Function_WithArgs()
     {
         var m = RCaronRunner.Run(@"
 class Funny {
-    $prop = 2;
-    func Function($a){ return $a + $prop; }
+    func Function($must, $opt = 2){ return $must + $opt; }
 }
-$h = #Funny:New().Function(4);
+$f = #Funny:New();
+$h = $f.Function(1);
+$h2 = $f.Function(1, opt: 1);
+$h6 = $f.Function(opt: 1, must: 5);
 ");
-        m.AssertVariableEquals("h", 6L);
+        m.AssertVariableEquals("h", 3L);
+        m.AssertVariableEquals("h2", 2L);
+        m.AssertVariableEquals("h6", 6L);
     }
 
     [Fact]

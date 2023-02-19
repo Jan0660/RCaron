@@ -297,28 +297,7 @@ public class Compiler
                     continue;
                 if (t is CallLikePosToken callToken)
                 {
-                    var exps = new Expression[callToken.Arguments.Length];
-                    for (var j = 0; j < callToken.Arguments.Length; j++)
-                    {
-                        var p = GetHighExpression(callToken.Arguments[j]);
-                        if (p.Type != typeof(object))
-                            p = Expression.Convert(p, typeof(object));
-                        exps[j] = p;
-                    }
-
-                    {
-                        var expsNew = new Expression[exps.Length + 1];
-                        expsNew[0] = value;
-                        Array.Copy(exps, 0, expsNew, 1, exps.Length);
-                        exps = expsNew;
-                    }
-
-                    value = Expression.Dynamic(
-                        new RCaronInvokeMemberBinder(callToken.Name, true, new CallInfo(exps.Length,
-                            // todo: named args https://learn.microsoft.com/en-us/dotnet/api/system.dynamic.callinfo?view=net-6.0#examples
-                            Array.Empty<string>()), compiledContext),
-                        typeof(object),
-                        exps);
+                    value = MethodCall(callToken.Name, callToken: callToken, target: value);
                 }
                 else if (t is KeywordToken keywordToken)
                 {
@@ -346,9 +325,9 @@ public class Compiler
         }
 
         Expression MethodCall(string name, ArraySegment<PosToken> argumentTokens = default,
-            CallLikePosToken? callToken = null)
+            CallLikePosToken? callToken = null, Expression? target = null)
         {
-            if (callToken != null)
+            if (callToken != null && target == null)
             {
                 switch (callToken.Name.ToLowerInvariant())
                 {
@@ -386,67 +365,66 @@ public class Compiler
             var enumerator = callToken == null
                 ? new ArgumentEnumerator(argumentTokens)
                 : new ArgumentEnumerator(callToken!);
-            switch (name)
-            {
-                case "print":
+            if (target == null)
+                switch (name)
                 {
-                    // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
-                    var expressions = new List<Expression>();
-                    while (enumerator.MoveNext())
+                    case "print":
                     {
-                        expressions.Add(Expression.Call(consoleWriteMethod.Value,
-                            // todo(perf): can get the correct write method instead of casting to object
-                            GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
-                        expressions.Add(Expression.Call(consoleWriteMethod.Value,
-                            Expression.Constant(' ', typeof(object))));
-                    }
+                        // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
+                        var expressions = new List<Expression>();
+                        while (enumerator.MoveNext())
+                        {
+                            expressions.Add(Expression.Call(consoleWriteMethod.Value,
+                                // todo(perf): can get the correct write method instead of casting to object
+                                GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
+                            expressions.Add(Expression.Call(consoleWriteMethod.Value,
+                                Expression.Constant(' ', typeof(object))));
+                        }
 
-                    expressions.Add(Expression.Call(consoleWriteLineMethod.Value));
-                    return Expression.Block(expressions);
-                }
-                case "println":
-                {
-                    // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
-                    var expressions = new List<Expression>();
-                    while (enumerator.MoveNext())
+                        expressions.Add(Expression.Call(consoleWriteLineMethod.Value));
+                        return Expression.Block(expressions);
+                    }
+                    case "println":
                     {
-                        expressions.Add(Expression.Call(consoleWriteLineWithArgMethod.Value,
-                            // todo(perf): can get the correct write method instead of casting to object
-                            GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
-                    }
+                        // todo: make it so that this has can be directly adding the expression onto the destination instead of having to create a new list and returning a block
+                        var expressions = new List<Expression>();
+                        while (enumerator.MoveNext())
+                        {
+                            expressions.Add(Expression.Call(consoleWriteLineWithArgMethod.Value,
+                                // todo(perf): can get the correct write method instead of casting to object
+                                GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
+                        }
 
-                    return Expression.Block(expressions);
-                }
-                case "dbg_println" when fakedMotor.Options.EnableDebugging:
-                {
-                    var expressions = new List<Expression>();
-                    while (enumerator.MoveNext())
+                        return Expression.Block(expressions);
+                    }
+                    case "dbg_println" when fakedMotor.Options.EnableDebugging:
                     {
-                        expressions.Add(Expression.Call(log73Debug.Value,
-                            GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
+                        var expressions = new List<Expression>();
+                        while (enumerator.MoveNext())
+                        {
+                            expressions.Add(Expression.Call(log73Debug.Value,
+                                GetHighExpression(enumerator.CurrentTokens).EnsureIsType(typeof(object))));
+                        }
+
+                        return Expression.Block(expressions);
                     }
+                    case "dbg_assert_is_one" when fakedMotor.Options.EnableDebugging:
+                    {
+                        return AssignGlobal("$$assertResult", Expression.Equal(
+                            GetHighExpression(argumentTokens).EnsureIsType(typeof(long)),
+                            Expression.Constant(1L)));
+                    }
+                    case "dbg_sum_three" when fakedMotor.Options.EnableDebugging:
+                    {
+                        return AssignGlobal("$$assertResult",
+                            Expression.Add(
+                                Expression.Add(GetSingleExpression(argumentTokens[0]).EnsureIsType(typeof(long)),
+                                    GetSingleExpression(argumentTokens[1]).EnsureIsType(typeof(long))
+                                        .EnsureIsType(typeof(long))),
+                                GetSingleExpression(argumentTokens[2]).EnsureIsType(typeof(long))));
+                    }
+                }
 
-                    return Expression.Block(expressions);
-                }
-                case "dbg_assert_is_one" when fakedMotor.Options.EnableDebugging:
-                {
-                    return AssignGlobal("$$assertResult", Expression.Equal(
-                        GetHighExpression(argumentTokens).EnsureIsType(typeof(long)),
-                        Expression.Constant(1L)));
-                }
-                case "dbg_sum_three" when fakedMotor.Options.EnableDebugging:
-                {
-                    return AssignGlobal("$$assertResult",
-                        Expression.Add(
-                            Expression.Add(GetSingleExpression(argumentTokens[0]).EnsureIsType(typeof(long)),
-                                GetSingleExpression(argumentTokens[1]).EnsureIsType(typeof(long))
-                                    .EnsureIsType(typeof(long))),
-                            GetSingleExpression(argumentTokens[2]).EnsureIsType(typeof(long))));
-                }
-            }
-
-            // List<Expression> positionalArgs = new();
-            // Dictionary<string, Expression> namedArgs = new();
             var args = new List<Expression>();
             var argNames = new List<string>();
             while (enumerator.MoveNext())
@@ -454,39 +432,17 @@ public class Compiler
                 var exp = GetHighExpression(enumerator.CurrentTokens);
                 args.Add(exp);
                 if (enumerator.CurrentName != null)
-                {
-                    // namedArgs.Add(enumerator.CurrentName, exp);
-                    // args.Add(exp);
                     argNames.Add(enumerator.CurrentName);
-                }
-                // else if (!enumerator.HitNamedArgument)
-                // {
-                //     // positionalArgs.Add(exp);
-                //     args.Add(exp);
-                // }
                 else if (enumerator.HitNamedArgument)
-                {
                     throw RCaronException.PositionalArgumentAfterNamedArgument();
-                }
             }
 
-            // var arguments = new RCaronOtherBinder.FunnyArguments(positionalArgs.ToArray(), namedArgs);
             var callInfo = new CallInfo(args.Count, argNames.ToArray());
+            if (target != null)
+                return Expression.Dynamic(new RCaronInvokeMemberBinder(name, true, callInfo, compiledContext),
+                    typeof(object), args.Prepend(target));
             var ensureSameCallWhateveThe = new object();
             var argsOver = args.Prepend(Expression.Constant(ensureSameCallWhateveThe));
-
-            // args[0] = Expression.Constant(arguments);
-            // for (int i = 0; i < positionalArgs.Count; i++)
-            // {
-            //     args[i + 1] = positionalArgs[i];
-            // }
-            //
-            // var index = positionalArgs.Count + 1;
-            // foreach (var namedArg in namedArgs)
-            // {
-            //     args[index++] = namedArg.Value;
-            // }
-
 
             return Expression.Dynamic(
                 new RCaronOtherBinder(compiledContext, name,

@@ -73,9 +73,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
             var compiledFunction = compiledClass?.Functions?[Name];
             if (compiledFunction == null)
                 throw RCaronException.ClassFunctionNotFound(Name);
-            return new DynamicMetaObject(Expression.Call(Expression.Constant(compiledFunction),
-                    typeof(CompiledFunction).GetMethod(nameof(CompiledFunction.Invoke))!,
-                    Expression.NewArrayInit(typeof(object), args.Select(x => x.Expression).Prepend(target.Expression))),
+            return Shared.DoFunction(compiledFunction, target, args, Name, CallInfo, typeof(object),
                 BindingRestrictions.GetExpressionRestriction(Expression.Equal(
                     Expression.Property(target.Expression.EnsureIsType(typeof(ClassInstance)), "Definition"),
                     Expression.Constant(classInstance.Definition))));
