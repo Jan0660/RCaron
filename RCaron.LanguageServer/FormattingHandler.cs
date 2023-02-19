@@ -323,6 +323,13 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                     NoSpaceUntilSemicolon(singleTokenLine.Token.Position.End);
                     Indent(singleTokenLine.Token.Position.Start, depth + 1);
                 }
+
+                if (line is ForLoopLine forLoopLine)
+                {
+                    NewlineBefore(forLoopLine.CallToken.Position.Start);
+                    SingleSpaceAfter(forLoopLine.CallToken.NameEndIndex);
+                    SingleSpaceAfter(forLoopLine.CallToken.Position.End);
+                }
             }
         }
 
