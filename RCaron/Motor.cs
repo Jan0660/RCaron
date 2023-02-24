@@ -713,14 +713,14 @@ public class Motor
                     target = obj;
                     type = obj.GetType();
                 }
-        
+
                 goto resolveMethod;
             }
-        
+
             resolveMethod: ;
             var (bestMethod, needsNumericConversion, isExtensionMethod) =
                 MethodResolver.Resolve(name, type, (fileScope ??= GetFileScope()), instance, args);
-        
+
             if (isExtensionMethod)
             {
                 var argsNew = new object[args.Length + 1];
@@ -728,7 +728,7 @@ public class Motor
                 argsNew[0] = target;
                 args = argsNew;
             }
-        
+
             // mismatch count arguments -> equate it out with default values
             // is equate even a word?
             var paramss = bestMethod.GetParameters();
@@ -740,10 +740,10 @@ public class Motor
                 {
                     argsNew[i] = paramss[i].DefaultValue!;
                 }
-        
+
                 args = argsNew;
             }
-        
+
             // numeric conversions
             if (needsNumericConversion)
             {
@@ -753,7 +753,7 @@ public class Motor
                         args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
                 }
             }
-        
+
             // generic method handling aaa
             if (bestMethod.IsGenericMethod)
             {
@@ -768,7 +768,7 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
-        
+
                     return Dynamic.InvokeMember(staticContext(t), bestMethod.Name, args);
                 }
                 else
@@ -778,16 +778,16 @@ public class Motor
                         Dynamic.InvokeMemberAction(target, bestMethod.Name, args);
                         return RCaronInsideEnum.NoReturnValue;
                     }
-        
+
                     return Dynamic.InvokeMember(target, bestMethod.Name, args);
                 }
             }
-        
+
             if (bestMethod is ConstructorInfo constructorInfo)
             {
                 return constructorInfo.Invoke(args);
             }
-        
+
             return bestMethod.Invoke(target, args);
         }
 
@@ -1035,6 +1035,10 @@ public class Motor
             return constToken.Value;
         if (token is VariableToken variableToken)
             return EvaluateVariable(variableToken.Name);
+        if (token is ValueOperationValuePosToken { Operation: OperationEnum.Range })
+            return "..";
+        if (token is ValueOperationValuePosToken { Operation: OperationEnum.Divide })
+            return "/";
         switch (token.Type)
         {
             case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
@@ -1067,6 +1071,8 @@ public class Motor
             case TokenType.LogicalOperationGroup
                 when token is LogicalOperationValuePosToken logicalOperationValuePosToken:
                 return EvaluateLogicalOperation(logicalOperationValuePosToken);
+            case TokenType.Dot:
+                return ".";
         }
 
         throw new Exception($"invalid tokentype to evaluate: {token.Type}");
@@ -1233,6 +1239,7 @@ public class Motor
     {
         bool Evaluate(ValuePosToken token)
             => (bool)SimpleEvaluateExpressionSingle(token)!;
+
         var op = comparisonValuePosToken.ComparisonToken;
         switch (op.Operation)
         {

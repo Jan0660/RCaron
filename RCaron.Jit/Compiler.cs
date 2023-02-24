@@ -127,6 +127,12 @@ public class Compiler
 
                     return GetVariable(variableToken.Name);
                 }
+                case ValueOperationValuePosToken { Operation: OperationEnum.Range }:
+                    return Expression.Constant("..");
+                case ValueOperationValuePosToken { Operation: OperationEnum.Divide }:
+                    return Expression.Constant("/");
+                case { Type: TokenType.Dot }:
+                    return Expression.Constant(".");
                 case MathValueGroupPosToken mathValueGroupPosToken:
                     return GetMathExpression(mathValueGroupPosToken.ValueTokens);
                 case LogicalOperationValuePosToken logicalToken:

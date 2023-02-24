@@ -117,7 +117,8 @@ public class TokenReader
             position += index;
             if (isDecimal)
                 return new ConstToken(TokenType.DecimalNumber,
-                    (initialPosition, position), Decimal.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
+                    (initialPosition, position),
+                    Decimal.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
             return new ConstToken(TokenType.Number, (initialPosition, position),
                 Int64.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
         }
@@ -189,6 +190,19 @@ public class TokenReader
             position++;
             return new PosToken(TokenType.Colon, (initialPosition, position));
         }
+        // paths
+        else if (txt[position] == '/' || txt[position] == '\\' || (txt.Length - position > 2 && char.IsLetter(txt[position]) &&
+                                                                   txt[position + 1] == ':' &&
+                                                                   (txt[position + 2] == '/' ||
+                                                                    txt[position + 2] == '\\')))
+        {
+            // position++;
+            var (index, path) = CollectPath(txt[position..]);
+            if (index == 0)
+                return null;
+            position += index;
+            return new ConstToken(TokenType.String, (initialPosition, position), path);
+        }
         // operation
         else
         {
@@ -210,6 +224,23 @@ public class TokenReader
 
             return new OperationPosToken(tokenType, (initialPosition, position), op);
         }
+    }
+
+    public (int index, string path) CollectPath(in ReadOnlySpan<char> span)
+    {
+        var index = 0;
+        Span<char> resultSpan = stackalloc char[span.Length];
+        var path = new SpanStringBuilder(ref resultSpan);
+        while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != ',' &&
+               span[index] != ')' && span[index] != ']' && span[index] != '}' && span[index] != ';')
+        {
+            if (span[index] == '`')
+                index++;
+            path.Append(span[index]);
+            index++;
+        }
+
+        return (index, path.ToString());
     }
 
     public (int index, bool isDecimal) CollectAnyNumber(in ReadOnlySpan<char> span)
