@@ -481,8 +481,6 @@ public static class RCaronRunner
         if (tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
-            // if (tokens[i + 2] is KeywordToken keywordToken)
-            //     keywordToken.IsExecutable = true;
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
                 endingIndex = tokens.Length;
