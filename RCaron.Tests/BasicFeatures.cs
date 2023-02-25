@@ -5,8 +5,8 @@ public class BasicFeatures
     [Fact]
     public void ParenthesisMath()
     {
-        var m = RCaronRunner.Run("$h = ((3 * 3) + 2) * 2;");
-        m.AssertVariableEquals("h", (long)22);
+        var m = RCaronRunner.Run("$h = ((3 * 3) + 2) * 2 / 2;");
+        m.AssertVariableEquals("h", (long)11);
     }
 
     [Fact]
@@ -184,7 +184,7 @@ $h = v();
             ["while"] = @"while($true) { return 1; } return 0;",
             ["just a code block"] = @"{ return 1; } return 0;",
             ["dowhile"] = @"dowhile($true) { return 1; } return 0;",
-            ["foreach"] = @"foreach($z in 0..10) { return 1; } return 0;",
+            ["foreach"] = @"foreach($z in range(0, 10)) { return 1; } return 0;",
             ["loop"] = @"loop { return 1; } return 0;",
             ["for"] = @"for($z = 0; $z < 10; $z = $z + 1) { return 1; } return 0;",
             ["qfor"] = @"qfor($z = 0; $z < 10; $z = $z + 1) { return 1; } return 0;",

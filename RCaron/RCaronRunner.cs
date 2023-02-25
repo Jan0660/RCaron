@@ -1,5 +1,6 @@
 ﻿using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using RCaron.Classes;
 
 namespace RCaron;
@@ -12,7 +13,8 @@ public static class RCaronRunner
     {
         var ctx = Parse(text);
 #if RCARONJIT
-        var fakedMotor = System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { ctx, motorOptions, null });
+        var fakedMotor =
+ System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { ctx, motorOptions, null });
         return (Motor)fakedMotor;
 #endif
         var motor = new Motor(ctx, motorOptions);
@@ -104,10 +106,11 @@ public static class RCaronRunner
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
                            tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
-                           (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer } ||
+                           (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range } ||
                             (tokens[i].Type == TokenType.Colon && tokens[i - 1].Type == TokenType.ExternThing) ||
                             (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
-                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer }))
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range }
+                           ) && !(tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.Keyword))
                         // while ((i != 0 && i != -1) && 
                         //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
                         //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
@@ -141,8 +144,30 @@ public static class RCaronRunner
                         //     tokens[rem] is not ValuePosToken)
                         //     goto beforeAdd;
                         tokens.RemoveFrom(rem);
-                        tokens.Add(new DotGroupPosToken(TokenType.DotGroup,
-                            (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                        if (h.tokens[0].Type == TokenType.Dot || h.tokens[0].Type == TokenType.Range ||
+                            Array.Exists(h.tokens, t => t.Type == TokenType.Path))
+                        {
+                            var path = new StringBuilder();
+                            foreach (var pathToken in h.tokens)
+                            {
+                                if (pathToken.Type == TokenType.Dot)
+                                    path.Append('.');
+                                else if (pathToken.Type == TokenType.Range)
+                                    path.Append("..");
+                                else if (pathToken is ConstToken { Type: TokenType.Path } actualPathToken)
+                                    path.Append((string)actualPathToken.Value);
+                                else if (pathToken is KeywordToken keywordToken)
+                                    path.Append(keywordToken.String);
+                            }
+
+                            tokens.Add(new ConstToken(TokenType.Path,
+                                (h.tokens.First().Position.Start, h.tokens.Last().Position.End), path.ToString()));
+                        }
+                        else
+                        {
+                            tokens.Add(new DotGroupPosToken(TokenType.DotGroup,
+                                (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
+                        }
                         // goto beforeAdd;
                     }
                     else
@@ -456,6 +481,8 @@ public static class RCaronRunner
         if (tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
+            // if (tokens[i + 2] is KeywordToken keywordToken)
+            //     keywordToken.IsExecutable = true;
             var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
             if (endingIndex == -1)
                 endingIndex = tokens.Length;

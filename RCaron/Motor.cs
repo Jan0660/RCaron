@@ -8,6 +8,7 @@ using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using System.Text;
 using Dynamitey;
 using JetBrains.Annotations;
 using Log73;
@@ -691,6 +692,12 @@ public class Motor
             }
             case "throw":
                 throw (Exception)At(argumentTokens, 0);
+            case "range":
+            {
+                var long1 = At(argumentTokens, 0).Expect<long>();
+                var long2 = At(argumentTokens, 1).Expect<long>();
+                return new RCaronRange(long1, long2);
+            }
         }
 
         if (TryGetFunction(nameArg, (fileScope ??= GetFileScope()), out var func))
@@ -860,6 +867,35 @@ public class Motor
         }
 
         throw new Exception("unsupported stuff for GetAssigner");
+    }
+
+    public static string EvaluateDotThingsAsPath(ReadOnlySpan<PosToken> tokens)
+    {
+        var path = new StringBuilder(128);
+        foreach (var token in tokens)
+        {
+            if (token is DotGroupPosToken dotGroupPosToken)
+            {
+                path.Append(EvaluateDotThingsAsPath(dotGroupPosToken.Tokens));
+                continue;
+            }
+
+            if (token is KeywordToken keywordToken)
+            {
+                path.Append(keywordToken.String);
+                continue;
+            }
+
+            if (token is ConstToken { Type: TokenType.Path } constToken)
+            {
+                path.Append((string)constToken.Value);
+                continue;
+            }
+
+            throw new Exception("unsupported stuff for EvaluateDotThingsAsPath");
+        }
+
+        return path.ToString();
     }
 
     public object? EvaluateDotThings(Span<PosToken> instanceTokens)
@@ -1035,7 +1071,7 @@ public class Motor
             return constToken.Value;
         if (token is VariableToken variableToken)
             return EvaluateVariable(variableToken.Name);
-        if (token is ValueOperationValuePosToken { Operation: OperationEnum.Range })
+        if (token is { Type: TokenType.Range })
             return "..";
         if (token is ValueOperationValuePosToken { Operation: OperationEnum.Divide })
             return "/";
@@ -1094,17 +1130,6 @@ public class Motor
             var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
             switch (op.Operation)
             {
-                case OperationEnum.Range:
-                {
-                    var long1 = value as long?;
-                    var long2 = second as long?;
-                    if (!long1.HasValue)
-                        long1 = Convert.ToInt64(value);
-                    if (!long2.HasValue)
-                        long2 = Convert.ToInt64(second);
-                    value = new RCaronRange(long1.Value, long2.Value);
-                    break;
-                }
                 default:
                     op.CallSite ??= BinderUtil.GetBinaryOperationCallSite(op.Operation);
                     value = op.CallSite.Target(op.CallSite, value, second);
@@ -1120,11 +1145,11 @@ public class Motor
     public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
         => tokens.Count switch
         {
-            > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
+            > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(keywordToken.String,
                 argumentTokens: tokens.Segment(1..)),
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
-            _ => throw new Exception("what he fuck")
+            _ => throw new Exception("something has gone very wrong with the parsing most probably")
         };
 
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,

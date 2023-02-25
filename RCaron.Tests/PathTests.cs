@@ -18,6 +18,9 @@ public class PathTests
         "/dir/", @"\dir\", "/dir/file", @"\dir\file",
         new[] { "/file` spaced", "/file spaced" }, new[] { "/file`,escaped", "/file,escaped" },
         @"C:\", "C:/", @"C:\file", "C:/file",
+        "dir/", "file",
+        "./file", "../file",
+        ".file", ".dir/"
     };
 
     public static IEnumerable<object[]> GetPathTestData()

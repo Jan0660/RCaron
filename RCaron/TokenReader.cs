@@ -157,14 +157,12 @@ public class TokenReader
             position++;
             return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
         }
-        // todo: for clarity maybe make ranges into a single token that would contain the numbers
         // range operator
         // it is here, instead of in CollectOperation, because it would conflict with TokenType.Dot
         else if (txt[position] == '.' && txt[position + 1] == '.' && txt[position + 2] != '.')
         {
             position += 2;
-            return new ValueOperationValuePosToken(TokenType.Operator, (initialPosition, position),
-                OperationEnum.Range);
+            return new PosToken(TokenType.Range, (initialPosition, position));
         }
         // dot
         else if (txt[position] == '.')
@@ -191,30 +189,42 @@ public class TokenReader
             return new PosToken(TokenType.Colon, (initialPosition, position));
         }
         // paths
-        else if (txt[position] == '/' || txt[position] == '\\' || (txt.Length - position > 2 && char.IsLetter(txt[position]) &&
-                                                                   txt[position + 1] == ':' &&
-                                                                   (txt[position + 2] == '/' ||
-                                                                    txt[position + 2] == '\\')))
+        else if ((txt.Length - position > 2 && char.IsLetter(txt[position]) &&
+                  txt[position + 1] == ':' &&
+                  (txt[position + 2] == '/' ||
+                   txt[position + 2] == '\\')))
         {
-            // position++;
-            var (index, path) = CollectPath(txt[position..]);
+            var (index, path, _) = CollectPathOrKeyword(txt[position..], allowFirstDoubleDot: true);
             if (index == 0)
                 return null;
             position += index;
-            return new ConstToken(TokenType.String, (initialPosition, position), path);
+            return new ConstToken(TokenType.Path, (initialPosition, position), path);
+        }
+        // executable keyword
+        if (txt[position] == '@')
+        {
+            position++;
+            var index = CollectExecutableKeyword(txt[position..]);
+            if (index == 0)
+                throw new("wtf");
+            position += index;
+            return new KeywordToken((initialPosition, position),
+                text.Substring(initialPosition + 1, position - initialPosition - 1), true);
         }
         // operation
         else
         {
             var (index, tokenType, op) = CollectOperation(txt[position..]);
             // collect a keyword e.g. "println"
-            if (index == 0)
+            if (index == 0 || (op == OperationEnum.Divide && txt[position + index] != ' '))
             {
-                index = CollectAlphaNumericAndSomeAndDash(txt[position..]);
+                (index, var str, var isPath) = CollectPathOrKeyword(txt[position..]);
                 if (index == 0)
                     throw new("Invalid token at position " + position);
                 position += index;
-                return new KeywordToken((initialPosition, position), text[initialPosition..position]);
+                return isPath
+                    ? new ConstToken(TokenType.Path, (initialPosition, position), str)
+                    : new KeywordToken((initialPosition, position), str);
             }
 
             position += index;
@@ -226,21 +236,39 @@ public class TokenReader
         }
     }
 
-    public (int index, string path) CollectPath(in ReadOnlySpan<char> span)
+    public int CollectExecutableKeyword(in ReadOnlySpan<char> span)
     {
         var index = 0;
+        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
+               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' || span[index] == '-')
+            index++;
+        return index;
+    }
+
+    public (int index, string path, bool isPath) CollectPathOrKeyword(in ReadOnlySpan<char> span,
+        bool allowFirstDoubleDot = false)
+    {
+        var index = 0;
+        var isPath = false;
         Span<char> resultSpan = stackalloc char[span.Length];
         var path = new SpanStringBuilder(ref resultSpan);
         while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != ',' &&
-               span[index] != ')' && span[index] != ']' && span[index] != '}' && span[index] != ';')
+               span[index] != '(' && span[index] != '{' && span[index] != '[' &&
+               span[index] != ')' && span[index] != ']' && span[index] != '}' &&
+               span[index] != ';' && span[index] != ':' && span[index] != '.')
         {
+            if (!((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
+                  (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' || span[index] == '-'))
+                isPath = true;
             if (span[index] == '`')
                 index++;
             path.Append(span[index]);
             index++;
+            if (allowFirstDoubleDot && span[index] == ':')
+                path.Append(span[index++]);
         }
 
-        return (index, path.ToString());
+        return (index, path.ToString(), isPath);
     }
 
     public (int index, bool isDecimal) CollectAnyNumber(in ReadOnlySpan<char> span)
@@ -273,15 +301,6 @@ public class TokenReader
         var index = 0;
         while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
                (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_')
-            index++;
-        return index;
-    }
-
-    public int CollectAlphaNumericAndSomeAndDash(in ReadOnlySpan<char> span)
-    {
-        var index = 0;
-        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' || span[index] == '-')
             index++;
         return index;
     }

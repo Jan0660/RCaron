@@ -127,7 +127,7 @@ public class Compiler
 
                     return GetVariable(variableToken.Name);
                 }
-                case ValueOperationValuePosToken { Operation: OperationEnum.Range }:
+                case { Type: TokenType.Range }:
                     return Expression.Constant("..");
                 case ValueOperationValuePosToken { Operation: OperationEnum.Divide }:
                     return Expression.Constant("/");
@@ -169,6 +169,8 @@ public class Compiler
                 {
                     return MethodCall(callToken.Name, callToken: callToken);
                 }
+                case KeywordToken keywordToken:
+                    return Expression.Constant(keywordToken.String);
             }
 
             throw new Exception($"Single expression {token.Type} not implemented");
@@ -185,28 +187,6 @@ public class Compiler
 
                 switch (opToken.Operation)
                 {
-                    case OperationEnum.Range:
-                    {
-                        if (exp is ConstantExpression constantExpression)
-                        {
-                            var right = GetSingleExpression(tokens[++i]);
-                            if (right is ConstantExpression rightConstantExpression)
-                            {
-                                // todo: this won't do smart conversions to long I assume -- wait I don't even have those
-                                var range = new RCaronRange((long)constantExpression.Value!,
-                                    (long)rightConstantExpression.Value!);
-                                exp = Expression.Constant(range);
-                            }
-                            else
-                            {
-                                exp = Expression.New(
-                                    typeof(RCaronRange).GetConstructor(new[] { typeof(long), typeof(long) })!,
-                                    exp, right);
-                            }
-                        }
-
-                        break;
-                    }
                     default:
                     {
                         exp = Expression.Dynamic(BinderUtil.GetBinaryOperationBinder(opToken.Operation), typeof(object),
@@ -272,7 +252,8 @@ public class Compiler
         Expression GetHighExpression(ArraySegment<PosToken> tokens)
             => tokens.Count switch
             {
-                > 0 when tokens[0] is KeywordToken keywordToken => MethodCall(keywordToken.String,
+                > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(
+                    keywordToken.String,
                     argumentTokens: tokens.Segment(1..)),
                 1 => GetSingleExpression(tokens[0]),
                 > 2 => GetMathExpression(tokens),
@@ -365,6 +346,14 @@ public class Compiler
                                 }), typeof(object),
                             GetHighExpression(callToken.Arguments[0]),
                             GetHighExpression(callToken.Arguments[1]));
+                    case "range":
+                    {
+                        var first = GetHighExpression(callToken.Arguments[0]).EnsureIsType(typeof(long));
+                        var second = GetHighExpression(callToken.Arguments[1]).EnsureIsType(typeof(long));
+                        return Expression.New(
+                            typeof(RCaronRange).GetConstructor(new[] { typeof(long), typeof(long) })!,
+                            first, second);
+                    }
                 }
             }
 

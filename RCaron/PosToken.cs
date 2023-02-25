@@ -39,6 +39,8 @@ public enum TokenType : byte
     EqualityOperationGroup,
     LogicalOperation,
     LogicalOperationGroup,
+    Path,
+    Range
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -83,6 +85,8 @@ public class PosToken
             TokenType.IndexerEnd => true,
             TokenType.Colon => true,
             TokenType.ExternThing => true,
+            TokenType.Path => true,
+            TokenType.Range => true,
             _ => false,
         };
 
@@ -119,10 +123,12 @@ public class VariableToken : ValuePosToken
 public class KeywordToken : PosToken
 {
     public string String { get; }
+    public bool IsExecutable { get; set; }
 
-    public KeywordToken((int Start, int End) position, string str) : base(TokenType.Keyword, position)
+    public KeywordToken((int Start, int End) position, string str, bool isExecutable = false) : base(TokenType.Keyword, position)
     {
         String = str;
+        IsExecutable = isExecutable;
     }
 }
 

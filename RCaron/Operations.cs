@@ -4,7 +4,6 @@ public static class Operations
 {
     // other
     public const string AssignmentOp = "=";
-    public const string RangeOp = "..";
     
     // equality
     public const string IsEqualOp = "==";
@@ -35,7 +34,6 @@ public enum OperationEnum : byte
     Invalid = 0,
     // other
     Assignment,
-    Range,
     // equality
     IsEqual,
     IsNotEqual,
