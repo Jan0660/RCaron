@@ -14,11 +14,11 @@ public class PathTests
     public static readonly object[] GetPathTestPaths =
     {
         ".", "..",
-        "/", @"\", "/file", @"\file",
+        "/", @"\", "/file", @"\file", "/file.ext",
         "/dir/", @"\dir\", "/dir/file", @"\dir\file",
         new[] { "/file` spaced", "/file spaced" }, new[] { "/file`,escaped", "/file,escaped" },
-        @"C:\", "C:/", @"C:\file", "C:/file",
-        "dir/", "file",
+        @"C:\", "C:/", @"C:\file", "C:/file", @"C:\file.ext",
+        "dir/", "file", "file.ext",
         "./file", "../file",
         ".file", ".dir/"
     };

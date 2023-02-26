@@ -144,7 +144,7 @@ public static class RCaronRunner
                         //     tokens[rem] is not ValuePosToken)
                         //     goto beforeAdd;
                         tokens.RemoveFrom(rem);
-                        if (h.tokens[0].Type == TokenType.Dot || h.tokens[0].Type == TokenType.Range ||
+                        if (h.tokens[0].Type is TokenType.Dot or TokenType.Range or TokenType.Keyword ||
                             Array.Exists(h.tokens, t => t.Type == TokenType.Path))
                         {
                             var path = new StringBuilder();
