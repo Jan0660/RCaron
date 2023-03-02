@@ -392,4 +392,23 @@ let $h = 1;
 $h = $null;");
         }, RCaronExceptionCode.LetVariableTypeMismatch);
     }
+
+    [Fact]
+    public void DotNetCallNumericConversion_OnConstructor()
+    {
+        // uses Timespan(int, int, int) constructor
+        var m = RCaronRunner.Run("$h = #System.TimeSpan:new(1, 2, 3);");
+        var timeSpan = m.AssertVariableIsType<TimeSpan>("h");
+        Assert.Equal(1, timeSpan.Hours);
+        Assert.Equal(2, timeSpan.Minutes);
+        Assert.Equal(3, timeSpan.Seconds);
+    }
+
+    [Fact]
+    public void DotNetCallNumericConversion()
+    {
+        var m = RCaronRunner.Run("$h = #System.TimeSpan:FromMilliseconds(10);");
+        var timeSpan = m.AssertVariableIsType<TimeSpan>("h");
+        Assert.Equal(10, timeSpan.TotalMilliseconds);
+    }
 }

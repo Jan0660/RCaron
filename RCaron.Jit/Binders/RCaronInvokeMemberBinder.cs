@@ -79,7 +79,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     Expression.Constant(classInstance.Definition))));
         }
 
-        if (target.Expression.Type == typeof(IDynamicMetaObjectProvider))
+        if (target.Expression.Type == typeof(IDynamicMetaObjectProvider) && target.LimitType != typeof(RCaronType))
         {
             return new DynamicMetaObject(
                 Expression.Call(target.Expression, "GetMetaObject", Array.Empty<Type>(), Expression.Constant(null)),
@@ -87,14 +87,13 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
         }
 
         {
-            var (method, needsNumericConversion, isExtensionMethod) = MethodResolver.Resolve(Name, target.LimitType,
+            var type = target.LimitType == typeof(RCaronType) ? ((RCaronType)target.Value!).Type : target.LimitType;
+            var (method, needsNumericConversion, isExtensionMethod) = MethodResolver.Resolve(Name, type,
                 Context.FileScope, target.Value, args.Select(x => x.Value).ToArray());
             var argsExpressionEnumerable = args.Select(x => x.Expression);
             var argsExpressionArray = isExtensionMethod
                 ? argsExpressionEnumerable.Prepend(target.Expression).ToArray()
                 : argsExpressionEnumerable.ToArray();
-            if (needsNumericConversion)
-                throw new NotImplementedException("Numeric conversion not implemented yet");
             if (method.IsGenericMethod && !method.IsConstructedGenericMethod)
             {
                 Expression GetExpression()
@@ -120,10 +119,26 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
             }
 
-            return method is ConstructorInfo ? throw new() :
+            var finalArgs = args.Select(x => x.Expression).ToArray();
+            if (needsNumericConversion)
+            {
+                var startIndex = isExtensionMethod ? 1 : 0;
+                var methodParameters = method.GetParameters();
+                for (var i = startIndex; i < finalArgs.Length; i++)
+                {
+                    var arg = finalArgs[i];
+                    if (!arg.Type.IsAssignableTo(methodParameters[i - startIndex].ParameterType))
+                        finalArgs[i] = Expression.Convert(arg, methodParameters[i - startIndex].ParameterType);
+                }
+            }
+
+            return method is ConstructorInfo constructorInfo ? new DynamicMetaObject(
+                    Expression.New(constructorInfo, finalArgs).EnsureIsType(ReturnType),
+                    BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)) :
                 method is MethodInfo methodInfo ? new DynamicMetaObject(
-                    Expression.Call(target.Expression.EnsureIsType(target.RuntimeType), methodInfo,
-                        args.Select(x => x.Expression).ToArray()).EnsureIsType(ReturnType),
+                    Expression.Call(methodInfo.IsStatic ? null : target.Expression.EnsureIsType(target.RuntimeType),
+                        methodInfo,
+                        finalArgs).EnsureIsType(ReturnType),
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)) : throw new();
         }
     }

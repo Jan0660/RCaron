@@ -7,9 +7,12 @@ public static class AssertionExtensions
         Assert.Equal(expected, motor.GlobalScope.GetVariable(variableName));
     }
 
-    public static void AssertVariableIsType<T>(this Motor motor, string variableName)
+    /// <returns>The variable</returns>
+    public static T AssertVariableIsType<T>(this Motor motor, string variableName)
     {
-        Assert.IsType<T>(motor.GlobalScope.GetVariable(variableName));
+        var variable = motor.GlobalScope.GetVariable(variableName);
+        Assert.IsType<T>(variable);
+        return (T)variable;
     }
 
     public static void RunWithCode(this Motor motor, string code)

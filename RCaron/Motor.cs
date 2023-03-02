@@ -753,13 +753,8 @@ public class Motor
 
             // numeric conversions
             if (needsNumericConversion)
-            {
                 for (var i = 0; i < args.Length; i++)
-                {
-                    if (paramss[i].ParameterType.IsNumericType() && args[i].GetType().IsNumericType())
-                        args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
-                }
-            }
+                    args[i] = Convert.ChangeType(args[i], paramss[i].ParameterType);
 
             // generic method handling aaa
             if (bestMethod.IsGenericMethod)
@@ -1486,39 +1481,55 @@ public class MethodResolver
                 score = uint.MaxValue;
             }
 
-            for (var j = 0; j < parameters.Length && j < args.Length; j++)
+            // check if we have more args than the method has parameters
+            if (parameters.Length < args.Length)
             {
-                if (parameters[j].ParameterType == args[j].GetType())
-                {
-                    score += 100;
-                }
-                else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
-                {
-                    score += 10;
-                }
-                // todo: support actual generic parameters constraints
-                else if (parameters[j].ParameterType.IsGenericType
-                         && ListEx.IsAssignableToGenericType(args[j].GetType(),
-                             parameters[j].ParameterType.GetGenericTypeDefinition()))
-                    // parameters[j].ParameterType.GetGenericParameterConstraints()
-                {
-                    score += 10;
-                }
-                else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
-                {
-                    score += 10;
-                    needsNumericConversions[i] = true;
-                }
-                else if (parameters[j].ParameterType.IsGenericParameter)
-                {
-                    score += 5;
-                }
-                else
-                {
+                // todo(feat): support params
+                if (parameters.Length == 0)
                     score = 0;
-                    break;
-                }
             }
+            else
+                for (var j = 0; j < parameters.Length; j++)
+                {
+                    // if method has more parameters than we have args, check if the parameter is optional
+                    if (j >= args.Length)
+                    {
+                        if (!parameters[j].HasDefaultValue)
+                            score = 0;
+                        break;
+                    }
+
+                    if (parameters[j].ParameterType == args[j].GetType())
+                    {
+                        score += 100;
+                    }
+                    else if (parameters[j].ParameterType.IsInstanceOfType(args[j]))
+                    {
+                        score += 10;
+                    }
+                    // todo: support actual generic parameters constraints
+                    else if (parameters[j].ParameterType.IsGenericType
+                             && ListEx.IsAssignableToGenericType(args[j].GetType(),
+                                 parameters[j].ParameterType.GetGenericTypeDefinition()))
+                        // parameters[j].ParameterType.GetGenericParameterConstraints()
+                    {
+                        score += 10;
+                    }
+                    else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
+                    {
+                        score += 10;
+                        needsNumericConversions[i] = true;
+                    }
+                    else if (parameters[j].ParameterType.IsGenericParameter)
+                    {
+                        score += 5;
+                    }
+                    else
+                    {
+                        score = 0;
+                        break;
+                    }
+                }
 
             scores[i] = score;
         }
