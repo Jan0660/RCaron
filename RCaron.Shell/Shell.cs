@@ -19,7 +19,7 @@ public class Shell
             {
                 Motor.MainFileScope.Functions ??= new();
                 foreach (var f in ctx.FileScope.Functions)
-                    Motor.MainFileScope.Functions[f.Key] =  f.Value;
+                    Motor.MainFileScope.Functions[f.Key] = f.Value;
             }
 
             if (ctx.FileScope.ClassDefinitions is not null)
@@ -32,7 +32,7 @@ public class Shell
         }
 
         Motor.UseContext(ctx, Motor.MainFileScope == null!);
-        if(import)
+        if (import)
             Motor.MainFileScope.FileName = fileName;
         Motor.Run();
     }

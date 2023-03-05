@@ -8,6 +8,7 @@ using PrettyPrompt.Highlighting;
 using RCaron;
 using RCaron.FunLibrary;
 using RCaron.Shell;
+using RCaron.Shell.Prompt;
 using Console = System.Console;
 
 var logger = new Log73Logger();
@@ -51,15 +52,16 @@ rootCommand.SetHandler((Func<InvocationContext, Task>)(async (context) =>
     var file = context.ParseResult.GetValueForArgument(fileArgument);
     var interactive = context.ParseResult.GetValueForOption(interactiveOption);
     var arguments = context.ParseResult.GetValueForArgument(argsArgument);
-    await Task.CompletedTask;
     var promptConfig = new PromptConfiguration(proportionOfWindowHeightForCompletionPane: 0.1)
     {
         Prompt = new(),
     };
-    var prompt = new Prompt(configuration: promptConfig, callbacks: new RCaronPromptCallbacks());
+    var promptCallbacks = new RCaronPromptCallbacks();
+    var prompt = new Prompt(configuration: promptConfig, callbacks: promptCallbacks);
     var shell = new Shell();
     shell.Motor.SetVar("args", arguments);
     shell.Motor.SetVar("current_shell", shell);
+    shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
     if (file is not null)
     {
         logger.Info($"Executing file {file.FullName}");
@@ -97,7 +99,6 @@ rootCommand.SetHandler((Func<InvocationContext, Task>)(async (context) =>
     {
         while (true)
         {
-            
             if (shell.PromptFunction != null)
             {
                 var promptResult = shell.Motor.FunctionCall(shell.PromptFunction);
