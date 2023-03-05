@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net7.0</TargetFramework>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <Nullable>enable</Nullable>
+        <EnablePreviewFeatures>True</EnablePreviewFeatures>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="PrettyPrompt" Version="4.0.4" />
+        <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+        <PackageReference Include="TextMateSharp" Version="1.0.51" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\RCaron.FunLibrary\RCaron.FunLibrary.csproj" />
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all" />
+    </ItemGroup>
+
+</Project>
