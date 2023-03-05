@@ -149,7 +149,7 @@ public class Motor
     public (bool Exit, object? Result) RunLine(Line baseLine)
     {
         Debug.WriteLine(baseLine is TokenLine tokenLine
-            ? GetFileScope().Raw[tokenLine.Tokens[0].Position.Start..tokenLine.Tokens[^1].Position.End]
+            ? GetFileScope().Raw[tokenLine.Tokens[0].Position.Start..(tokenLine.Tokens[^1].Position.End - 1)]
             : (
                 baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
         if (baseLine is CodeBlockLine codeBlockLine)
@@ -1218,7 +1218,8 @@ public class Motor
         }
 
 
-        BlockStack.Push(new StackThing(false, true, scope, function.FileScope, Lines[curIndex]));
+        BlockStack.Push(new StackThing(false, true, scope, function.FileScope,
+            Lines.Count - curIndex > 0 ? Lines[curIndex] : null));
         return RunCodeBlock(function.CodeBlock);
     }
 

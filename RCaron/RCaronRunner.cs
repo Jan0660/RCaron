@@ -1,4 +1,5 @@
 ﻿using System.Reflection;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using RCaron.Classes;
@@ -45,14 +46,23 @@ public static class RCaronRunner
             var codeBlockLines = new List<Line>();
             for (int i = 0; i < range.Length; i++)
             {
+                // skip semicolon
+                if (range[i].Type == TokenType.LineEnding)
+                    continue;
                 codeBlockLines.Add(GetLine(range, ref i, text));
             }
 
             tokens.Add(new CodeBlockToken(codeBlockLines));
         }
 
-        while (token != null)
+        var hasDoneLastToken = false;
+        while (token != null || !hasDoneLastToken)
         {
+            if(token == null && !hasDoneLastToken)
+            {
+                hasDoneLastToken = true;
+                token = new PosToken(TokenType.EndOfFile, (text.Length, text.Length));
+            }
             if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
@@ -88,7 +98,7 @@ public static class RCaronRunner
                         break;
                 }
 
-                var dontAddCurrent = false;
+                var dontAddCurrent = token.Type == TokenType.EndOfFile;
                 var dontDoSimpleBlockEndCheck = false;
 
                 if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
@@ -123,7 +133,8 @@ public static class RCaronRunner
 
                 if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() &&
                     (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
-                    !posToken.IsDotJoinableSomething() && posToken.Type != TokenType.IndexerStart &&
+                    (!posToken.IsDotJoinableSomething() || _isNewLineBetweenTokens(tokens[^1], posToken, text)) &&
+                    posToken.Type != TokenType.IndexerStart &&
                     posToken.Type != TokenType.SimpleBlockStart
                    )
                 {
@@ -410,6 +421,9 @@ public static class RCaronRunner
         var t = tokens.ToArray();
         for (var i = 0; i < tokens.Count; i++)
         {
+            // skip semicolon
+            if (t[i].Type == TokenType.LineEnding)
+                continue;
             // class definition
             if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
@@ -473,6 +487,38 @@ public static class RCaronRunner
         return new RCaronRunnerContext(fileScope);
     }
 
+    /// <summary>
+    /// If there is a newline(\n) between the two tokens, returns true.
+    /// </summary>
+    /// <param name="text">Raw code</param>
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private static bool _isNewLineBetweenTokens(PosToken first, PosToken second, string text)
+    {
+        for (var j = first.Position.End; j < second.Position.Start; j++)
+            if (text[j] == '\n')
+                return true;
+        return false;
+    }
+
+    private static (int toUse, int toSet) _findLineEnding(PosToken[] tokens, in int i, string text)
+    {
+        var ind = i;
+        for (; ind < tokens.Length; ind++)
+        {
+            if (tokens[ind].Type == TokenType.LineEnding)
+                return (ind, ind);
+            if (tokens[ind].Type == TokenType.BlockEnd)
+                return (ind, ind);
+            if (tokens.Length - ind > 1)
+            {
+                if (_isNewLineBetweenTokens(tokens[ind], tokens[ind + 1], text))
+                    return (ind + 1, ind);
+            }
+        }
+
+        return (ind, ind);
+    }
+
     public static Line GetLine(PosToken[] tokens, ref int i, in string text)
     {
         Line? res = default;
@@ -481,22 +527,18 @@ public static class RCaronRunner
         if (tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
-            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
-            if (endingIndex == -1)
-                endingIndex = tokens.Length;
-            res = new TokenLine(tokens[i..(endingIndex)], LineType.VariableAssignment);
-            i = endingIndex;
+            var endingIndex = _findLineEnding(tokens, i, text);
+            res = new TokenLine(tokens[i..(endingIndex.toUse)], LineType.VariableAssignment);
+            i = endingIndex.toSet;
         }
         // let variable assignment
         else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "let") &&
                  tokens[i + 1] is VariableToken && tokens[i + 2].Type == TokenType.Operation &&
                  tokens[i + 2].EqualsString(text, "="))
         {
-            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
-            if (endingIndex == -1)
-                endingIndex = tokens.Length;
-            res = new TokenLine(tokens[i..(endingIndex)], LineType.LetVariableAssignment);
-            i = endingIndex;
+            var endingIndex = _findLineEnding(tokens, i, text);
+            res = new TokenLine(tokens[i..(endingIndex.toUse)], LineType.LetVariableAssignment);
+            i = endingIndex.toSet;
         }
         else if (callToken != null && callToken.NameEquals(text, "switch"))
         {
@@ -535,15 +577,13 @@ public static class RCaronRunner
             i++;
         }
         // assigner assignment
-        else if (tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
+        else if (tokens.Length - i > 1 && tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
                  && tokens[i + 1].Type == TokenType.Operation
                  && tokens[i + 1].EqualsString(text, "="))
         {
-            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
-            if (endingIndex == -1)
-                endingIndex = tokens.Length;
-            res = new TokenLine(tokens[i..(endingIndex)], LineType.AssignerAssignment);
-            i = endingIndex;
+            var endingIndex = _findLineEnding(tokens, i, text);
+            res = new TokenLine(tokens[i..(endingIndex.toUse)], LineType.AssignerAssignment);
+            i = endingIndex.toSet;
         }
         // unary operation
         else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
@@ -620,12 +660,11 @@ public static class RCaronRunner
         // keyword plain call
         else if (tokens[i].Type == TokenType.Keyword)
         {
-            // check if keyword is lone keyword -- dont have to -- bruh
-            var endingIndex = Array.FindIndex(tokens, i, t => t.Type == TokenType.LineEnding);
+            var endingIndex = _findLineEnding(tokens, i, text);
             res = new TokenLine(
-                tokens[i..(endingIndex)],
+                tokens[i..(endingIndex.toUse)],
                 LineType.KeywordPlainCall);
-            i = endingIndex;
+            i = endingIndex.toSet;
         }
         // code block
         else if (tokens[i] is CodeBlockToken { Type: TokenType.CodeBlock } cbt)
@@ -640,7 +679,6 @@ public static class RCaronRunner
         else if (tokens[i] is DotGroupPosToken)
         {
             res = new TokenLine(new[] { tokens[i] }, LineType.DotGroupCall);
-            i++;
         }
         // invalid line
         else

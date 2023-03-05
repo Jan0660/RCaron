@@ -40,7 +40,8 @@ public enum TokenType : byte
     LogicalOperation,
     LogicalOperationGroup,
     Path,
-    Range
+    Range,
+    EndOfFile,
 }
 
 [DebuggerDisplay("Type = {Type}")]

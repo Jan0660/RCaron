@@ -123,7 +123,7 @@ public class TokenReader
                 Int64.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
         }
         // single line comment
-        else if (txt[position] == '/' && txt[position + 1] == '/')
+        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '/')
         {
             position += 2;
             while (position < txt.Length && txt[position] != '\n')
@@ -133,7 +133,7 @@ public class TokenReader
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
         // multiline line comment
-        else if (txt[position] == '/' && txt[position + 1] == '*')
+        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '*')
         {
             position += 2;
             while (txt[position] != '*' && txt[position + 1] != '/')
@@ -152,14 +152,15 @@ public class TokenReader
                 text.Substring(initialPosition + 1, position - initialPosition - 1));
         }
         // array literal start
-        else if (txt[position] == '@' && txt[position + 1] == '(')
+        else if (txt.Length - position > 1 && txt[position] == '@' && txt[position + 1] == '(')
         {
             position++;
             return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
         }
         // range operator
         // it is here, instead of in CollectOperation, because it would conflict with TokenType.Dot
-        else if (txt[position] == '.' && txt[position + 1] == '.' && txt[position + 2] != '.')
+        else if (txt.Length - position > 1 && txt[position] == '.' && txt[position + 1] == '.' &&
+                 (txt.Length - position > 2 && txt[position + 2] != '.'))
         {
             position += 2;
             return new PosToken(TokenType.Range, (initialPosition, position));
@@ -200,6 +201,7 @@ public class TokenReader
             position += index;
             return new ConstToken(TokenType.Path, (initialPosition, position), path);
         }
+
         // executable keyword
         if (txt[position] == '@')
         {
@@ -216,7 +218,7 @@ public class TokenReader
         {
             var (index, tokenType, op) = CollectOperation(txt[position..]);
             // collect a keyword e.g. "println"
-            if (index == 0 || (op == OperationEnum.Divide && txt[position + index] != ' '))
+            if (index == 0 || (txt.Length - position - index > 0 && op == OperationEnum.Divide && txt[position + index] != ' '))
             {
                 (index, var str, var isPath) = CollectPathOrKeyword(txt[position..]);
                 if (index == 0)
@@ -239,8 +241,10 @@ public class TokenReader
     public int CollectExecutableKeyword(in ReadOnlySpan<char> span)
     {
         var index = 0;
-        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' || span[index] == '-')
+        while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
+                                       (span[index] >= 'a' && span[index] <= 'z') ||
+                                       (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_' ||
+                                       span[index] == '-'))
             index++;
         return index;
     }
@@ -275,7 +279,7 @@ public class TokenReader
     {
         var index = 0;
         var isDecimal = false;
-        while (char.IsDigit(span[index]) || span[index] == '.')
+        while (index < span.Length && (char.IsDigit(span[index]) || span[index] == '.'))
         {
             if (span[index] == '.' && char.IsDigit(span[index + 1]))
                 isDecimal = true;
@@ -290,8 +294,9 @@ public class TokenReader
     public int CollectAlphaNumeric(in ReadOnlySpan<char> span)
     {
         var index = 0;
-        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z'))
+        while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
+                                       (span[index] >= 'a' && span[index] <= 'z') ||
+                                       (span[index] >= 'A' && span[index] <= 'Z')))
             index++;
         return index;
     }
@@ -299,8 +304,9 @@ public class TokenReader
     public int CollectAlphaNumericAndSome(in ReadOnlySpan<char> span)
     {
         var index = 0;
-        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_')
+        while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
+                                       (span[index] >= 'a' && span[index] <= 'z') ||
+                                       (span[index] >= 'A' && span[index] <= 'Z') || span[index] == '_'))
             index++;
         return index;
     }
@@ -308,8 +314,10 @@ public class TokenReader
     public int CollectAlphaNumericAndSomeAndDot(in ReadOnlySpan<char> span)
     {
         var index = 0;
-        while ((span[index] >= '0' && span[index] <= '9') || (span[index] >= 'a' && span[index] <= 'z') ||
-               (span[index] >= 'A' && span[index] <= 'Z') || (span[index] == '_' || span[index] == '.'))
+        while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
+                                       (span[index] >= 'a' && span[index] <= 'z') ||
+                                       (span[index] >= 'A' && span[index] <= 'Z') ||
+                                       (span[index] == '_' || span[index] == '.')))
             index++;
         return index;
     }
@@ -368,7 +376,6 @@ public class TokenReader
                 {
                     var escape = span[(i + 1)..(i + 5)];
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
-                        // string unicodeString= char.ConvertFromUtf32(code);
                         str.Append((char)code);
                     else
                         throw RCaronException.InvalidUnicodeEscape(escape);
