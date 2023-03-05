@@ -32,8 +32,22 @@ jobs:
         run: dotnet build RCaron.Tests --no-restore
       - name: test
         run: dotnet test RCaron.Tests --no-build
-  rcaron-jit-test:
+  rcaron-jit-build:
     needs: rcaron-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 7.0.x
+          include-prerelease: true
+      - name: restore
+        run: dotnet restore RCaron.Jit
+      - name: build
+        run: dotnet build RCaron.Jit --no-restore
+  rcaron-jit-test:
+    needs: rcaron-jit-build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -92,3 +106,17 @@ jobs:
         run: dotnet build RCaron.Benchmarks --no-restore
       - name: check
         run: dotnet run --project RCaron.Benchmarks --no-build -- checkAllWork
+  shell-build:
+    needs: rcaron-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v2
+        with:
+          dotnet-version: 7.0.x
+          include-prerelease: true
+      - name: restore
+        run: dotnet restore RCaron.Shell
+      - name: build
+        run: dotnet build RCaron.Shell --no-restore
