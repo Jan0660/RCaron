@@ -27,6 +27,7 @@ public enum RCaronExceptionCode
     PositionalArgumentAfterNamedArgument,
     LetVariableTypeMismatch,
     ImportNotFound,
+    InvalidUnicodeEscape
 }
 
 public class RCaronException : Exception
@@ -87,4 +88,7 @@ public class RCaronException : Exception
     public static RCaronException ClassToImportNotFound(string className)
         => new($"Class '{className}' to import not found",
             RCaronExceptionCode.ImportNotFound);
+    
+    public static RCaronException InvalidUnicodeEscape(ReadOnlySpan<char> escape)
+        => new($"Invalid unicode escape '{escape}'", RCaronExceptionCode.InvalidUnicodeEscape);
 }

@@ -122,6 +122,22 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     }
 
     [Fact]
+    public void StringUtf16Escape()
+    {
+        var m = RCaronRunner.Run(@"$h = 'a\u0159b';");
+        m.AssertVariableEquals("h", "a\u0159b");
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"$h = '\utttt';"), ExceptionCode.InvalidUnicodeEscape);
+    }
+
+    [Fact]
+    public void StringUtf32Escape()
+    {
+        var m = RCaronRunner.Run(@"$h = 'a\U0001F47Db';");
+        m.AssertVariableEquals("h", "a\U0001F47Db");
+        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"$h = '\Utttttttt';"), ExceptionCode.InvalidUnicodeEscape);
+    }
+
+    [Fact]
     public void Numbers()
     {
         var m = RCaronRunner.Run(@"$long = 123; $decimal = 123.123;");

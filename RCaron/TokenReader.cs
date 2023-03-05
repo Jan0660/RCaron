@@ -364,6 +364,25 @@ public class TokenReader
                 // vertical tab
                 else if (span[i] == 'v')
                     str.Append('\v');
+                else if (span[i] == 'u')
+                {
+                    var escape = span[(i + 1)..(i + 5)];
+                    if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
+                        // string unicodeString= char.ConvertFromUtf32(code);
+                        str.Append((char)code);
+                    else
+                        throw RCaronException.InvalidUnicodeEscape(escape);
+                    i += 4;
+                }
+                else if (span[i] == 'U')
+                {
+                    var escape = span[(i + 1)..(i + 9)];
+                    if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
+                        str.Append(char.ConvertFromUtf32(code));
+                    else
+                        throw RCaronException.InvalidUnicodeEscape(escape);
+                    i += 8;
+                }
                 else
                     throw new RCaronException($"invalid character to escape: {span[i]}",
                         RCaronExceptionCode.InvalidEscape);
