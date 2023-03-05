@@ -29,7 +29,7 @@ namespace RCaron.LanguageServer
 
             Log.Logger = new LoggerConfiguration()
                         .Enrich.FromLogContext()
-                        .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
+                        // .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
                         .MinimumLevel.Verbose()
                         .CreateLogger();
             
