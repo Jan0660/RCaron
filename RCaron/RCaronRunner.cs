@@ -118,10 +118,6 @@ public static class RCaronRunner
                             (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
                             tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range }
                            ) && !(tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.Keyword))
-                        // while ((i != 0 && i != -1) && 
-                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
-                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
-                        //       )
                         i--;
                     if (tokens.Count - i == 1)
                         return (-1, Array.Empty<PosToken>());
@@ -139,18 +135,9 @@ public static class RCaronRunner
                     var h = BackwardsCollectDotThing();
                     if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
                     {
-                        // may not be needed?
-                        // if (h.tokens[1].Type != TokenType.Dot)
-                        //     goto beforeAdd;
                         // AAAAAA
                         // remove those replace with fucking imposter thing
                         var rem = h.index;
-                        // if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
-                        //     posToken.Type != TokenType.SimpleBlockEnd)
-                        //     rem += 1;
-                        // if (!tokens[rem - 1].IsDotJoinableSomething() &&
-                        //     tokens[rem] is not ValuePosToken)
-                        //     goto beforeAdd;
                         tokens.RemoveFrom(rem);
                         if (h.tokens[0].Type is TokenType.Dot or TokenType.Range or TokenType.Keyword ||
                             Array.Exists(h.tokens, t => t.Type == TokenType.Path))
@@ -178,12 +165,6 @@ public static class RCaronRunner
                             tokens.Add(new DotGroupPosToken(TokenType.DotGroup,
                                 (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
                         }
-                        // goto beforeAdd;
-                    }
-                    else
-                    {
-                        // if (h.index != -1)
-                        //     Debugger.Break();
                     }
                 }
 
@@ -195,10 +176,6 @@ public static class RCaronRunner
                            tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken &&
                            (tokens[i] is { Type: TokenType.MathOperator } ||
                             tokens[i - 1] is { Type: TokenType.MathOperator }))
-                        // while ((i != 0 && i != -1) && 
-                        //        tokens[i] is ValuePosToken && tokens[i - 1] is ValuePosToken && 
-                        //        (tokens[i] is {Type: TokenType.Operator} || tokens[i-1] is {Type: TokenType.Operator})
-                        //       )
                         i--;
                     if ((tokens.Count - i) % 2 == 0 || tokens.Count - i == 1)
                         return (-1, Array.Empty<ValuePosToken>());
@@ -234,16 +211,6 @@ public static class RCaronRunner
                         tokens.RemoveFrom(rem);
                         tokens.Add(new MathValueGroupPosToken(TokenType.DumbShit,
                             (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
-                        // if (posToken is { Type: TokenType.SimpleBlockEnd })
-                        // {
-                        //     dontDoSimpleBlockEndCheck = true;
-                        //     dontAddCurrent = true;
-                        // }
-                    }
-                    else
-                    {
-                        // if (h.index != -1)
-                        //     Debugger.Break();
                     }
                 }
 
@@ -284,13 +251,12 @@ public static class RCaronRunner
                     tokens[^1] is { Type: TokenType.EqualityOperationGroup or TokenType.LogicalOperationGroup } &&
                     tokens[^2].Type == TokenType.SimpleBlockStart)
                 {
-                    var awd = tokens[^1];
                     tokens.RemoveAt(tokens.Count - 2);
                     dontDoSimpleBlockEndCheck = true;
                     dontAddCurrent = true;
                 }
 
-                if ( /*!dontDoSimpleBlockEndCheck && */posToken is BlockPosToken
+                if (posToken is BlockPosToken
                     {
                         Type: TokenType.SimpleBlockEnd
                     } blockToken)
@@ -359,10 +325,6 @@ public static class RCaronRunner
 
                         var h = new CallLikePosToken(TokenType.KeywordCall,
                             (tokens[startIndex - 1].Position.Start, posToken.Position.End), args,
-                            // new[]
-                            // {
-                            //     tokens.GetRange((startIndex + 1)..).ToArray()
-                            // }
                             tokens[startIndex - 1].Position.End, tokens[startIndex - 1].ToString(text)
                         );
                         tokens.RemoveFrom(startIndex - 1);
@@ -376,7 +338,6 @@ public static class RCaronRunner
                 beforeAdd: ;
                 if (!dontAddCurrent)
                     tokens.Add(posToken);
-                afterAdd: ;
             }
 
             token = reader.Read();
