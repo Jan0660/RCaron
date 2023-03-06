@@ -133,16 +133,16 @@ public class TokenReader
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
         // // multiline line comment
-        // else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '*')
-        // {
-        //     position += 2;
-        //     while (txt[position] != '*' && txt[position + 1] != '/')
-        //         position++;
-        //     position += 3;
-        //     if (!ReturnIgnored)
-        //         return IgnorePosToken;
-        //     return new PosToken(TokenType.Comment, (initialPosition, position));
-        // }
+        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '#')
+        {
+            position += 2;
+            while (txt[position] != '#' && txt[position + 1] != '/')
+                position++;
+            position += 3;
+            if (!ReturnIgnored)
+                return IgnorePosToken;
+            return new PosToken(TokenType.Comment, (initialPosition, position));
+        }
         // extern thing
         else if (txt[position] == '#')
         {
