@@ -132,17 +132,17 @@ public class TokenReader
                 return IgnorePosToken;
             return new PosToken(TokenType.Comment, (initialPosition, position));
         }
-        // multiline line comment
-        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '*')
-        {
-            position += 2;
-            while (txt[position] != '*' && txt[position + 1] != '/')
-                position++;
-            position += 3;
-            if (!ReturnIgnored)
-                return IgnorePosToken;
-            return new PosToken(TokenType.Comment, (initialPosition, position));
-        }
+        // // multiline line comment
+        // else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '*')
+        // {
+        //     position += 2;
+        //     while (txt[position] != '*' && txt[position + 1] != '/')
+        //         position++;
+        //     position += 3;
+        //     if (!ReturnIgnored)
+        //         return IgnorePosToken;
+        //     return new PosToken(TokenType.Comment, (initialPosition, position));
+        // }
         // extern thing
         else if (txt[position] == '#')
         {
@@ -218,7 +218,9 @@ public class TokenReader
         {
             var (index, tokenType, op) = CollectOperation(txt[position..]);
             // collect a keyword e.g. "println"
-            if (index == 0 || (txt.Length - position - index > 0 && op == OperationEnum.Divide && txt[position + index] != ' '))
+            if (index == 0 || (txt.Length - position - index > 0 &&
+                               ((op == OperationEnum.Divide && txt[position + index] != ' ') ||
+                                (op == OperationEnum.Multiply && txt[position + index] != ' '))))
             {
                 (index, var str, var isPath) = CollectPathOrKeyword(txt[position..]);
                 if (index == 0)
@@ -393,6 +395,7 @@ public class TokenReader
                 else
                     throw new RCaronException($"invalid character to escape: {span[i]}",
                         RCaronExceptionCode.InvalidEscape);
+
                 continue;
             }
 

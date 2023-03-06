@@ -20,7 +20,9 @@ public class PathTests
         @"C:\", "C:/", @"C:\file", "C:/file", @"C:\file.ext",
         "dir/", "file", "file.ext",
         "./file", "../file",
-        ".file", ".dir/"
+        ".file", ".dir/",
+        "~", "~/file", "~/dir/",
+        "*", "*.*", "*.ext", "./file*.*", "/*",
     };
 
     public static IEnumerable<object[]> GetPathTestData()

@@ -58,11 +58,12 @@ public static class RCaronRunner
         var hasDoneLastToken = false;
         while (token != null || !hasDoneLastToken)
         {
-            if(token == null && !hasDoneLastToken)
+            if (token == null && !hasDoneLastToken)
             {
                 hasDoneLastToken = true;
                 token = new PosToken(TokenType.EndOfFile, (text.Length, text.Length));
             }
+
             if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
             {
                 if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
@@ -169,6 +170,8 @@ public static class RCaronRunner
                                     path.Append((string)actualPathToken.Value);
                                 else if (pathToken is KeywordToken keywordToken)
                                     path.Append(keywordToken.String);
+                                else
+                                    throw new("something went very wrong with the parsing it seems");
                             }
 
                             tokens.Add(new ConstToken(TokenType.Path,
@@ -578,8 +581,8 @@ public static class RCaronRunner
         }
         // assigner assignment
         else if (tokens.Length - i > 1 && tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
-                 && tokens[i + 1].Type == TokenType.Operation
-                 && tokens[i + 1].EqualsString(text, "="))
+                                       && tokens[i + 1].Type == TokenType.Operation
+                                       && tokens[i + 1].EqualsString(text, "="))
         {
             var endingIndex = _findLineEnding(tokens, i, text);
             res = new TokenLine(tokens[i..(endingIndex.toUse)], LineType.AssignerAssignment);

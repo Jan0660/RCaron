@@ -129,10 +129,12 @@ public class Compiler
                 }
                 case { Type: TokenType.Range }:
                     return Expression.Constant("..");
-                case ValueOperationValuePosToken { Operation: OperationEnum.Divide }:
-                    return Expression.Constant("/");
                 case { Type: TokenType.Dot }:
                     return Expression.Constant(".");
+                case ValueOperationValuePosToken { Operation: OperationEnum.Divide }:
+                    return Expression.Constant("/");
+                case ValueOperationValuePosToken { Operation: OperationEnum.Multiply }:
+                    return Expression.Constant("*");
                 case MathValueGroupPosToken mathValueGroupPosToken:
                     return GetMathExpression(mathValueGroupPosToken.ValueTokens);
                 case LogicalOperationValuePosToken logicalToken:

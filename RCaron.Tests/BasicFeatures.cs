@@ -268,14 +268,14 @@ $h--;");
         m.AssertVariableEquals("h", (long)4);
     }
 
-    [Fact]
-    public void MultilineComments()
-    {
-        var m = RCaronRunner.Run(@"/*when the comment is*/
-$h = 1;
-/**/ /* cool */");
-        m.AssertVariableEquals("h", (long)1);
-    }
+//     [Fact]
+//     public void MultilineComments()
+//     {
+//         var m = RCaronRunner.Run(@"/*when the comment is*/
+// $h = 1;
+// /**/ /* cool */");
+//         m.AssertVariableEquals("h", (long)1);
+//     }
 
     [Fact]
     public void ExternalMethods()

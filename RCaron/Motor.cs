@@ -1070,6 +1070,8 @@ public class Motor
             return "..";
         if (token is ValueOperationValuePosToken { Operation: OperationEnum.Divide })
             return "/";
+        if (token is ValueOperationValuePosToken { Operation: OperationEnum.Multiply })
+            return "*";
         switch (token.Type)
         {
             case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
