@@ -33,9 +33,6 @@ fileArgument.SetDefaultValue(null);
 var interactiveOption = new Option<bool>("--interactive",
     "Run interactive.");
 interactiveOption.AddAlias("-i");
-var lintOption = new Option<bool>("--lint",
-    "Print code funny colored.");
-lintOption.AddAlias("-l");
 var funOption = new Option<bool>("--fun",
     "Add experimental stuff module.");
 var argsArgument = new Argument<string[]>("arguments", "Arguments to pass to the file");
@@ -45,21 +42,19 @@ argsArgument.SetDefaultValue(Array.Empty<string>());
 var rootCommand = new RootCommand();
 rootCommand.AddArgument(fileArgument);
 rootCommand.AddOption(interactiveOption);
-rootCommand.AddOption(lintOption);
 rootCommand.AddOption(funOption);
 rootCommand.AddArgument(argsArgument);
 
 rootCommand.Description = "RCaron.Cli";
 
-rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, string[] arguments) =>
+rootCommand.SetHandler((FileInfo? f, bool interactive, bool fun, string[] arguments) =>
 {
-    RCaronRunner.GlobalLog = lint ? RCaronRunnerLog.FunnyColors: 0;
     Motor motor = new(new(null!));
     if (f is not null)
     {
         logger.Info($"Executing file {f.FullName}");
         motor.SetVar("args", arguments);
-        motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName), returnIgnored: lint));
+        motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName)));
         motor.MainFileScope.FileName = f.FullName;
         if (fun)
             AddFun(motor);
@@ -81,14 +76,12 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
         }
     }
 
-    RCaronRunner.GlobalLog = 0;
-
     if (interactive)
     {
         var input = Console.ReadLine();
         while (input != null)
         {
-            var ctx = RCaronRunner.Parse(input, returnIgnored: lint);
+            var ctx = RCaronRunner.Parse(input);
             // todo: doesn't do functions and classes
             motor.UseContext(ctx, false);
             try
@@ -103,7 +96,7 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool lint, bool fun, stri
             input = Console.ReadLine();
         }
     }
-}, fileArgument, interactiveOption, lintOption, funOption, argsArgument);
+}, fileArgument, interactiveOption, funOption, argsArgument);
 
 // Parse the incoming args and invoke the handler
 return rootCommand.Invoke(args);

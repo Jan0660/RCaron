@@ -101,14 +101,6 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     }
 
     [Fact]
-    public void EnableLogRun()
-    {
-        RCaronRunner.GlobalLog = (RCaronRunnerLog)0b111111;
-        RCaronRunner.Run("println 'woo';");
-        RCaronRunner.GlobalLog = 0;
-    }
-
-    [Fact]
     public void Strings()
     {
         var m = RCaronRunner.Run(@"$h = 'when the string is escaped == \'kool!!!\' \\';");

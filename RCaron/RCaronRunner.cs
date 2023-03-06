@@ -8,8 +8,6 @@ namespace RCaron;
 
 public static class RCaronRunner
 {
-    public static RCaronRunnerLog GlobalLog = RCaronRunnerLog.None;
-
     public static Motor Run(string text, MotorOptions? motorOptions = null)
     {
         var ctx = Parse(text);
@@ -66,8 +64,6 @@ public static class RCaronRunner
 
             if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
             {
-                if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
-                    Console.Write(token.ToString(text));
                 token = reader.Read();
                 continue;
             }
@@ -381,38 +377,12 @@ public static class RCaronRunner
                 if (!dontAddCurrent)
                     tokens.Add(posToken);
                 afterAdd: ;
-                if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
-                {
-                    Console.ForegroundColor = posToken.Type switch
-                    {
-                        TokenType.Operation => ConsoleColor.Black,
-                        TokenType.String => ConsoleColor.Blue,
-                        TokenType.Number => ConsoleColor.Cyan,
-                        TokenType.DecimalNumber => ConsoleColor.Cyan,
-                        TokenType.VariableIdentifier => ConsoleColor.Green,
-                        TokenType.Keyword or TokenType.ExternThing => ConsoleColor.Magenta,
-                        _ => ConsoleColor.Black,
-                    };
-                    Console.Write(posToken.ToString(text));
-                    if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColorsBrackets) && posToken is BlockPosToken bpt)
-                    {
-                        Console.ForegroundColor = ConsoleColor.DarkGray;
-                        Console.Write($"({bpt.Depth}, {bpt.Number})");
-                    }
-                }
             }
 
             token = reader.Read();
         }
 
         DoCodeBlockToken();
-
-        if (GlobalLog.HasFlag(RCaronRunnerLog.FunnyColors))
-        {
-            Console.WriteLine();
-            Console.ResetColor();
-            Console.Out.Flush();
-        }
 
         // find lines
         var lines = new List<Line>();
