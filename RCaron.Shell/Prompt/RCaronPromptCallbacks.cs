@@ -55,6 +55,8 @@ public class RCaronPromptCallbacks : PromptCallbacks
         if (HighlightBracketPairs)
         {
             var inString = false;
+            var inSingleLineComment = false;
+            var inMultiLineComment = false;
             short roundDepth = -1;
             short squareDepth = -1;
             short curlyDepth = -1;
@@ -69,6 +71,20 @@ public class RCaronPromptCallbacks : PromptCallbacks
                     i++;
                 else if (!inString)
                 {
+                    if (inSingleLineComment && text[i] == '\n')
+                        inSingleLineComment = false;
+                    else if (inSingleLineComment)
+                        continue;
+                    // make sure we skip comments
+                    if (i < text.Length - 1 && text[i] == '/' && text[i + 1] == '/')
+                        inSingleLineComment = true;
+                    else if (i < text.Length - 1 && text[i] == '/' && text[i + 1] == '#')
+                        inMultiLineComment = true;
+                    else if (i < text.Length - 1 && text[i] == '#' && text[i + 1] == '/')
+                        inMultiLineComment = false;
+                    if (inMultiLineComment)
+                        continue;
+
                     if (text[i] == '(')
                         AddPairSpan(false, i, ref roundDepth, ref roundStack, spans);
                     else if (text[i] == ')')
