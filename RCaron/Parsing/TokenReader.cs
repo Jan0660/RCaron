@@ -375,23 +375,27 @@ public class TokenReader
                 // vertical tab
                 else if (span[i] == 'v')
                     str.Append('\v');
-                else if (span[i] == 'u')
+                else if (span[i] == 'u' || span[i] == 'U')
                 {
-                    var escape = span[(i + 1)..(i + 5)];
+                    var length = span[i] == 'u' ? 4 : 8;
+                    var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, length);
+                    if (escape.Length != length)
+                    {
+                        ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, length,
+                            new((i + (text.Length - span.Length)) - 1, 2 + escape.Length)));
+                        continue;
+                    }
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
-                        str.Append((char)code);
+                    {
+                        if(length == 4)
+                            str.Append((char)code);
+                        else
+                            str.Append(char.ConvertFromUtf32(code));
+                    }
                     else
-                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape, new((i + (text.Length - span.Length)) - 1, 6)));
-                    i += 4;
-                }
-                else if (span[i] == 'U')
-                {
-                    var escape = span[(i + 1)..(i + 9)];
-                    if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
-                        str.Append(char.ConvertFromUtf32(code));
-                    else
-                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape, new((i + (text.Length - span.Length)) - 1, 10)));
-                    i += 8;
+                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape,
+                            new((i + (text.Length - span.Length)) - 1, 2 + length)));
+                    i += length;
                 }
                 else
                     throw new RCaronException($"invalid character to escape: {span[i]}",
@@ -404,6 +408,18 @@ public class TokenReader
         }
 
         return (index, str.ToString());
+    }
+
+    public ReadOnlySpan<char> GetCharactersInStringForUnicodeEscape(in ReadOnlySpan<char> span, int start, int length)
+    {
+        var index = start;
+        while (index < span.Length && (index - start) < length
+                                   && !(span[index] == '\'' && span[index - 1] != '\\'))
+        {
+            index++;
+        }
+
+        return span[start..index];
     }
 
     public bool IsMatch(in ReadOnlySpan<char> span, ReadOnlySpan<char> toMatch)

@@ -28,7 +28,8 @@ public enum RCaronExceptionCode
     LetVariableTypeMismatch,
     ImportNotFound,
     InvalidUnicodeEscape,
-    ExecutionNotAllowed
+    ExecutionNotAllowed,
+    TooShortUnicodeEscape,
 }
 
 public class RCaronException : Exception

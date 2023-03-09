@@ -119,6 +119,7 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
         var m = RCaronRunner.Run(@"$h = 'a\u0159b';");
         m.AssertVariableEquals("h", "a\u0159b");
         ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\utttt';"), ExceptionCode.InvalidUnicodeEscape);
+        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\uaa';"), ExceptionCode.TooShortUnicodeEscape);
     }
 
     [Fact]
@@ -127,6 +128,7 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
         var m = RCaronRunner.Run(@"$h = 'a\U0001F47Db';");
         m.AssertVariableEquals("h", "a\U0001F47Db");
         ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\Utttttttt';"), ExceptionCode.InvalidUnicodeEscape);
+        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\Uaaaaaa';"), ExceptionCode.TooShortUnicodeEscape);
     }
 
     [Fact]
