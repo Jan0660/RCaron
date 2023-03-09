@@ -16,4 +16,7 @@ public class ParsingException : RCaronException
     public static ParsingException TooShortUnicodeEscape(ReadOnlySpan<char> escape, int expectedLength, TextSpan location)
         => new($"Too short unicode escape '{escape}', expected {expectedLength} characters",
             RCaronExceptionCode.TooShortUnicodeEscape, location);
+
+    public static ParsingException InvalidEscapeSequence(char c, TextSpan location)
+        => new($"Invalid character to escape: {c}", RCaronExceptionCode.InvalidEscape, location);
 }

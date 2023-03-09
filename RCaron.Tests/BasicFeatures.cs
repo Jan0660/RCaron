@@ -110,7 +110,7 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     [Fact]
     public void StringInvalidCharacterEscape()
     {
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"$h = '\z';"), ExceptionCode.InvalidEscape);
+        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\z';"), ExceptionCode.InvalidEscape);
     }
 
     [Fact]

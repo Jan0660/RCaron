@@ -382,24 +382,25 @@ public class TokenReader
                     if (escape.Length != length)
                     {
                         ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, length,
-                            new((i + (text.Length - span.Length)) - 1, 2 + escape.Length)));
+                            GetLocation(span, i - 1, 2 + escape.Length)));
                         continue;
                     }
+
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
                     {
-                        if(length == 4)
+                        if (length == 4)
                             str.Append((char)code);
                         else
                             str.Append(char.ConvertFromUtf32(code));
                     }
                     else
-                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape,
-                            new((i + (text.Length - span.Length)) - 1, 2 + length)));
+                        ErrorHandler.Handle(
+                            ParsingException.InvalidUnicodeEscape(escape, GetLocation(span, i - 1, 2 + length)));
+
                     i += length;
                 }
                 else
-                    throw new RCaronException($"invalid character to escape: {span[i]}",
-                        RCaronExceptionCode.InvalidEscape);
+                    ErrorHandler.Handle(ParsingException.InvalidEscapeSequence(span[i], GetLocation(span, i - 1, 2)));
 
                 continue;
             }
@@ -474,4 +475,10 @@ public class TokenReader
             return (1, TokenType.MathOperator, OperationEnum.Modulo);
         return (0, 0, 0);
     }
+
+    public TextSpan GetLocation(int startIndex, int length)
+        => new(startIndex, length);
+
+    public TextSpan GetLocation(ReadOnlySpan<char> subSpan, int startIndexInSubSpan, int length)
+        => new(startIndexInSubSpan + (text.Length - subSpan.Length), length);
 }
