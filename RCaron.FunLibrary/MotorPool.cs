@@ -1,4 +1,5 @@
 ﻿using System.Collections.Concurrent;
+using RCaron.Parsing;
 
 namespace RCaron.FunLibrary;
 
@@ -25,7 +26,7 @@ public static class MotorPool
             }
         }
 
-        res = new Motor(new RCaronRunnerContext(parent.MainFileScope));
+        res = new Motor(new RCaronParserContext(parent.MainFileScope));
         Prepare(res);
         var item = new MotorPoolItem(res) { InUse = true };
         Pool.Add(item);

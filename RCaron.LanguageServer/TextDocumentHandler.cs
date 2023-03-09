@@ -13,6 +13,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Server;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Server.WorkDone;
 using OmniSharp.Extensions.LanguageServer.Protocol.Workspace;
+using RCaron.Parsing;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 
@@ -26,18 +27,20 @@ namespace RCaron.LanguageServer
         private readonly ILanguageServerConfiguration _configuration;
 
         private readonly DocumentSelector _documentSelector = DocumentSelector.ForLanguage("rcaron");
+        private readonly ILanguageServerFacade _facade;
 
         public TextDocumentHandler(ILogger<TextDocumentHandler> logger, Foo foo,
-            ILanguageServerConfiguration configuration)
+            ILanguageServerConfiguration configuration, ILanguageServerFacade facade)
         {
             _logger = logger;
             _configuration = configuration;
             foo.SayFoo();
+            _facade = facade;
         }
 
         public TextDocumentSyncKind Change { get; } = TextDocumentSyncKind.Full;
 
-        public override Task<Unit> Handle(DidChangeTextDocumentParams notification, CancellationToken token)
+        public override async Task<Unit> Handle(DidChangeTextDocumentParams notification, CancellationToken token)
         {
             foreach (var change in notification.ContentChanges)
             {
@@ -50,7 +53,35 @@ namespace RCaron.LanguageServer
                 _logger.LogInformation("Updated document text for {Path}", notification.TextDocument.Uri.Path);
             }
 
-            return Unit.Task;
+            var content = await Util.GetDocumentText(notification.TextDocument.Uri.GetFileSystemPath());
+            // do highlighting
+            var errorHandler = new ParsingErrorStoreHandler();
+            var tryParsed = RCaronParser.Parse(content, errorHandler: errorHandler);
+            if (errorHandler.Exceptions.Count == 0)
+                return Unit.Value;
+            var diagnostics = new List<Diagnostic>();
+            
+            foreach (var exception in errorHandler.Exceptions)
+            {
+                diagnostics.Add(new Diagnostic()
+                {
+                    Code = exception.Code.ToString(),
+                    Severity = DiagnosticSeverity.Error,
+                    Message = exception.Message,
+                    Range = Util.GetRange(exception.Location.Position, exception.Location.Position + exception.Location.Length, content),
+                    // Source = "XXX",
+                    // Tags = new Container<DiagnosticTag>(new DiagnosticTag[] { DiagnosticTag.Unnecessary })
+                });
+            }
+            
+            _facade.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams() 
+            {
+                Diagnostics = new Container<Diagnostic>(diagnostics.ToArray()),
+                Uri = notification.TextDocument.Uri,
+                Version = notification.TextDocument.Version,
+            });
+
+            return Unit.Value;
         }
 
         public override async Task<Unit> Handle(DidOpenTextDocumentParams notification, CancellationToken token)
@@ -86,7 +117,7 @@ namespace RCaron.LanguageServer
             new TextDocumentAttributes(uri, "rcaron");
     }
 
-    internal class MyDocumentSymbolHandler : IDocumentSymbolHandler
+    internal class MyDocumentSymbolHandler : DocumentSymbolHandlerBase
     {
         private readonly ILogger _logger;
 
@@ -95,7 +126,7 @@ namespace RCaron.LanguageServer
             _logger = logger;
         }
 
-        public async Task<SymbolInformationOrDocumentSymbolContainer> Handle(
+        public override async Task<SymbolInformationOrDocumentSymbolContainer> Handle(
             DocumentSymbolParams request,
             CancellationToken cancellationToken
         )
@@ -139,7 +170,7 @@ namespace RCaron.LanguageServer
                 return symbol;
             }
 
-            var parsed = RCaronRunner.Parse(content, returnDescriptive: true);
+            var parsed = RCaronParser.Parse(content, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
 
             void EvaluateLines(IList<Line> lines, [CanBeNull] List<DocumentSymbol> parentChildren = null, bool insideClass = false)
             {
@@ -200,7 +231,7 @@ namespace RCaron.LanguageServer
             return symbols;
         }
 
-        public DocumentSymbolRegistrationOptions GetRegistrationOptions(DocumentSymbolCapability capability,
+        protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(DocumentSymbolCapability capability,
             ClientCapabilities clientCapabilities) => new DocumentSymbolRegistrationOptions
         {
             DocumentSelector = DocumentSelector.ForLanguage("rcaron")

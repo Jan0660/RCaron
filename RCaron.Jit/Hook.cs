@@ -3,6 +3,7 @@ using System.Diagnostics;
 using System.Linq.Expressions;
 using ExpressionTreeToString;
 using Microsoft.Scripting.Generation;
+using RCaron.Parsing;
 
 namespace RCaron.Jit;
 
@@ -25,9 +26,9 @@ public static class Hook
         var compiled = CompileWithNoMotor(code);
         compiled.DynamicInvoke();
     }
-    public static Motor Run(RCaronRunnerContext ctx, MotorOptions? options = null, Motor? fakeMotor = null)
+    public static Motor Run(RCaronParserContext ctx, MotorOptions? options = null, Motor? fakeMotor = null)
     {
-        fakeMotor ??= new Motor(new RCaronRunnerContext(ctx.FileScope), options);
+        fakeMotor ??= new Motor(new RCaronParserContext(ctx.FileScope), options);
         var block = Compiler.CompileToBlock(ctx, fakeMotor);
         var lambda = Expression.Lambda(block);
         var compiled = lambda.Compile();

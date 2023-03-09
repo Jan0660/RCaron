@@ -1,4 +1,5 @@
 ﻿using BenchmarkDotNet.Attributes;
+using RCaron.Parsing;
 
 namespace RCaron.Benchmarks.Benchmarks;
 
@@ -27,7 +28,7 @@ $hello8 'a'     'aaa yee haawww hello worldy';";
         Console.WriteLine(text);
         Console.WriteLine("===============================");
         var tokens = new List<PosToken>();
-        var reader = new TokenReader(text);
+        var reader = new TokenReader(text, RCaronParser.DefaultThrowHandler);
         var token = reader.Read();
         while (token != null)
         {

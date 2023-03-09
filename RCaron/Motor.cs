@@ -16,6 +16,7 @@ using Microsoft.CSharp.RuntimeBinder;
 using RCaron.BaseLibrary;
 using RCaron.Binders;
 using RCaron.Classes;
+using RCaron.Parsing;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 using Console = Log73.Console;
 using ExceptionCode = RCaron.RCaronExceptionCode;
@@ -80,20 +81,20 @@ public class Motor
     public LocalScope GlobalScope { get; set; } = new();
 
 #pragma warning disable CS8618
-    public Motor(RCaronRunnerContext runnerContext, MotorOptions? options = null)
+    public Motor(RCaronParserContext parserContext, MotorOptions? options = null)
 #pragma warning restore CS8618
     {
-        UseContext(runnerContext);
+        UseContext(parserContext);
         Options = options ?? new();
         // Modules = new List<IRCaronModule>(1) { new LoggingModule() };
     }
 
-    public void UseContext(RCaronRunnerContext runnerContext, bool withFileScope = true)
+    public void UseContext(RCaronParserContext parserContext, bool withFileScope = true)
     {
-        Lines = runnerContext.FileScope?.Lines;
-        if (withFileScope && runnerContext.FileScope != null)
+        Lines = parserContext.FileScope?.Lines;
+        if (withFileScope && parserContext.FileScope != null)
         {
-            MainFileScope = runnerContext.FileScope;
+            MainFileScope = parserContext.FileScope;
             MainFileScope.Modules ??= new List<IRCaronModule>(1) { new LoggingModule(), new ExperimentalModule() };
         }
     }
@@ -108,7 +109,7 @@ public class Motor
     public object? Run(int startIndex = 0)
     {
 #if RCARONJIT
-        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { new RCaronRunnerContext(MainFileScope), null, this });
+        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { new RCaronParserContext(MainFileScope), null, this });
         return null;
 #endif
         curIndex = startIndex;

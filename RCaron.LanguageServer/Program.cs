@@ -1,4 +1,6 @@
 using System;
+using System.Diagnostics;
+using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,11 +31,16 @@ namespace RCaron.LanguageServer
 
             Log.Logger = new LoggerConfiguration()
                         .Enrich.FromLogContext()
-                        // .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
+                        .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
                         .MinimumLevel.Verbose()
                         .CreateLogger();
             
             Log.Logger.Information("This only goes file...");
+
+            // while (!Debugger.IsAttached)
+            // {
+            //     Thread.Sleep(100);
+            // }
 
             IObserver<WorkDoneProgressReport> workDone = null!;
 
@@ -68,23 +75,23 @@ namespace RCaron.LanguageServer
                                     {
                                         var loggerFactory = provider.GetService<ILoggerFactory>();
                                         var logger = loggerFactory.CreateLogger<Foo>();
-
+                       
                                         logger.LogInformation("Configuring");
-
+                       
                                         return new Foo(logger);
                                     }
                                 );
-                                services.AddSingleton(
-                                    new ConfigurationItem
-                                    {
-                                        Section = "typescript",
-                                    }
-                                ).AddSingleton(
-                                    new ConfigurationItem
-                                    {
-                                        Section = "terminal",
-                                    }
-                                );
+                                // services.AddSingleton(
+                                //     new ConfigurationItem
+                                //     {
+                                //         Section = "typescript",
+                                //     }
+                                // ).AddSingleton(
+                                //     new ConfigurationItem
+                                //     {
+                                //         Section = "terminal",
+                                //     }
+                                // );
                             }
                         )
                        .OnInitialize(
@@ -138,39 +145,39 @@ namespace RCaron.LanguageServer
                             {
                                 using var manager = await languageServer.WorkDoneManager.Create(new WorkDoneProgressBegin { Title = "Doing some work..." })
                                                                         .ConfigureAwait(false);
-
+                       
                                 manager.OnNext(new WorkDoneProgressReport { Message = "doing things..." });
                                 await Task.Delay(100).ConfigureAwait(false);
                                 manager.OnNext(new WorkDoneProgressReport { Message = "doing things... 1234" });
                                 await Task.Delay(100).ConfigureAwait(false);
                                 manager.OnNext(new WorkDoneProgressReport { Message = "doing things... 56789" });
-
-                                var logger = languageServer.Services.GetService<ILogger<Foo>>();
-                                var configuration = await languageServer.Configuration.GetConfiguration(
-                                    new ConfigurationItem
-                                    {
-                                        Section = "typescript",
-                                    }, new ConfigurationItem
-                                    {
-                                        Section = "terminal",
-                                    }
-                                ).ConfigureAwait(false);
-
-                                var baseConfig = new JObject();
-                                foreach (var config in languageServer.Configuration.AsEnumerable())
-                                {
-                                    baseConfig.Add(config.Key, config.Value);
-                                }
-
-                                logger.LogInformation("Base Config: {@Config}", baseConfig);
-
-                                var scopedConfig = new JObject();
-                                foreach (var config in configuration.AsEnumerable())
-                                {
-                                    scopedConfig.Add(config.Key, config.Value);
-                                }
-
-                                logger.LogInformation("Scoped Config: {@Config}", scopedConfig);
+                       
+                                // var logger = languageServer.Services.GetService<ILogger<Foo>>();
+                                // var configuration = await languageServer.Configuration.GetConfiguration(
+                                //     new ConfigurationItem
+                                //     {
+                                //         Section = "typescript",
+                                //     }, new ConfigurationItem
+                                //     {
+                                //         Section = "terminal",
+                                //     }
+                                // ).ConfigureAwait(false);
+                                //
+                                // var baseConfig = new JObject();
+                                // foreach (var config in languageServer.Configuration.AsEnumerable())
+                                // {
+                                //     baseConfig.Add(config.Key, config.Value);
+                                // }
+                                //
+                                // logger.LogInformation("Base Config: {@Config}", baseConfig);
+                                //
+                                // var scopedConfig = new JObject();
+                                // foreach (var config in configuration.AsEnumerable())
+                                // {
+                                //     scopedConfig.Add(config.Key, config.Value);
+                                // }
+                                //
+                                // logger.LogInformation("Scoped Config: {@Config}", scopedConfig);
                             }
                         )
             ).ConfigureAwait(false);

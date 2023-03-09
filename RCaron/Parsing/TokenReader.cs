@@ -1,8 +1,7 @@
-using System.Diagnostics;
 using System.Globalization;
 using Log73;
 
-namespace RCaron;
+namespace RCaron.Parsing;
 
 // todo(perf): could be a struct so that it is kept on the stack?
 public class TokenReader
@@ -11,12 +10,14 @@ public class TokenReader
     string text;
     public bool ReturnIgnored { get; set; }
     public static readonly PosToken IgnorePosToken = new(TokenType.Ignore, (0, 0));
+    public IParsingErrorHandler ErrorHandler { get; }
 
-    public TokenReader(string text, bool returnIgnored = false)
+    public TokenReader(string text, IParsingErrorHandler errorHandler, bool returnIgnored = false)
     {
         this.text = text;
         this.position = 0;
         ReturnIgnored = returnIgnored;
+        ErrorHandler = errorHandler;
     }
 
     public PosToken? Read()
@@ -380,7 +381,7 @@ public class TokenReader
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
                         str.Append((char)code);
                     else
-                        throw RCaronException.InvalidUnicodeEscape(escape);
+                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape, new((i + (text.Length - span.Length)) - 1, 6)));
                     i += 4;
                 }
                 else if (span[i] == 'U')
@@ -389,7 +390,7 @@ public class TokenReader
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
                         str.Append(char.ConvertFromUtf32(code));
                     else
-                        throw RCaronException.InvalidUnicodeEscape(escape);
+                        ErrorHandler.Handle(ParsingException.InvalidUnicodeEscape(escape, new((i + (text.Length - span.Length)) - 1, 10)));
                     i += 8;
                 }
                 else

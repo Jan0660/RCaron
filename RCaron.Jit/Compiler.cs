@@ -9,6 +9,7 @@ using Microsoft.CSharp.RuntimeBinder;
 using RCaron.Classes;
 using RCaron.Jit.Binders;
 using RCaron.Binders;
+using RCaron.Parsing;
 using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.Jit;
@@ -19,11 +20,11 @@ public class Compiler
     private static readonly object ReturnWithoutValue = RCaronInsideEnum.ReturnWithoutValue;
 
     public static BlockExpression CompileToBlock(
-        RCaronRunnerContext parsed, Motor? fakedMotor = null)
+        RCaronParserContext parsed, Motor? fakedMotor = null)
         => Compile(parsed, fakedMotor).blockExpression;
 
     public static (BlockExpression blockExpression, CompiledContext compiledContext) Compile(
-        RCaronRunnerContext parsed, Motor? fakedMotor = null)
+        RCaronParserContext parsed, Motor? fakedMotor = null)
     {
         var contextStack = new NiceStack<Context>();
         var fakedMotorConstant = Expression.Constant(fakedMotor, typeof(Motor));
