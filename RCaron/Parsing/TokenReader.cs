@@ -259,7 +259,7 @@ public class TokenReader
         var isPath = false;
         Span<char> resultSpan = stackalloc char[span.Length];
         var path = new SpanStringBuilder(ref resultSpan);
-        while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != ',' &&
+        while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != '\r' && span[index] != ',' &&
                span[index] != '(' && span[index] != '{' && span[index] != '[' &&
                span[index] != ')' && span[index] != ']' && span[index] != '}' &&
                span[index] != ';' && span[index] != ':' && span[index] != '.')
