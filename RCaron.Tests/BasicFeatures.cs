@@ -96,7 +96,7 @@ dowhile ($h > 1) {
     [Fact]
     public void InvalidLine()
     {
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Parse(@"$h = 0;
+        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Parse(@"$h = 0;
 $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     }
 
