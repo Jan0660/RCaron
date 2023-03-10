@@ -44,7 +44,7 @@ public static class RCaronParser
                 // skip semicolon
                 if (range[i].Type == TokenType.LineEnding)
                     continue;
-                codeBlockLines.Add(GetLine(range, ref i, text));
+                codeBlockLines.Add(GetLine(range, ref i, text, errorHandler));
             }
 
             tokens.Add(new CodeBlockToken(codeBlockLines));
@@ -412,7 +412,9 @@ public static class RCaronParser
                 i += 2;
             }
             else
-                lines.Add(GetLine(t, ref i, text));
+            {
+                lines.Add(GetLine(t, ref i, text, errorHandler));
+            }
         }
 
         return new RCaronParserContext(fileScope, errorHandler.AllowsExecution());
@@ -450,7 +452,7 @@ public static class RCaronParser
         return (ind, ind);
     }
 
-    public static Line GetLine(PosToken[] tokens, ref int i, in string text)
+    public static Line GetLine(PosToken[] tokens, ref int i, in string text, IParsingErrorHandler errorHandler)
     {
         Line? res = default;
         var callToken = tokens[i] as CallLikePosToken;
@@ -557,18 +559,18 @@ public static class RCaronParser
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
             var falseI = 0;
-            var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
+            var initializer = GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
             falseI = 0;
-            var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
+            var iterator = GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
             return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i]);
         }
         // qfor loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "qfor"))
         {
             var falseI = 0;
-            var initializer = GetLine(callToken.Arguments[0], ref falseI, text);
+            var initializer = GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
             falseI = 0;
-            var iterator = GetLine(callToken.Arguments[2], ref falseI, text);
+            var iterator = GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
             return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i],
                 LineType.QuickForLoop);
         }
@@ -622,7 +624,8 @@ public static class RCaronParser
                     lineNumber++;
             }
 
-            throw new RCaronException($"invalid line at line {lineNumber}", RCaronExceptionCode.ParseInvalidLine);
+            errorHandler.Handle(ParsingException.InvalidLine(lineNumber, new TextSpan(pos, 1)));
+            return new TokenLine(new[] { tokens[i] }, LineType.InvalidLine);
         }
 
         return res;

@@ -82,4 +82,5 @@ public enum LineType : byte
     FinallyBlock,
     ClassDefinition,
     LetVariableAssignment,
+    InvalidLine
 }
