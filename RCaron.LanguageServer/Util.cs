@@ -41,6 +41,28 @@ public static class Util
         return new Position(line, column);
     }
 
+    public static int GetPositionInt(string raw, Position position)
+    {
+        const int indexedByWhat = 0; // or 1
+        var line = indexedByWhat;
+        var col = indexedByWhat;
+        for (var i = indexedByWhat; i < raw.Length; i++)
+        {
+            col++;
+            if (line == position.Line && col == position.Character)
+            {
+                return i;
+            }
+            if (raw[i] == '\n')
+            {
+                line++;
+                col = indexedByWhat;
+            }
+        }
+
+        throw new();
+    }
+
     public static Range GetRange(int start, int end, in string raw)
     {
         var startPos = GetPosition(start, raw);

@@ -1,11 +1,7 @@
 using System;
-using System.Diagnostics;
-using System.Threading;
 using System.Threading.Tasks;
-using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using Newtonsoft.Json.Linq;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using OmniSharp.Extensions.LanguageServer.Server;
 using Serilog;
@@ -31,7 +27,7 @@ namespace RCaron.LanguageServer
 
             Log.Logger = new LoggerConfiguration()
                         .Enrich.FromLogContext()
-                        .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
+                        // .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
                         .MinimumLevel.Verbose()
                         .CreateLogger();
             
@@ -57,6 +53,7 @@ namespace RCaron.LanguageServer
                                 .SetMinimumLevel(LogLevel.Debug)
                         )
                        .WithHandler<TextDocumentHandler>()
+                       .WithHandler<CompletionHandler>()
                        // .WithHandler<DidChangeWatchedFilesHandler>()
                        // .WithHandler<FoldingRangeHandler>()
                        

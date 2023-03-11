@@ -1,7 +1,10 @@
 ﻿using System.Diagnostics.CodeAnalysis;
 using System.Drawing;
 using PrettyPrompt;
+using PrettyPrompt.Completion;
+using PrettyPrompt.Documents;
 using PrettyPrompt.Highlighting;
+using RCaron.AutoCompletion;
 using TextMateSharp.Grammars;
 using TextMateSharp.Registry;
 
@@ -26,6 +29,8 @@ public class RCaronPromptCallbacks : PromptCallbacks
 
     [MemberNotNullWhen(true, nameof(Grammar), nameof(Registry))]
     public bool UseTextMateHighlighting { get; private set; }
+
+    public int MaxCompletions { get; set; } = 40;
 
     protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text,
         CancellationToken cancellationToken)
@@ -142,6 +147,26 @@ public class RCaronPromptCallbacks : PromptCallbacks
             var pos = stack.Pop();
             spans.Add(new FormatSpan(pos, 1, PairErrorFormat));
         }
+    }
+
+    protected override Task<IReadOnlyList<CompletionItem>> GetCompletionItemsAsync(string text, int caret,
+        TextSpan spanToBeReplaced, CancellationToken cancellationToken)
+    {
+        var items = new List<CompletionItem>();
+        var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions);
+        foreach (var item in h)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            var displayText = item.Thing.Deprecated
+                ? new FormattedString(item.Thing.Word, new FormatSpan(0, item.Thing.Word.Length, AnsiColor.Red))
+                : default;
+            items.Add(new CompletionItem(item.Thing.Word, displayText: displayText,
+                getExtendedDescription: _ =>
+                    Task.FromResult(new FormattedString(item.Thing.Detail + "\n" + item.Thing.Documentation,
+                        new FormatSpan(0, item.Thing.Detail.Length, AnsiColor.BrightBlack)))));
+        }
+
+        return Task.FromResult<IReadOnlyList<CompletionItem>>(items);
     }
 
     public void UseTextMate(LocalRegistryOptions registryOptions)

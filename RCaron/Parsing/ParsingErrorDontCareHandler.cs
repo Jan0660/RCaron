@@ -1,6 +1,4 @@
-﻿using RCaron.Parsing;
-
-namespace RCaron.LanguageServer;
+﻿namespace RCaron.Parsing;
 
 public class ParsingErrorDontCareHandler : IParsingErrorHandler
 {
