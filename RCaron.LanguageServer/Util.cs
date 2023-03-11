@@ -6,6 +6,13 @@ namespace RCaron.LanguageServer;
 
 public static class Util
 {
+    public static DocumentSelector DocumentSelector { get; } =
+        new(new DocumentFilter()
+        {
+            Language = "rcaron",
+            Scheme = "file"
+        });
+
     public static ConcurrentDictionary<string, string> DocumentTexts = new();
 
     public static async Task<string> GetDocumentText(string fileSystemPath)
@@ -14,7 +21,7 @@ public static class Util
             return value;
         return DocumentTexts[fileSystemPath] = await System.IO.File.ReadAllTextAsync(fileSystemPath);
     }
-    
+
     public static (int Line, int Column) GetLineAndColumn(int index, in string raw, int? startLine, int? startColumn,
         int? startOffset)
     {
@@ -51,8 +58,9 @@ public static class Util
             col++;
             if (line == position.Line && col == position.Character)
             {
-                return i;
+                return i + 1;
             }
+
             if (raw[i] == '\n')
             {
                 line++;

@@ -16,8 +16,6 @@ public partial class CompletionProvider
     public List<Completion> GetCompletions(string code, int caretPosition, int maxCompletions = 40)
     {
         var list = new List<Completion>(maxCompletions);
-
-        // var code = await Util.GetDocumentText(textDocument.Uri.GetFileSystemPath());
         var parsed = RCaronParser.Parse(code, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
         DoLines(parsed.FileScope.Lines);
 

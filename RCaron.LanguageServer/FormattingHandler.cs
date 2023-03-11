@@ -23,7 +23,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
     {
         return new()
         {
-            DocumentSelector = DocumentSelector.ForLanguage("rcaron"),
+            DocumentSelector = Util.DocumentSelector,
         };
     }
 

@@ -22,7 +22,7 @@ public class CompletionHandler : CompletionHandlerBase
         ClientCapabilities clientCapabilities)
         => new()
         {
-            DocumentSelector = DocumentSelector.ForLanguage("rcaron"),
+            DocumentSelector = Util.DocumentSelector,
             ResolveProvider = false,
         };
 

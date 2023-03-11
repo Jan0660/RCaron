@@ -97,7 +97,7 @@ namespace RCaron.LanguageServer
             _logger.LogWarning("balls");
             return new SemanticTokensRegistrationOptions
             {
-                DocumentSelector = DocumentSelector.ForLanguage("rcaron"),
+                DocumentSelector = Util.DocumentSelector,
                 Legend = new SemanticTokensLegend
                 {
                     TokenModifiers = capability.TokenModifiers,

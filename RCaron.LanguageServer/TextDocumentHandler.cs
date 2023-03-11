@@ -25,8 +25,6 @@ namespace RCaron.LanguageServer
     {
         private readonly ILogger<TextDocumentHandler> _logger;
         private readonly ILanguageServerConfiguration _configuration;
-
-        private readonly DocumentSelector _documentSelector = DocumentSelector.ForLanguage("rcaron");
         private readonly ILanguageServerFacade _facade;
 
         public TextDocumentHandler(ILogger<TextDocumentHandler> logger, Foo foo,
@@ -108,13 +106,13 @@ namespace RCaron.LanguageServer
             SynchronizationCapability capability, ClientCapabilities clientCapabilities) =>
             new TextDocumentSyncRegistrationOptions()
             {
-                DocumentSelector = _documentSelector,
+                DocumentSelector = Util.DocumentSelector,
                 Change = Change,
                 Save = new SaveOptions() { IncludeText = true }
             };
 
         public override TextDocumentAttributes GetTextDocumentAttributes(DocumentUri uri) =>
-            new TextDocumentAttributes(uri, "rcaron");
+            new TextDocumentAttributes(uri, "file", "rcaron");
     }
 
     internal class MyDocumentSymbolHandler : DocumentSymbolHandlerBase
@@ -234,7 +232,7 @@ namespace RCaron.LanguageServer
         protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(DocumentSymbolCapability capability,
             ClientCapabilities clientCapabilities) => new DocumentSymbolRegistrationOptions
         {
-            DocumentSelector = DocumentSelector.ForLanguage("rcaron")
+            DocumentSelector = Util.DocumentSelector
         };
     }
 
