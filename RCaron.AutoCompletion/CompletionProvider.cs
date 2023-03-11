@@ -27,27 +27,42 @@ public partial class CompletionProvider
                 // check caret position is within token
                 if (caretPosition > token.Position.Start && caretPosition <= token.Position.End)
                 {
-                    if (token is KeywordToken keywordToken)
+                    switch (token)
                     {
-                        foreach (var builtInFunction in BuiltInFunctions)
+                        case KeywordToken keywordToken:
                         {
-                            if (list.Count >= maxCompletions) return;
-                            if (builtInFunction.Word.StartsWith(keywordToken.String,
-                                    StringComparison.InvariantCultureIgnoreCase))
-                                list.Add(new Completion(builtInFunction, token.Position));
-                        }
+                            foreach (var builtInFunction in BuiltInFunctions)
+                            {
+                                if (list.Count >= maxCompletions) return;
+                                if (builtInFunction.Word.StartsWith(keywordToken.String,
+                                        StringComparison.InvariantCultureIgnoreCase))
+                                    list.Add(new Completion(builtInFunction, token.Position));
+                            }
 
-                        foreach (var keyword in Keywords)
-                        {
-                            if (list.Count >= maxCompletions) return;
-                            if (keyword.Word.StartsWith(keywordToken.String,
-                                    StringComparison.InvariantCultureIgnoreCase))
-                                list.Add(new Completion(keyword, token.Position));
+                            foreach (var keyword in Keywords)
+                            {
+                                if (list.Count >= maxCompletions) return;
+                                if (keyword.Word.StartsWith(keywordToken.String,
+                                        StringComparison.InvariantCultureIgnoreCase))
+                                    list.Add(new Completion(keyword, token.Position));
+                            }
+
+                            break;
                         }
+                        case CodeBlockToken codeBlockToken:
+                            DoLines(codeBlockToken.Lines);
+                            break;
+                        case VariableToken variableToken:
+                            foreach (var constant in Constants)
+                            {
+                                if (list.Count >= maxCompletions) return;
+                                if (constant.Word.AsSpan().StartsWith(variableToken.ToSpan(code),
+                                        StringComparison.InvariantCultureIgnoreCase))
+                                    list.Add(new Completion(constant, token.Position));
+                            }
+
+                            break;
                     }
-
-                    if (token is CodeBlockToken codeBlockToken)
-                        DoLines(codeBlockToken.Lines);
                 }
             }
         }

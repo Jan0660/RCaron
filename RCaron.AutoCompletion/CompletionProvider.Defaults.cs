@@ -2,6 +2,8 @@
 
 public partial class CompletionProvider
 {
+    #region constant
+
     public static readonly CompletionThing[] BuiltInFunctions =
     {
         new()
@@ -174,7 +176,8 @@ switch ('fun') {
             Kind = CompletionItemKind.Keyword,
             Detail = @"// must be preceded by a try statement
 catch {...}",
-            Documentation = "Catches an exception and executes the code in the catch block, with the exception available in the `$exception` variable."
+            Documentation =
+                "Catches an exception and executes the code in the catch block, with the exception available in the `$exception` variable."
         },
         new()
         {
@@ -182,6 +185,44 @@ catch {...}",
             Kind = CompletionItemKind.Keyword,
             Detail = @"// must be preceded by a try or catch statement
 finally {...}",
+        }
+    };
+
+    public static readonly CompletionThing[] Constants =
+    {
+        new()
+        {
+            Word = "$true",
+            Kind = CompletionItemKind.Constant,
+            Detail = "(constant) $true",
+            Documentation = "The boolean value `true`."
+        },
+        new()
+        {
+            Word = "$false",
+            Kind = CompletionItemKind.Constant,
+            Detail = "(constant) $false",
+            Documentation = "The boolean value `false`."
+        },
+        new()
+        {
+            Word = "$null",
+            Kind = CompletionItemKind.Constant,
+            Detail = "(constant) $null",
+            Documentation = "The null value."
+        },
+    };
+
+    #endregion
+
+    public List<CompletionThing> GlobalVariables { get; } = new()
+    {
+        new()
+        {
+            Word = "$current_motor",
+            Kind = CompletionItemKind.Variable,
+            Detail = "(variable) $current_motor",
+            Documentation = "The current executing motor(`RCaron.Motor`)."
         }
     };
 }

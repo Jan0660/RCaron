@@ -30,6 +30,7 @@ public enum RCaronExceptionCode
     InvalidUnicodeEscape,
     ExecutionNotAllowed,
     TooShortUnicodeEscape,
+    LonelyVariableStart,
 }
 
 public class RCaronException : Exception

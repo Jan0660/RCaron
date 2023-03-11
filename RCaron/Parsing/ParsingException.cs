@@ -23,4 +23,7 @@ public class ParsingException : RCaronException
 
     public static ParsingException InvalidLine(int lineNumber, TextSpan location)
         => new($"invalid line at line {lineNumber}", RCaronExceptionCode.ParseInvalidLine, location);
+
+    public static ParsingException LonelyVariableStart(TextSpan location)
+        => new("Variable start with no variable name after it", RCaronExceptionCode.LonelyVariableStart, location);
 }

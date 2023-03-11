@@ -457,7 +457,7 @@ public static class RCaronParser
         Line? res = default;
         var callToken = tokens[i] as CallLikePosToken;
         // variable assignment
-        if (tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
+        if (tokens.Length - i > 2 && tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
             tokens[i + 1].EqualsString(text, "="))
         {
             var endingIndex = _findLineEnding(tokens, i, text);
@@ -486,7 +486,7 @@ public static class RCaronParser
             i++;
         }
         // property without initializer in class
-        else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.LineEnding)
+        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.LineEnding)
         {
             res = new SingleTokenLine(tokens[i], LineType.PropertyWithoutInitializer);
             i++;
@@ -510,7 +510,7 @@ public static class RCaronParser
             i++;
         }
         // assigner assignment
-        else if (tokens.Length - i > 1 && tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
+        else if (tokens.Length - i > 2 && tokens[i].Type is TokenType.ExternThing or TokenType.DotGroup
                                        && tokens[i + 1].Type == TokenType.Operation
                                        && tokens[i + 1].EqualsString(text, "="))
         {
@@ -519,7 +519,7 @@ public static class RCaronParser
             i = endingIndex.toSet;
         }
         // unary operation
-        else if (tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
+        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
         {
             res = new TokenLine(tokens[i..(i + 2)], LineType.UnaryOperation);
             i += 2;

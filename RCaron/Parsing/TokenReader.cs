@@ -42,7 +42,7 @@ public class TokenReader
             Skip(1);
             var index = CollectAlphaNumericAndSome(txt[position..]);
             if (index == 0)
-                return null;
+                ErrorHandler.Handle(ParsingException.LonelyVariableStart(GetLocation(initialPosition, 1)));
             position += index;
             return new VariableToken((initialPosition, position),
                 text.Substring(initialPosition + 1, position - initialPosition - 1));
@@ -259,7 +259,8 @@ public class TokenReader
         var isPath = false;
         Span<char> resultSpan = stackalloc char[span.Length];
         var path = new SpanStringBuilder(ref resultSpan);
-        while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != '\r' && span[index] != ',' &&
+        while (index < span.Length && span[index] != ' ' && span[index] != '\n' && span[index] != '\r' &&
+               span[index] != ',' &&
                span[index] != '(' && span[index] != '{' && span[index] != '[' &&
                span[index] != ')' && span[index] != ']' && span[index] != '}' &&
                span[index] != ';' && span[index] != ':' && span[index] != '.')
