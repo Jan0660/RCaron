@@ -6,12 +6,11 @@ jobs:
   rcaron-build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron
       - name: build
@@ -20,12 +19,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Tests
       - name: build
@@ -36,12 +34,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Jit
       - name: build
@@ -50,12 +47,11 @@ jobs:
     needs: rcaron-jit-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Jit.Tests
       - name: build
@@ -66,12 +62,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Cli
       - name: build
@@ -80,12 +75,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.LanguageServer
       - name: build
@@ -94,12 +88,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Benchmarks
       - name: build
@@ -110,12 +103,11 @@ jobs:
     needs: rcaron-build
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
-        uses: actions/setup-dotnet@v2
+        uses: actions/setup-dotnet@v3
         with:
           dotnet-version: 7.0.x
-          include-prerelease: true
       - name: restore
         run: dotnet restore RCaron.Shell
       - name: build
