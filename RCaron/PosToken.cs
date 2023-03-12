@@ -125,7 +125,8 @@ public class KeywordToken : PosToken
     public string String { get; }
     public bool IsExecutable { get; set; }
 
-    public KeywordToken((int Start, int End) position, string str, bool isExecutable = false) : base(TokenType.Keyword, position)
+    public KeywordToken((int Start, int End) position, string str, bool isExecutable = false) : base(TokenType.Keyword,
+        position)
     {
         String = str;
         IsExecutable = isExecutable;

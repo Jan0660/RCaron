@@ -9,6 +9,15 @@ public class BasicFeatures
         m.AssertVariableEquals("h", (long)11);
     }
 
+    [Theory]
+    [InlineData("(3 * 3)")]
+    //[InlineData("((3 * 3))")]
+    public void ParenthesisMathMore(string code)
+    {
+        var m = RCaronRunner.Run($"$h = {code};");
+        m.AssertVariableEquals("h", (long)9);
+    }
+
     [Fact]
     public void IfStatement()
     {
@@ -127,7 +136,8 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     {
         var m = RCaronRunner.Run(@"$h = 'a\U0001F47Db';");
         m.AssertVariableEquals("h", "a\U0001F47Db");
-        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\Utttttttt';"), ExceptionCode.InvalidUnicodeEscape);
+        ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\Utttttttt';"),
+            ExceptionCode.InvalidUnicodeEscape);
         ExtraAssert.ThrowsParsingCode(() => RCaronRunner.Run(@"$h = '\Uaaaaaa';"), ExceptionCode.TooShortUnicodeEscape);
     }
 

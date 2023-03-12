@@ -86,7 +86,9 @@ public class Motor
 
     public void UseContext(RCaronParserContext parserContext, bool withFileScope = true)
     {
-        Lines = parserContext.FileScope.Lines;
+#pragma warning disable CS8601
+        Lines = parserContext.FileScope?.Lines;
+#pragma warning restore CS8601
         if (withFileScope && parserContext.FileScope != null!)
         {
             MainFileScope = parserContext.FileScope;
