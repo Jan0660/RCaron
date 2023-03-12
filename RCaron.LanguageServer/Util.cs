@@ -15,7 +15,7 @@ public static class Util
 
     public static ConcurrentDictionary<string, string> DocumentTexts = new();
 
-    public static async Task<string> GetDocumentText(string fileSystemPath)
+    public static async Task<string> GetDocumentTextAsync(string fileSystemPath)
     {
         if (DocumentTexts.TryGetValue(fileSystemPath, out var value))
             return value;

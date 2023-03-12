@@ -28,13 +28,13 @@ public class Compiler
     {
         var contextStack = new NiceStack<Context>();
         var fakedMotorConstant = Expression.Constant(fakedMotor, typeof(Motor));
-        System.Lazy<MethodInfo> consoleWriteMethod =
+        Lazy<MethodInfo> consoleWriteMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.Write), new[] { typeof(object) })!);
-        System.Lazy<MethodInfo> consoleWriteLineMethod =
+        Lazy<MethodInfo> consoleWriteLineMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), Array.Empty<Type>())!);
-        System.Lazy<MethodInfo> consoleWriteLineWithArgMethod =
+        Lazy<MethodInfo> consoleWriteLineWithArgMethod =
             new(() => typeof(Console).GetMethod(nameof(Console.WriteLine), new[] { typeof(object) })!);
-        System.Lazy<MethodInfo> log73Debug =
+        Lazy<MethodInfo> log73Debug =
             new(() => typeof(Log73.Console).GetMethod(nameof(Log73.Console.Debug), new[] { typeof(object) })!);
         var functions = new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
         var classes = new List<CompiledClass>();
@@ -362,7 +362,7 @@ public class Compiler
 
             var enumerator = callToken == null
                 ? new ArgumentEnumerator(argumentTokens)
-                : new ArgumentEnumerator(callToken!);
+                : new ArgumentEnumerator(callToken);
             if (target == null)
                 switch (name)
                 {
@@ -395,7 +395,7 @@ public class Compiler
 
                         return Expression.Block(expressions);
                     }
-                    case "dbg_println" when fakedMotor.Options.EnableDebugging:
+                    case "dbg_println" when fakedMotor?.Options.EnableDebugging ?? false:
                     {
                         var expressions = new List<Expression>();
                         while (enumerator.MoveNext())
@@ -406,13 +406,13 @@ public class Compiler
 
                         return Expression.Block(expressions);
                     }
-                    case "dbg_assert_is_one" when fakedMotor.Options.EnableDebugging:
+                    case "dbg_assert_is_one" when fakedMotor?.Options.EnableDebugging ?? false:
                     {
                         return AssignGlobal("$$assertResult", Expression.Equal(
                             GetHighExpression(argumentTokens).EnsureIsType(typeof(long)),
                             Expression.Constant(1L)));
                     }
-                    case "dbg_sum_three" when fakedMotor.Options.EnableDebugging:
+                    case "dbg_sum_three" when fakedMotor?.Options.EnableDebugging ?? false:
                     {
                         return AssignGlobal("$$assertResult",
                             Expression.Add(
@@ -472,7 +472,7 @@ public class Compiler
 
         void DoLine(Line line, List<Expression> expressions, IList<Line> lines, ref int index)
         {
-            Expression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type specificType = null)
+            Expression GetOrNewVariable(string name, bool mustBeAtCurrent = false, Type? specificType = null)
             {
                 var varExp = GetVariableNullable(name, mustBeAtCurrent);
                 if (varExp == null)
@@ -556,6 +556,7 @@ public class Compiler
                             {
                             }
 
+                            Assert(c.ReturnLabel != null);
                             if (tokenLine.Tokens.Length == 1)
                                 expressions.Add(Expression.Return(c.ReturnLabel,
                                     Expression.Constant(ReturnWithoutValue, typeof(object))));
@@ -652,17 +653,17 @@ public class Compiler
                 case TokenLine { Type: LineType.TryBlock } tokenLine
                     when tokenLine.Tokens[1] is CodeBlockToken codeBlockToken:
                 {
-                    bool TryGetFrom(int index, LineType what, out CodeBlockToken? cbt)
+                    bool TryGetFrom(int index, LineType what, out CodeBlockToken? cbt1)
                     {
                         var l = lines[index];
-                        if (l is TokenLine tokenLine && tokenLine.Type == what &&
-                            tokenLine.Tokens[1] is CodeBlockToken cbt2)
+                        if (l is TokenLine tokenLine1 && tokenLine1.Type == what &&
+                            tokenLine1.Tokens[1] is CodeBlockToken cbt2)
                         {
-                            cbt = cbt2;
+                            cbt1 = cbt2;
                             return true;
                         }
 
-                        cbt = null;
+                        cbt1 = null;
                         return false;
                     }
 
@@ -790,6 +791,7 @@ public class Compiler
                     break;
                 case ForLoopLine { Type: LineType.ForLoop or LineType.QuickForLoop } forLoopLine:
                 {
+                    // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
                     if (forLoopLine.Initializer is not null)
                     {
                         expressions.Add(DoLines(new[] { forLoopLine.Initializer }, useCurrent: true));
@@ -848,8 +850,10 @@ public class Compiler
                 {
                     var currentVariableName = ((VariableToken)callToken.Arguments[0][0]).Name;
                     var enumerator = Expression.Variable(typeof(IEnumerator));
-                    contextStack.Peek().Variables ??= _newVariableDict();
-                    contextStack.Peek().Variables.Add("\u0159enumerator", enumerator);
+                    // todo: not sure if this should be in loopContext, but it doesn't work when I add it there so here it is
+                    var currentContext = contextStack.Peek();
+                    currentContext.Variables ??= _newVariableDict();
+                    currentContext.Variables.Add("\u0159enumerator", enumerator);
                     expressions.Add(Expression.Assign(enumerator,
                         Expression.Call(Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(IEnumerable),
                                 null), typeof(IEnumerable), GetHighExpression(callToken.Arguments[0].Segment(2..))),
@@ -917,7 +921,7 @@ public class Compiler
             List<Expression>? prependLines = null, Context? theCurrentToUse = null)
         {
             var isRoot = contextStack.Count == 0;
-            Context c = null;
+            Context? c;
             if (!useCurrent)
             {
                 c = new Context
@@ -930,7 +934,7 @@ public class Compiler
                 c = theCurrentToUse;
 
             var exps = prependLines ?? new List<Expression>();
-            if (isRoot && fakedMotor is { GlobalScope.Variables.Count: > 0 })
+            if (isRoot && fakedMotor is { GlobalScope.Variables.Count: > 0 } && c != null)
             {
                 c.Variables ??= _newVariableDict();
                 foreach (var (name, value) in fakedMotor.GlobalScope.Variables)
@@ -1052,8 +1056,8 @@ public class Compiler
 
     private class LoopContext : Context
     {
-        public LabelTarget BreakLabel { get; init; }
-        public LabelTarget ContinueLabel { get; init; }
+        public required LabelTarget BreakLabel { get; init; }
+        public required LabelTarget ContinueLabel { get; init; }
     }
 
     private class FunctionContext : Context
@@ -1062,7 +1066,7 @@ public class Compiler
         public ClassDefinition? ClassDefinition { get; init; } = null;
     }
 
-    public static void Assert(bool condition)
+    public static void Assert([DoesNotReturnIf(false)] bool condition)
     {
         if (condition)
             return;

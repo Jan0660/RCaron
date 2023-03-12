@@ -1,12 +1,9 @@
 ﻿using System.Collections.Concurrent;
-using System.Diagnostics;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Text;
 using JetBrains.Annotations;
-using Microsoft.CSharp.RuntimeBinder;
 using RCaron.LibrarySourceGenerator;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 
 namespace RCaron.FunLibrary;
 
@@ -18,7 +15,7 @@ public partial class FunModule : IRCaronModule
     {
         Console.WriteLine(codeBlockToken.Lines.Count);
         var del = GetDelegate(codeBlockToken, motor, typeof(Action<string>));
-        var real = (Action<string>)del.DynamicInvoke();
+        var real = (Action<string>)del.DynamicInvoke()!;
         // var type = Type.GetType("Balls");
         // var e = type.GetEvent("event");
         // var g = e.EventHandlerType;
@@ -32,26 +29,34 @@ public partial class FunModule : IRCaronModule
     {
         var type = obj.GetType();
         var ev = type.GetEvent(eventName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+        if (ev is null)
+            throw new($"Event '{eventName}' not found on type '{type}'");
+        if(ev.EventHandlerType is null)
+            throw new($"Event '{eventName}' on type '{type}' has null event handler type");
         var del = GetDelegate(codeBlockToken, motor, ev.EventHandlerType);
-        var finDel = (Delegate)del.DynamicInvoke();
+        var finDel = (Delegate)del.DynamicInvoke()!;
         ev.AddEventHandler(obj, finDel);
     }
 
     [Method("Start-MotorPoolTask")]
     public void StartMotorPoolTask(Motor motor, Motor parent, CodeBlockToken codeBlockToken, object[]? args = null)
     {
-        using var m = MotorPool.GetAndPrepare(parent);
+        var m = MotorPool.GetAndPrepare(parent);
         var scope = new LocalScope();
         scope.Variables ??= new();
         scope.SetVariable("args", args);
         m.Motor.BlockStack.Push(new(false, true, scope, motor.MainFileScope));
-        Task.Run((() => m.Motor.RunCodeBlock(codeBlockToken)));
+        Task.Run((() =>
+        {
+            m.Motor.RunCodeBlock(codeBlockToken);
+            m.Dispose();
+        }));
     }
 
     [Method("Convert-Array")]
     public object ConvertArray(Motor _, object[] array, RCaronType type)
     {
-        if (array is not object[] arr)
+        if (array is not { } arr)
             throw new();
         var r = Array.CreateInstance(type.Type, arr.Length);
         for (var i = 0; i < arr.Length; i++)
@@ -70,9 +75,6 @@ public partial class FunModule : IRCaronModule
 
         FileScope GetFileScopeBefore(int i)
             => i == 0 ? motor.MainFileScope : motor.BlockStack.At(i - 1).FileScope;
-
-        FileScope GetFileScopeAt(int i)
-            => i < 0 ? motor.MainFileScope : motor.BlockStack.At(i).FileScope;
 
         int GetPos(Line line)
             => line switch
@@ -115,7 +117,7 @@ public partial class FunModule : IRCaronModule
             var lineNumber = motor.GetLineNumber(fileScopeBefore, pos);
             var name = GetName(fileScopeBefore, pos);
             sb.AppendLine(
-                $"{(name == null ? "" : $"at {name} ")}in {fileScopeBefore.FileName ?? "null FileName"}:{lineNumber}");
+                $"at {name} in {fileScopeBefore.FileName ?? "null FileName"}:{lineNumber}");
         }
 
         Do(motor.Lines[motor.CurrentLineIndex], GetFileScopeBefore(motor.BlockStack.Count - 1));
@@ -185,16 +187,16 @@ public partial class FunModule : IRCaronModule
 
     // taken over from PowerShell
 
-    private static readonly ConcurrentDictionary<CodeBlockToken, ConcurrentDictionary<Type, Delegate>> s_delegateTable =
+    private static readonly ConcurrentDictionary<CodeBlockToken, ConcurrentDictionary<Type, Delegate>> SDelegateTable =
         new();
 
     internal Delegate GetDelegate(CodeBlockToken codeBlock, Motor motor, Type delegateType)
     {
-        ConcurrentDictionary<Type, Delegate> d;
-        if (!s_delegateTable.TryGetValue(codeBlock, out d))
+        ConcurrentDictionary<Type, Delegate>? d;
+        if (!SDelegateTable.TryGetValue(codeBlock, out d))
         {
             d = new();
-            s_delegateTable[codeBlock] = d;
+            SDelegateTable[codeBlock] = d;
         }
 
         Delegate ret;
@@ -208,7 +210,7 @@ public partial class FunModule : IRCaronModule
     /// </summary>
     internal Delegate CreateDelegate(CodeBlockToken codeBlock, Motor motor, Type delegateType)
     {
-        MethodInfo invokeMethod = delegateType.GetMethod("Invoke");
+        MethodInfo invokeMethod = delegateType.GetMethod("Invoke")!;
         ParameterInfo[] parameters = invokeMethod.GetParameters();
         if (invokeMethod.ContainsGenericParameters)
         {
@@ -252,7 +254,7 @@ public partial class FunModule : IRCaronModule
 
         Expression call = Expression.Call(
             Expression.Constant(new CodeBlockWrap(motor, codeBlock)),
-            CodeBlockWrap_InvokeAsDelegateHelper,
+            _codeBlockWrapInvokeAsDelegateHelper,
             // (object)
             Expression.NewArrayInit(typeof(object), h));
         if (returnsSomething)
@@ -277,7 +279,7 @@ public partial class FunModule : IRCaronModule
     }
 
 
-    private readonly static MethodInfo Convert_ChangeType = typeof(Convert).GetMethod("Convert");
+    private static readonly MethodInfo ConvertChangeType = typeof(Convert).GetMethod("Convert")!;
 
     internal static Expression Cast(Expression expr, Type type)
     {
@@ -286,15 +288,12 @@ public partial class FunModule : IRCaronModule
             return expr;
         }
 
-        if ((
-                // todo(current)
-                // expr.Type.IsFloating() || 
-                expr.Type == typeof(decimal)) && type.IsPrimitive)
+        if (expr.Type == typeof(decimal) && type.IsPrimitive)
         {
             // Convert correctly handles most "primitive" conversions for PowerShell,
             // but it does not correctly handle floating point.
             expr = Expression.Call(
-                Convert_ChangeType,
+                ConvertChangeType,
                 Expression.Convert(expr, typeof(object)),
                 Expression.Constant(type, typeof(Type)));
         }
@@ -302,8 +301,8 @@ public partial class FunModule : IRCaronModule
         return Expression.Convert(expr, type);
     }
 
-    private MethodInfo CodeBlockWrap_InvokeAsDelegateHelper =
-        typeof(CodeBlockWrap).GetMethod("InvokeAsDelegateHelper", BindingFlags.NonPublic | BindingFlags.Instance);
+    private readonly MethodInfo _codeBlockWrapInvokeAsDelegateHelper =
+        typeof(CodeBlockWrap).GetMethod(nameof(CodeBlockWrap.InvokeAsDelegateHelper), BindingFlags.NonPublic | BindingFlags.Instance)!;
 
     #endregion
 }

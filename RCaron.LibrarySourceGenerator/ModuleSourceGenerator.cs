@@ -1,13 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
+﻿using System.Collections.Generic;
 using System.Text;
-using System.Threading;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
-using Microsoft.CodeAnalysis.Text;
 using System.Linq;
 
 namespace RCaron.LibrarySourceGenerator
@@ -25,13 +20,12 @@ namespace RCaron.LibrarySourceGenerator
         public void OnVisitSyntaxNode(GeneratorSyntaxContext context)
         {
             // any field with at least one attribute is a candidate for property generation
-            if (context.Node is ClassDeclarationSyntax classDeclarationSyntax
-                && classDeclarationSyntax.AttributeLists.Count > 0)
+            if (context.Node is ClassDeclarationSyntax { AttributeLists.Count: > 0 } classDeclarationSyntax)
             {
-                var g = (ITypeSymbol)context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax);
+                var g = (ITypeSymbol)context.SemanticModel.GetDeclaredSymbol(classDeclarationSyntax)!;
                 foreach (var att in g.GetAttributes())
                 {
-                    if (att.AttributeClass.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute")
+                    if (att.AttributeClass?.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute")
                     {
                         Classes.Add(g);
                     }
@@ -39,7 +33,6 @@ namespace RCaron.LibrarySourceGenerator
             }
         }
     }
-
 
     [Generator]
     public class ModuleSourceGenerator : ISourceGenerator
@@ -55,20 +48,22 @@ namespace RCaron.LibrarySourceGenerator
 using RCaron;
 using System.Linq;
 #nullable enable
+#nullable disable warnings
+#pragma warning disable
 
 namespace {classSymbol.ContainingNamespace.ToDisplayString()};
 
 public partial class {classSymbol.Name}{{");
                 var moduleAttribute = classSymbol.GetAttributes().First(att =>
-                    att.AttributeClass.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute");
+                    att.AttributeClass?.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute");
                 if (moduleAttribute.NamedArguments
                     .Any(pair => pair is { Key: "ImplementModuleRun", Value.Value: false }))
                     goto afterImplementModuleRun;
                 source.AppendLine(
-                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken callToken){
+                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken){
 switch(name){");
 
-                void AppendArgumentGet(bool isPositional, IParameterSymbol param)
+                void AppendArgumentGet(IParameterSymbol param)
                 {
                     bool AssignableToPosToken(ITypeSymbol typeSymbol)
                     {
@@ -82,15 +77,10 @@ switch(name){");
                         return AssignableToPosToken(typeSymbol.BaseType);
                     }
 
-                    var g = isPositional ? string.Empty : " + 2";
-                    const string index = "enumerator.Index";
-                    // const string index = "i";
                     if (AssignableToPosToken(param.Type) || param.Type.ToDisplayString() == "RCaron.PosToken")
-                        // source.AppendLine($"arguments[{index}{g}];");
                         source.AppendLine($"enumerator.CurrentTokens[0];");
                     else
                         source.AppendLine($"motor.SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);");
-                    // source.AppendLine($"motor.SimpleEvaluateExpressionSingle(arguments[{index}{g}]);");
                 }
 
                 foreach (var member in classSymbol.GetMembers())
@@ -100,7 +90,7 @@ switch(name){");
                     var att = GetMethodAttribute(member);
                     if (att == null)
                         continue;
-                    var name = (string)att.ConstructorArguments[0].Value;
+                    var name = (string)att.ConstructorArguments[0].Value!;
 
                     source.AppendLine(@$"case ""{name.ToLowerInvariant()}"":
 {{");
@@ -162,7 +152,7 @@ switch(name){");
                                 source.AppendLine($"{param.Name}_hasValue = true;");
 
                                 source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-                                AppendArgumentGet(false, param);
+                                AppendArgumentGet(param);
 
                                 source.AppendLine("}");
                             }
@@ -182,7 +172,7 @@ switch(name){");
                                 source.AppendLine($@"if(!{param.Name}_hasValue)
 {{");
                                 source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
-                                AppendArgumentGet(true, param);
+                                AppendArgumentGet(param);
                                 source.AppendLine($@"{param.Name}_hasValue = true;");
                                 source.AppendLine("}");
                             }

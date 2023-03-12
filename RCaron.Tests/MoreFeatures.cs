@@ -149,7 +149,7 @@ foreach($num in range(0, 10)){
     public void ConstructorNew()
     {
         var m = RCaronRunner.Run(@"$h = #System.Text.StringBuilder:New(int32(20));");
-        var str = (StringBuilder)m.GlobalScope.GetVariable("h");
+        var str = (StringBuilder)m.GlobalScope.GetVariable("h")!;
         Assert.Equal(20, str.Capacity);
     }
 
@@ -381,13 +381,13 @@ $h = $h + 1;");
         m.AssertVariableEquals("h", 2L);
         ExtraAssert.ThrowsCode(() =>
         {
-            var m = RCaronRunner.Run(@"
+            RCaronRunner.Run(@"
 let $h = 1;
 $h = 1.2;");
         }, RCaronExceptionCode.LetVariableTypeMismatch);
         ExtraAssert.ThrowsCode(() =>
         {
-            var m = RCaronRunner.Run(@"
+            RCaronRunner.Run(@"
 let $h = 1;
 $h = $null;");
         }, RCaronExceptionCode.LetVariableTypeMismatch);

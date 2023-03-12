@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using System.Diagnostics;
+﻿using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
 
@@ -11,7 +10,7 @@ namespace RCaron
     [DebuggerDisplay("Count = {Count}")]
     [Serializable]
     [ExcludeFromCodeCoverage]
-    [System.Runtime.CompilerServices.TypeForwardedFrom("System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
+    [TypeForwardedFrom("System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class NiceStack<T>
     {
         private T[] _array; // Storage for stack elements. Do not rename (binary serialization)

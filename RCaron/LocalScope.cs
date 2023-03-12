@@ -7,7 +7,7 @@ public class LocalScope
 {
     public Dictionary<string, object?>? Variables;
 
-    public virtual object GetVariable(string name)
+    public virtual object? GetVariable(string name)
     {
         if (Variables == null || !Variables.TryGetValue(name, out var value))
             return RCaronInsideEnum.VariableNotFound;
@@ -19,7 +19,7 @@ public class LocalScope
     public virtual bool TryGetVariable(string name, out object? value)
     {
         value = GetVariable(name);
-        return !value.Equals(RCaronInsideEnum.VariableNotFound);
+        return !value?.Equals(RCaronInsideEnum.VariableNotFound) ?? true;
     }
 
     public virtual void SetVariable(string name, in object? value)
@@ -48,7 +48,7 @@ public class ClassFunctionScope : LocalScope
     public ClassInstance ClassInstance { get; }
     public ClassFunctionScope(ClassInstance classInstance) => ClassInstance = classInstance;
 
-    public override object GetVariable(string name)
+    public override object? GetVariable(string name)
     {
         if (ClassInstance.TryGetPropertyValue(name, out var propVal))
             return propVal;

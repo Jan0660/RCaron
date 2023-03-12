@@ -27,25 +27,11 @@ public class FormattingHandler : DocumentFormattingHandlerBase
         };
     }
 
-    public override async Task<TextEditContainer> Handle(DocumentFormattingParams request,
+    public override async Task<TextEditContainer?> Handle(DocumentFormattingParams request,
         CancellationToken cancellationToken)
     {
         var res = new List<TextEdit>();
-        var content = await Util.GetDocumentText(request.TextDocument.Uri.GetFileSystemPath());
-
-        TextEdit SpaceAt(int index)
-        {
-            var pos = Util.GetPosition(index, content);
-            return new TextEdit
-            {
-                NewText = " ",
-                Range = new Range
-                {
-                    Start = pos,
-                    End = pos
-                }
-            };
-        }
+        var content = await Util.GetDocumentTextAsync(request.TextDocument.Uri.GetFileSystemPath());
 
         void SingleSpaceAfter(int index)
         {
@@ -168,8 +154,7 @@ public class FormattingHandler : DocumentFormattingHandlerBase
             // NewlineAfter(endBlockPosToken.Position.End);
         }
 
-        // returns index at which semicolon is
-        int NoSpaceUntilSemicolon(int index)
+        void NoSpaceUntilSemicolon(int index)
         {
             var curIndex = index;
             while (curIndex < content.Length && content[curIndex] == ' ')
@@ -188,18 +173,13 @@ public class FormattingHandler : DocumentFormattingHandlerBase
                     End = endPos,
                 }
             });
-            return curIndex;
         }
 
         void NewlineBefore(int index)
         {
             var curIndex = index - 1;
-            var ran = false;
             while (curIndex >= 0 && (content[curIndex] == ' ' || content[curIndex] == '\t'))
-            {
-                ran = true;
                 curIndex--;
-            }
 
             if (curIndex <= 0 || content[curIndex] == '\n')
                 return;

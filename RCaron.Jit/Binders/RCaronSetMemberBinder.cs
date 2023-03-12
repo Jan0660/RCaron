@@ -24,7 +24,7 @@ public class RCaronSetMemberBinder : SetMemberBinder
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
 
-        var property = target.RuntimeType.GetProperty(Name,
+        var property = target.RuntimeType?.GetProperty(Name,
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (property != null)
         {
@@ -34,7 +34,7 @@ public class RCaronSetMemberBinder : SetMemberBinder
             return new DynamicMetaObject(exp, GetRestrictions(target));
         }
 
-        var field = target.RuntimeType.GetField(Name,
+        var field = target.RuntimeType?.GetField(Name,
             BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
         if (field != null)
         {

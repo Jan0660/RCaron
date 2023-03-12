@@ -32,7 +32,7 @@ public class Shell
         }
 
         Motor.UseContext(ctx, Motor.MainFileScope == null!);
-        if (import)
+        if (import && Motor.MainFileScope != null!)
             Motor.MainFileScope.FileName = fileName;
         Motor.Run();
     }

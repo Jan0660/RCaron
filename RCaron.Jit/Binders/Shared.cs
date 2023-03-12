@@ -58,7 +58,7 @@ public static class Shared
                     exps == null
                         ? Expression.Constant(null, typeof(object[]))
                         : Expression.NewArrayInit(
-                            typeof(object), exps.Select(x => x!.EnsureIsType(typeof(object))!)))
+                            typeof(object), exps.Select(x => x!.EnsureIsType(typeof(object)))))
                 .EnsureIsType(returnType),
             restrictions);
     }

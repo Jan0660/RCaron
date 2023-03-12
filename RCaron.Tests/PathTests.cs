@@ -32,7 +32,7 @@ public class PathTests
             foreach (var path in GetPathTestPaths)
             {
                 if (path is string)
-                    yield return new object[] { template, path, path };
+                    yield return new[] { template, path, path };
                 else if (path is string[] arr)
                     yield return new object[] { template, arr[0], arr[1] };
                 else

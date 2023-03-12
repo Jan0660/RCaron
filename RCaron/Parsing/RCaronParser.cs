@@ -59,7 +59,7 @@ public static class RCaronParser
                 token = new PosToken(TokenType.EndOfFile, (text.Length, text.Length));
             }
 
-            if (token.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
+            if (token!.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
             {
                 token = reader.Read();
                 continue;
@@ -68,7 +68,7 @@ public static class RCaronParser
             DoCodeBlockToken();
 
             // for some reason, when not doing this, there is literally more memory allocated
-            if (token is PosToken posToken)
+            if (token is { } posToken)
             {
                 switch (posToken)
                 {
@@ -232,8 +232,8 @@ public static class RCaronParser
                     if (tokens[^2].Type == TokenType.LogicalOperation && token.Type != TokenType.ComparisonOperation)
                     {
                         // recheck ^3 and ^1 are still ValuePosTokens and reassign them
-                        if (ranComparison && !((left = tokens[^3] as ValuePosToken) != null &&
-                                               (right = tokens[^1] as ValuePosToken) != null))
+                        if (ranComparison && !((left = (tokens[^3] as ValuePosToken)!) != null &&
+                                               (right = (tokens[^1] as ValuePosToken)!) != null))
                             goto afterComparisonAndLogicalGrouping;
                         var comparison = new LogicalOperationValuePosToken(left, right, (OperationPosToken)tokens[^2],
                             (left.Position.Start, wouldEnd ?? right.Position.End));
@@ -258,7 +258,7 @@ public static class RCaronParser
                         Type: TokenType.SimpleBlockEnd
                     } blockToken)
                 {
-                    int startIndex = -1;
+                    int startIndex;
                     if (!dontDoSimpleBlockEndCheck)
                         startIndex = tokens.FindIndex(
                             t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
@@ -277,7 +277,7 @@ public static class RCaronParser
                         tokens.RemoveAt(tokens.Count - 1);
                         tokens.Add(new CallLikePosToken(TokenType.KeywordCall,
                             (nameToken.Position.Start, m.Position.End),
-                            new PosToken[][] { new PosToken[] { m } },
+                            new[] { new[] { m } },
                             nameToken.Position.End, nameToken.ToString(text)
                         ));
                         goto afterCallLikePosTokenThing;
@@ -359,7 +359,7 @@ public static class RCaronParser
             if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
                 var name = ((KeywordToken)t[i + 1]).String;
-                Dictionary<string, Function> functions = null;
+                Dictionary<string, Function>? functions = null;
                 // todo: use array
                 List<string>? propertyNames = null;
                 List<PosToken[]?>? propertyInitializers = null;
@@ -370,7 +370,7 @@ public static class RCaronParser
                     if (body.Lines[j].Type == LineType.Function)
                     {
                         var tokenLine = (TokenLine)body.Lines[j];
-                        var f = DoFunction(tokenLine.Tokens);
+                        var f = DoFunction(tokenLine.Tokens, errorHandler);
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
                         functions[f.name] = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
                         j++;
@@ -404,7 +404,7 @@ public static class RCaronParser
             // function
             else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
             {
-                var (name, arguments) = DoFunction(tokens, i);
+                var (name, arguments) = DoFunction(tokens, errorHandler, i);
                 fileScope.Functions ??= new(StringComparer.InvariantCultureIgnoreCase);
                 fileScope.Functions[name] = new Function((CodeBlockToken)tokens[i + 2], arguments, fileScope);
                 if (returnDescriptive)
@@ -423,12 +423,14 @@ public static class RCaronParser
     /// <summary>
     /// If there is a newline(\n) between the two tokens, returns true.
     /// </summary>
-    /// <param name="text">Raw code</param>
+    /// <param name="first">The first token</param>
+    /// <param name="second">The second token</param>
+    /// <param name="code">Raw code</param>
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static bool _isNewLineBetweenTokens(PosToken first, PosToken second, string text)
+    private static bool _isNewLineBetweenTokens(PosToken first, PosToken second, string code)
     {
         for (var j = first.Position.End; j < second.Position.Start; j++)
-            if (text[j] == '\n')
+            if (code[j] == '\n')
                 return true;
         return false;
     }
@@ -454,7 +456,7 @@ public static class RCaronParser
 
     public static Line GetLine(PosToken[] tokens, ref int i, in string text, IParsingErrorHandler errorHandler)
     {
-        Line? res = default;
+        Line? res;
         var callToken = tokens[i] as CallLikePosToken;
         // variable assignment
         if (tokens.Length - i > 2 && tokens[i] is VariableToken && tokens[i + 1].Type == TokenType.Operation &&
@@ -631,7 +633,7 @@ public static class RCaronParser
         return res;
     }
 
-    public static (string name, FunctionArgument[]? arguments) DoFunction(IList<PosToken> tokens, int offset = 0)
+    public static (string name, FunctionArgument[]? arguments) DoFunction(IList<PosToken> tokens, IParsingErrorHandler errorHandler, int offset = 0)
     {
         string name;
         FunctionArgument[]? arguments = null;
@@ -647,7 +649,7 @@ public static class RCaronParser
                 if (cur is [_, OperationPosToken { Operation: OperationEnum.Assignment }, ..])
                 {
                     // todo: support constant expressions like if 1 + 1
-                    arguments[j].DefaultValue = EvaluateConstantToken(cur[2]);
+                    arguments[j].DefaultValue = EvaluateConstantToken(cur[2], errorHandler);
                 }
             }
         }
@@ -659,7 +661,7 @@ public static class RCaronParser
         return (name, arguments);
     }
 
-    public static object? EvaluateConstantToken(PosToken token)
+    public static object? EvaluateConstantToken(PosToken token, IParsingErrorHandler errorHandler)
         => token switch
         {
             // todo(current): in TokenReader make true, false and null into ConstTokens instead of variables
@@ -667,5 +669,6 @@ public static class RCaronParser
             VariableToken { Name: "false" } => false,
             VariableToken { Name: "null" } => null,
             ConstToken constToken => constToken.Value,
+            _ => errorHandler.Handle(ParsingException.ExpectedConstant(TextSpan.FromToken(token))),
         };
 }

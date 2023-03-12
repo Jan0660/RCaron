@@ -1,5 +1,4 @@
-﻿using System.Diagnostics.CodeAnalysis;
-using System.Dynamic;
+﻿using System.Dynamic;
 using System.Linq.Expressions;
 
 namespace RCaron.Classes;
@@ -41,7 +40,7 @@ public sealed class ClassInstance : IDynamicMetaObjectProvider
     private class ClassInstanceDynamicMetaObject : DynamicMetaObject
     {
         internal ClassInstanceDynamicMetaObject(
-            System.Linq.Expressions.Expression parameter,
+            Expression parameter,
             ClassInstance value)
             : base(parameter, BindingRestrictions.Empty, value)
         {

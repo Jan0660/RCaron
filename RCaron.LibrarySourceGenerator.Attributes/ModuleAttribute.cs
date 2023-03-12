@@ -1,8 +1,6 @@
-using System;
-
 namespace RCaron.LibrarySourceGenerator;
 
-[AttributeUsage(AttributeTargets.Class, Inherited = false, AllowMultiple = false)]
+[AttributeUsage(AttributeTargets.Class, Inherited = false)]
 public sealed class ModuleAttribute : Attribute
 {
     public ModuleAttribute(string name)

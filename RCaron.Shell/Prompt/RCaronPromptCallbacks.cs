@@ -162,8 +162,10 @@ public class RCaronPromptCallbacks : PromptCallbacks
                 : default;
             items.Add(new CompletionItem(item.Thing.Word, displayText: displayText,
                 getExtendedDescription: _ =>
-                    Task.FromResult(new FormattedString(item.Thing.Detail + "\n" + item.Thing.Documentation,
-                        new FormatSpan(0, item.Thing.Detail.Length, AnsiColor.BrightBlack)))));
+                    Task.FromResult(item.Thing.Detail != null
+                        ? new FormattedString(item.Thing.Detail + "\n" + item.Thing.Documentation,
+                            new FormatSpan(0, item.Thing.Detail.Length, AnsiColor.BrightBlack))
+                        : new FormattedString(item.Thing.Documentation))));
         }
 
         return Task.FromResult<IReadOnlyList<CompletionItem>>(items);

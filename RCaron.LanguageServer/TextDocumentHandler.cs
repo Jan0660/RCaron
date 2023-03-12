@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using JetBrains.Annotations;
 using MediatR;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol;
@@ -51,10 +50,9 @@ namespace RCaron.LanguageServer
                 _logger.LogInformation("Updated document text for {Path}", notification.TextDocument.Uri.Path);
             }
 
-            var content = await Util.GetDocumentText(notification.TextDocument.Uri.GetFileSystemPath());
-            // do highlighting
+            var content = await Util.GetDocumentTextAsync(notification.TextDocument.Uri.GetFileSystemPath());
             var errorHandler = new ParsingErrorStoreHandler();
-            var tryParsed = RCaronParser.Parse(content, errorHandler: errorHandler);
+            RCaronParser.Parse(content, errorHandler: errorHandler);
             if (errorHandler.Exceptions.Count == 0)
                 return Unit.Value;
             var diagnostics = new List<Diagnostic>();
@@ -119,7 +117,7 @@ namespace RCaron.LanguageServer
     {
         private readonly ILogger _logger;
 
-        public MyDocumentSymbolHandler(ILogger<SemanticTokensHandler> logger)
+        public MyDocumentSymbolHandler(ILogger<MyDocumentSymbolHandler> logger)
         {
             _logger = logger;
         }
@@ -130,31 +128,21 @@ namespace RCaron.LanguageServer
         )
         {
             // you would normally get this from a common source that is managed by current open editor, current active editor, etc.
-            var content = await Util.GetDocumentText(request.TextDocument.Uri.GetFileSystemPath());
+            var content = await Util.GetDocumentTextAsync(request.TextDocument.Uri.GetFileSystemPath());
             // var lines = content.Split('\n');
             var symbols = new List<SymbolInformationOrDocumentSymbol>();
 
-            DocumentSymbol AddSymbol(string name,
+            void AddSymbol(string name,
                 (int Start, int End) range, (int Start, int End) selectionRange,
-                SymbolKind kind, List<DocumentSymbol> parentChildren, [CanBeNull] List<DocumentSymbol> children = null)
+                SymbolKind kind, List<DocumentSymbol>? parentChildren, List<DocumentSymbol>? children = null)
             {
                 var symbol = new DocumentSymbol
                 {
                     Detail = name,
                     Deprecated = false,
-                    Kind = kind,
-                    // Tags = new[] { SymbolTag.Deprecated },                
+                    Kind = kind,          
                     Range = Util.GetRange(range.Start, range.End, content),
-                    // Range = new Range(                                    
-                    //     new Position(startPos.Item1, startPos.Item2),      
-                    //     new Position(endPos.Item1, endPos.Item2)
-                    // ),
                     SelectionRange = Util.GetRange(selectionRange.Start, selectionRange.End, content),
-                    // SelectionRange =
-                    //     new Range(
-                    //         new Position(startPos.Item1, startPos.Item2),
-                    //         new Position(endPos.Item1, endPos.Item2)
-                    //     ),
                     Name = name,
                     Children = children,
                 };
@@ -165,18 +153,15 @@ namespace RCaron.LanguageServer
 
                 _logger.LogInformation(
                     $"Symbol name: {name}; {range.Start} - {range.End}; {selectionRange.Start} - {selectionRange.End}; kind: {kind}");
-                return symbol;
             }
 
             var parsed = RCaronParser.Parse(content, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
 
-            void EvaluateLines(IList<Line> lines, [CanBeNull] List<DocumentSymbol> parentChildren = null, bool insideClass = false)
+            void EvaluateLines(IList<Line> lines, List<DocumentSymbol>? parentChildren = null, bool insideClass = false)
             {
                 for (var i = 0; i < lines.Count; i++)
                 {
                     var line = lines[i];
-                    // _logger.LogInformation(
-                    //     $"Symbol: {token.ToString(content)}; ({lineIndex}, {chr}) - ({endLineIndex}, {endChr})");
                     switch (line.Type)
                     {
                         case LineType.Function when line is TokenLine tokenLine:
@@ -230,7 +215,7 @@ namespace RCaron.LanguageServer
         }
 
         protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(DocumentSymbolCapability capability,
-            ClientCapabilities clientCapabilities) => new DocumentSymbolRegistrationOptions
+            ClientCapabilities clientCapabilities) => new()
         {
             DocumentSelector = Util.DocumentSelector
         };
@@ -250,7 +235,7 @@ namespace RCaron.LanguageServer
             _logger = logger;
         }
 
-        public async Task<Container<SymbolInformation>> Handle(
+        public async Task<Container<SymbolInformation>?> Handle(
             WorkspaceSymbolParams request,
             CancellationToken cancellationToken
         )

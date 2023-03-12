@@ -1,5 +1,4 @@
 ﻿using System.Buffers;
-using System.Diagnostics;
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
@@ -10,9 +9,9 @@ namespace RCaron.Binders;
 public class RCaronGetIndexBinder : GetIndexBinder
 {
     public FileScope FileScope { get; }
-    public Motor Motor { get; }
+    public Motor? Motor { get; }
 
-    public RCaronGetIndexBinder(CallInfo callInfo, FileScope fileScope, Motor motor) : base(callInfo)
+    public RCaronGetIndexBinder(CallInfo callInfo, FileScope fileScope, Motor? motor) : base(callInfo)
     {
         FileScope = fileScope;
         Motor = motor;
@@ -62,7 +61,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
                     scores[i] += 100;
                 }
                 else if (param.ParameterType.IsGenericType
-                         && ListEx.IsAssignableToGenericType(indexes[i].RuntimeType,
+                         && ListEx.IsAssignableToGenericType(indexes[i].LimitType,
                              param.ParameterType.GetGenericTypeDefinition()))
                     // parameters[j].ParameterType.GetGenericParameterConstraints()
                 {
@@ -99,7 +98,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
         if (bestIndexerScore == 0)
         {
             // custom indexers
-            if (FileScope.IndexerImplementations != null && indexes.Length == 1)
+            if (Motor != null && FileScope.IndexerImplementations != null && indexes.Length == 1)
             {
                 foreach (var indexer in FileScope.IndexerImplementations)
                 {
@@ -113,7 +112,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
                             // todo: make another interface that allows the indexer to specify its own restrictions
                             BindingRestrictions.GetInstanceRestriction(target.Expression, target.Value)
                                 .Merge(BindingRestrictions.GetExpressionRestriction(
-                                    Expression.Equal(indexes[0].Expression.EnsureIsType(indexes[0].RuntimeType), Expression.Constant(indexes[0].Value)))));
+                                    Expression.Equal(indexes[0].Expression.EnsureIsType(indexes[0].LimitType), Expression.Constant(indexes[0].Value)))));
                     }
                 }
             }
@@ -122,7 +121,7 @@ public class RCaronGetIndexBinder : GetIndexBinder
         }
 
         var bestIndexer = indexers[bestIndexerIndex];
-        var @params = bestIndexer.GetMethod.GetParameters();
+        var @params = bestIndexer.GetMethod!.GetParameters();
         var args = new Expression[@params.Length];
         for (var i = 0; i < @params.Length; i++)
         {

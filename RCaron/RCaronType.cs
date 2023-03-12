@@ -1,7 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.CSharp.RuntimeBinder;
 
 namespace RCaron;
 
@@ -15,7 +14,7 @@ public record RCaronType(Type Type) : IDynamicMetaObjectProvider
     private class RCaronTypeDynamicMetaObject : DynamicMetaObject
     {
         internal RCaronTypeDynamicMetaObject(
-            System.Linq.Expressions.Expression parameter,
+            Expression parameter,
             RCaronType value)
             : base(parameter, BindingRestrictions.Empty, value)
         {

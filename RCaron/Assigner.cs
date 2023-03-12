@@ -59,7 +59,7 @@ public class InterfaceListAssigner : IAssigner
     public void Assign(object? value)
     {
         var g = _motor.SimpleEvaluateExpressionHigh(_indexerToken.Tokens.ToArray());
-        var asInt = (int)Convert.ChangeType(g, typeof(int));
+        var asInt = (int)Convert.ChangeType(g, typeof(int))!;
         _list[asInt] = value;
     }
 }

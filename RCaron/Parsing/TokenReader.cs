@@ -6,238 +6,237 @@ namespace RCaron.Parsing;
 // todo(perf): could be a struct so that it is kept on the stack?
 public class TokenReader
 {
-    int position;
-    string text;
+    int _position;
+    string _code;
     public bool ReturnIgnored { get; set; }
     public static readonly PosToken IgnorePosToken = new(TokenType.Ignore, (0, 0));
     public IParsingErrorHandler ErrorHandler { get; }
 
-    public TokenReader(string text, IParsingErrorHandler errorHandler, bool returnIgnored = false)
+    public TokenReader(string code, IParsingErrorHandler errorHandler, bool returnIgnored = false)
     {
-        this.text = text;
-        this.position = 0;
+        this._code = code;
+        this._position = 0;
         ReturnIgnored = returnIgnored;
         ErrorHandler = errorHandler;
     }
 
     public PosToken? Read()
     {
-        if (position >= text.Length)
+        if (_position >= _code.Length)
         {
             return null;
         }
 
-        var txt = text.AsSpan();
+        var txt = _code.AsSpan();
 
         void Skip(int count)
         {
-            position += count;
+            _position += count;
         }
 
-        var initialPosition = position;
+        var initialPosition = _position;
 
         // variable
-        if (txt[position] == '$')
+        if (txt[_position] == '$')
         {
             Skip(1);
-            var index = CollectAlphaNumericAndSome(txt[position..]);
+            var index = CollectAlphaNumericAndSome(txt[_position..]);
             if (index == 0)
                 ErrorHandler.Handle(ParsingException.LonelyVariableStart(GetLocation(initialPosition, 1)));
-            position += index;
-            return new VariableToken((initialPosition, position),
-                text.Substring(initialPosition + 1, position - initialPosition - 1));
+            _position += index;
+            return new VariableToken((initialPosition, _position),
+                _code.Substring(initialPosition + 1, _position - initialPosition - 1));
             // return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
         }
         // shebang
-        else if (txt[position] == '#' && txt[position + 1] == '!')
+        else if (txt[_position] == '#' && txt[_position + 1] == '!')
         {
-            position += 2;
+            _position += 2;
             // collect until line ending
-            while (position != txt.Length && txt[position] != '\n')
-                position++;
+            while (_position != txt.Length && txt[_position] != '\n')
+                _position++;
             if (!ReturnIgnored)
                 return IgnorePosToken;
-            return new PosToken(TokenType.Ignore, (initialPosition, position));
+            return new PosToken(TokenType.Ignore, (initialPosition, _position));
         }
         // string
-        else if (txt[position] == '\'')
+        else if (txt[_position] == '\'')
         {
             Skip(1);
-            var (index, str) = CollectString(txt[position..]);
+            var (index, str) = CollectString(txt[_position..]);
             if (index == 0)
                 return null;
-            position += index;
-            return new ConstToken(TokenType.String, (initialPosition, position), str);
+            _position += index;
+            return new ConstToken(TokenType.String, (initialPosition, _position), str);
         }
         // whitespace
-        else if (char.IsWhiteSpace(txt[position]))
+        else if (char.IsWhiteSpace(txt[_position]))
         {
-            position++;
-            while (position < txt.Length && char.IsWhiteSpace(txt[position]))
-                ++position;
+            _position++;
+            while (_position < txt.Length && char.IsWhiteSpace(txt[_position]))
+                ++_position;
             if (!ReturnIgnored)
                 return IgnorePosToken;
-            return new PosToken(TokenType.Whitespace, (initialPosition, position));
+            return new PosToken(TokenType.Whitespace, (initialPosition, _position));
         }
         // comma
-        else if (txt[position] == ',')
+        else if (txt[_position] == ',')
         {
-            position++;
-            return new PosToken(TokenType.Comma, (initialPosition, position));
+            _position++;
+            return new PosToken(TokenType.Comma, (initialPosition, _position));
         }
         // line ending - semicolon
-        else if (txt[position] == ';')
+        else if (txt[_position] == ';')
         {
-            position++;
-            return new PosToken(TokenType.LineEnding, (initialPosition, position));
+            _position++;
+            return new PosToken(TokenType.LineEnding, (initialPosition, _position));
         }
-        else if (txt[position] == '{')
+        else if (txt[_position] == '{')
         {
-            position++;
-            return new BlockPosToken(TokenType.BlockStart, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.BlockStart, (initialPosition, _position));
         }
-        else if (txt[position] == '}')
+        else if (txt[_position] == '}')
         {
-            position++;
-            return new BlockPosToken(TokenType.BlockEnd, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.BlockEnd, (initialPosition, _position));
         }
-        else if (txt[position] == '(')
+        else if (txt[_position] == '(')
         {
-            position++;
-            return new BlockPosToken(TokenType.SimpleBlockStart, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.SimpleBlockStart, (initialPosition, _position));
         }
-        else if (txt[position] == ')')
+        else if (txt[_position] == ')')
         {
-            position++;
-            return new BlockPosToken(TokenType.SimpleBlockEnd, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.SimpleBlockEnd, (initialPosition, _position));
         }
         // (decimal|integer) number
-        else if (char.IsDigit(txt[position]))
+        else if (char.IsDigit(txt[_position]))
         {
-            var (index, isDecimal) = CollectAnyNumber(txt[position..]);
-            position += index;
+            var (index, isDecimal) = CollectAnyNumber(txt[_position..]);
+            _position += index;
             if (isDecimal)
                 return new ConstToken(TokenType.DecimalNumber,
-                    (initialPosition, position),
-                    Decimal.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
-            return new ConstToken(TokenType.Number, (initialPosition, position),
-                Int64.Parse(text[initialPosition..position], CultureInfo.InvariantCulture));
+                    (initialPosition, _position),
+                    Decimal.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
+            return new ConstToken(TokenType.Number, (initialPosition, _position),
+                Int64.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
         }
         // single line comment
-        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '/')
+        else if (txt.Length - _position > 1 && txt[_position] == '/' && txt[_position + 1] == '/')
         {
-            position += 2;
-            while (position < txt.Length && txt[position] != '\n')
-                position++;
+            _position += 2;
+            while (_position < txt.Length && txt[_position] != '\n')
+                _position++;
             if (!ReturnIgnored)
                 return IgnorePosToken;
-            return new PosToken(TokenType.Comment, (initialPosition, position));
+            return new PosToken(TokenType.Comment, (initialPosition, _position));
         }
         // // multiline line comment
-        else if (txt.Length - position > 1 && txt[position] == '/' && txt[position + 1] == '#')
+        else if (txt.Length - _position > 1 && txt[_position] == '/' && txt[_position + 1] == '#')
         {
-            position += 2;
-            while (txt[position] != '#' && txt[position + 1] != '/')
-                position++;
-            position += 3;
+            _position += 2;
+            while (txt[_position] != '#' && txt[_position + 1] != '/')
+                _position++;
+            _position += 3;
             if (!ReturnIgnored)
                 return IgnorePosToken;
-            return new PosToken(TokenType.Comment, (initialPosition, position));
+            return new PosToken(TokenType.Comment, (initialPosition, _position));
         }
         // extern thing
-        else if (txt[position] == '#')
+        else if (txt[_position] == '#')
         {
-            position++;
-            position += CollectAlphaNumericAndSomeAndDot(txt[position..]);
-            return new ExternThingToken((initialPosition, position),
-                text.Substring(initialPosition + 1, position - initialPosition - 1));
+            _position++;
+            _position += CollectAlphaNumericAndSomeAndDot(txt[_position..]);
+            return new ExternThingToken((initialPosition, _position),
+                _code.Substring(initialPosition + 1, _position - initialPosition - 1));
         }
         // array literal start
-        else if (txt.Length - position > 1 && txt[position] == '@' && txt[position + 1] == '(')
+        else if (txt.Length - _position > 1 && txt[_position] == '@' && txt[_position + 1] == '(')
         {
-            position++;
-            return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, position));
+            _position++;
+            return new PosToken(TokenType.ArrayLiteralStart, (initialPosition, _position));
         }
         // range operator
         // it is here, instead of in CollectOperation, because it would conflict with TokenType.Dot
-        else if (txt.Length - position > 1 && txt[position] == '.' && txt[position + 1] == '.' &&
-                 (txt.Length - position > 2 && txt[position + 2] != '.'))
+        else if (txt.Length - _position > 1 && txt[_position] == '.' && txt[_position + 1] == '.' &&
+                 (txt.Length - _position > 2 && txt[_position + 2] != '.'))
         {
-            position += 2;
-            return new PosToken(TokenType.Range, (initialPosition, position));
+            _position += 2;
+            return new PosToken(TokenType.Range, (initialPosition, _position));
         }
         // dot
-        else if (txt[position] == '.')
+        else if (txt[_position] == '.')
         {
-            position++;
-            return new PosToken(TokenType.Dot, (initialPosition, position));
+            _position++;
+            return new PosToken(TokenType.Dot, (initialPosition, _position));
         }
-        // normal array accesser start
-        else if (txt[position] == '[')
+        // normal array indexer start
+        else if (txt[_position] == '[')
         {
-            position++;
-            return new BlockPosToken(TokenType.IndexerStart, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.IndexerStart, (initialPosition, _position));
         }
-        // normal array accesser end
-        else if (txt[position] == ']')
+        // normal array indexer end
+        else if (txt[_position] == ']')
         {
-            position++;
-            return new BlockPosToken(TokenType.IndexerEnd, (initialPosition, position));
+            _position++;
+            return new BlockPosToken(TokenType.IndexerEnd, (initialPosition, _position));
         }
         // colon
-        else if (txt[position] == ':')
+        else if (txt[_position] == ':')
         {
-            position++;
-            return new PosToken(TokenType.Colon, (initialPosition, position));
+            _position++;
+            return new PosToken(TokenType.Colon, (initialPosition, _position));
         }
         // paths
-        else if ((txt.Length - position > 2 && char.IsLetter(txt[position]) &&
-                  txt[position + 1] == ':' &&
-                  (txt[position + 2] == '/' ||
-                   txt[position + 2] == '\\')))
+        else if ((txt.Length - _position > 2 && char.IsLetter(txt[_position]) &&
+                  txt[_position + 1] == ':' &&
+                  (txt[_position + 2] == '/' ||
+                   txt[_position + 2] == '\\')))
         {
-            var (index, path, _) = CollectPathOrKeyword(txt[position..], allowFirstDoubleDot: true);
+            var (index, path, _) = CollectPathOrKeyword(txt[_position..], allowFirstDoubleDot: true);
             if (index == 0)
                 return null;
-            position += index;
-            return new ConstToken(TokenType.Path, (initialPosition, position), path);
+            _position += index;
+            return new ConstToken(TokenType.Path, (initialPosition, _position), path);
         }
-
         // executable keyword
-        if (txt[position] == '@')
+        else if (txt[_position] == '@')
         {
-            position++;
-            var index = CollectExecutableKeyword(txt[position..]);
+            _position++;
+            var index = CollectExecutableKeyword(txt[_position..]);
             if (index == 0)
                 throw new("wtf");
-            position += index;
-            return new KeywordToken((initialPosition, position),
-                text.Substring(initialPosition + 1, position - initialPosition - 1), true);
+            _position += index;
+            return new KeywordToken((initialPosition, _position),
+                _code.Substring(initialPosition + 1, _position - initialPosition - 1), true);
         }
         // operation
         else
         {
-            var (index, tokenType, op) = CollectOperation(txt[position..]);
+            var (index, tokenType, op) = CollectOperation(txt[_position..]);
             // collect a keyword e.g. "println"
-            if (index == 0 || (txt.Length - position - index > 0 &&
-                               ((op == OperationEnum.Divide && txt[position + index] != ' ') ||
-                                (op == OperationEnum.Multiply && txt[position + index] != ' '))))
+            if (index == 0 || (txt.Length - _position - index > 0 &&
+                               ((op == OperationEnum.Divide && txt[_position + index] != ' ') ||
+                                (op == OperationEnum.Multiply && txt[_position + index] != ' '))))
             {
-                (index, var str, var isPath) = CollectPathOrKeyword(txt[position..]);
+                (index, var str, var isPath) = CollectPathOrKeyword(txt[_position..]);
                 if (index == 0)
-                    throw new("Invalid token at position " + position);
-                position += index;
+                    throw new("Invalid token at position " + _position);
+                _position += index;
                 return isPath
-                    ? new ConstToken(TokenType.Path, (initialPosition, position), str)
-                    : new KeywordToken((initialPosition, position), str);
+                    ? new ConstToken(TokenType.Path, (initialPosition, _position), str)
+                    : new KeywordToken((initialPosition, _position), str);
             }
 
-            position += index;
+            _position += index;
             // match "value" operations
             if (tokenType == TokenType.Operator || tokenType == TokenType.MathOperator)
-                return new ValueOperationValuePosToken(tokenType, (initialPosition, position), op);
+                return new ValueOperationValuePosToken(tokenType, (initialPosition, _position), op);
 
-            return new OperationPosToken(tokenType, (initialPosition, position), op);
+            return new OperationPosToken(tokenType, (initialPosition, _position), op);
         }
     }
 
@@ -481,5 +480,5 @@ public class TokenReader
         => new(startIndex, length);
 
     public TextSpan GetLocation(ReadOnlySpan<char> subSpan, int startIndexInSubSpan, int length)
-        => new(startIndexInSubSpan + (text.Length - subSpan.Length), length);
+        => new(startIndexInSubSpan + (_code.Length - subSpan.Length), length);
 }

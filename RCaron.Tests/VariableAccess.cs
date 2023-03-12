@@ -156,7 +156,7 @@ $h2 = $arr[$h];");
 
     public class NormalIndexerOnDotThingDummy
     {
-        public object[] Array { get; set; }
+        public object[]? Array { get; set; }
     }
 
     [Fact]
@@ -178,7 +178,7 @@ $h2 = $arr[$h];");
 $arr[1] = 22;
 $h = $arr[1];");
         m.AssertVariableEquals("h", (long)22);
-        m = RCaronRunner.Run(@"#RCaron.Tests.StaticDummy:Field = 1;
+        RCaronRunner.Run(@"#RCaron.Tests.StaticDummy:Field = 1;
 #RCaron.Tests.StaticDummy:Property = 1;");
         Assert.Equal(1, StaticDummy.Field);
         Assert.Equal(1, StaticDummy.Property);

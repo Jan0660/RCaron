@@ -1,5 +1,4 @@
-﻿using Dynamitey.Internal.Optimization;
-using RCaron.Parsing;
+﻿using RCaron.Parsing;
 
 namespace RCaron.AutoCompletion;
 

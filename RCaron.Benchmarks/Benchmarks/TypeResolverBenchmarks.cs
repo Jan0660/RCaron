@@ -11,13 +11,15 @@ public class TypeResolverBenchmarks
     {
         TypeResolver.FindType("System.Console");
     }
+
     [Benchmark()]
     public void FullNameWeirdInternal()
     {
         TypeResolver.FindType("Internal.Console");
     }
 
-    public FileScope VarShortNameAndUsed = new(){ UsedNamespaces = new() { "System" } };
+    public FileScope VarShortNameAndUsed = new() { Raw = null!, Lines = null!, UsedNamespaces = new() { "System" } };
+
     [Benchmark()]
     public void ShortNameAndUsed()
     {

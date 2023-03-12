@@ -12,19 +12,8 @@ namespace RCaron.LanguageServer
 {
     internal class Program
     {
-        private static void Main(string[] args)
+        private static async Task Main(string[] args)
         {
-            MainAsync(args).Wait();
-        }
-
-        private static async Task MainAsync(string[] args)
-        {
-            // Debugger.Launch();
-            // while (!Debugger.IsAttached)
-            // {
-            //     await Task.Delay(100);
-            // }
-
             Log.Logger = new LoggerConfiguration()
                         .Enrich.FromLogContext()
                         // .WriteTo.File("log.txt", rollingInterval: RollingInterval.Day)
@@ -32,12 +21,6 @@ namespace RCaron.LanguageServer
                         .CreateLogger();
             
             Log.Logger.Information("This only goes file...");
-
-            // while (!Debugger.IsAttached)
-            // {
-            //     Thread.Sleep(100);
-            // }
-
             IObserver<WorkDoneProgressReport> workDone = null!;
 
             var server = await OmniSharp.Extensions.LanguageServer.Server.LanguageServer.From(
@@ -54,14 +37,8 @@ namespace RCaron.LanguageServer
                         )
                        .WithHandler<TextDocumentHandler>()
                        .WithHandler<CompletionHandler>()
-                       // .WithHandler<DidChangeWatchedFilesHandler>()
-                       // .WithHandler<FoldingRangeHandler>()
-                       
-                       // .WithHandler<MyWorkspaceSymbolsHandler>()
                        .WithHandler<MyDocumentSymbolHandler>()
                        .WithHandler<FormattingHandler>()
-                       
-                       // .WithHandler<SemanticTokensHandler>()
                        // .WithContentModifiedSupport(false)
                        .WithServices(x => x.AddLogging(b => b.SetMinimumLevel(LogLevel.Trace)))
                        .WithServices(

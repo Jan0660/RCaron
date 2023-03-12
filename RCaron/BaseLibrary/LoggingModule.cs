@@ -1,5 +1,4 @@
-﻿using System.Reflection;
-using RCaron.LibrarySourceGenerator;
+﻿using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.BaseLibrary;
 
@@ -7,7 +6,7 @@ namespace RCaron.BaseLibrary;
 public partial class LoggingModule : IRCaronModule
 {
     [Method("SayHello")]
-    public static object? SayHello(Motor motor, in ReadOnlySpan<PosToken> arguments)
+    public static object SayHello(Motor motor, in ReadOnlySpan<PosToken> arguments)
     {
         Console.WriteLine("Hello, ř!");
         return RCaronInsideEnum.NoReturnValue;

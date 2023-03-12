@@ -5,7 +5,7 @@ using BenchmarkDotNet.Jobs;
 namespace RCaron.Benchmarks.Benchmarks;
 
 [MemoryDiagnoser]
-[Config(typeof(StringBenchmarks.Config))]
+[Config(typeof(Config))]
 public class StringBenchmarks
 {
     public class Config : ManualConfig

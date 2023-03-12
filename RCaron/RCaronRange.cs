@@ -15,9 +15,7 @@ public class RCaronRange : IEnumerable
 
 // Implementation for the GetEnumerator method.
     IEnumerator IEnumerable.GetEnumerator()
-    {
-        return (IEnumerator)GetEnumerator();
-    }
+        => GetEnumerator();
 
     public RCaronRangeEnumerator GetEnumerator()
     {

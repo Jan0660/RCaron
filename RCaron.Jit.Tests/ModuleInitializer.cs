@@ -1,6 +1,6 @@
 ﻿using System.Runtime.CompilerServices;
 
-namespace RCaron.Tests;
+namespace RCaron.Jit.Tests;
 
 public static class ModuleInitializer
 {
@@ -8,6 +8,6 @@ public static class ModuleInitializer
     public static void Initialize()
     {
         // throw new();
-        RCaron.Jit.Hook.EmptyMethod();
+        Hook.EmptyMethod();
     }
 }

@@ -1,6 +1,4 @@
-﻿using RCaron.Classes;
-
-namespace RCaron;
+﻿namespace RCaron;
 
 public static class TypeResolver
 {
@@ -34,7 +32,7 @@ public static class TypeResolver
                 }
 
                 if (type.Name.Equals(name, StringComparison.InvariantCultureIgnoreCase) &&
-                    (usedNamespaces?.Contains(type.Namespace) ?? false))
+                    type.Namespace != null && (usedNamespaces?.Contains(type.Namespace) ?? false))
                 {
                     if (fileScope != null)
                     {

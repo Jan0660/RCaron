@@ -3,21 +3,16 @@ using System.Collections;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Dynamic;
-using System.Globalization;
-using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using Dynamitey;
 using JetBrains.Annotations;
-using Log73;
-using Microsoft.CSharp.RuntimeBinder;
 using RCaron.BaseLibrary;
 using RCaron.Binders;
 using RCaron.Classes;
 using RCaron.Parsing;
-using Binder = Microsoft.CSharp.RuntimeBinder.Binder;
 using Console = Log73.Console;
 using ExceptionCode = RCaron.RCaronExceptionCode;
 
@@ -91,8 +86,8 @@ public class Motor
 
     public void UseContext(RCaronParserContext parserContext, bool withFileScope = true)
     {
-        Lines = parserContext.FileScope?.Lines;
-        if (withFileScope && parserContext.FileScope != null)
+        Lines = parserContext.FileScope.Lines;
+        if (withFileScope && parserContext.FileScope != null!)
         {
             MainFileScope = parserContext.FileScope;
             MainFileScope.Modules ??= new List<IRCaronModule>(1) { new LoggingModule(), new ExperimentalModule() };
@@ -102,22 +97,22 @@ public class Motor
     /// <summary>
     /// current line index
     /// </summary>
-    private int curIndex;
+    private int _curIndex;
 
-    public int CurrentLineIndex => curIndex;
+    public int CurrentLineIndex => _curIndex;
 
     public object? Run(int startIndex = 0)
     {
 #if RCARONJIT
-        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook").GetMethod("Run").Invoke(null, new object[] { new RCaronParserContext(MainFileScope), null, this });
+        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook")!.GetMethod("Run")!.Invoke(null, new object[] { new RCaronParserContext(MainFileScope), null, this });
         return null;
 #endif
-        curIndex = startIndex;
-        for (; curIndex < Lines.Count; curIndex++)
+        _curIndex = startIndex;
+        for (; _curIndex < Lines.Count; _curIndex++)
         {
-            if (curIndex >= Lines.Count)
+            if (_curIndex >= Lines.Count)
                 break;
-            var line = Lines[curIndex];
+            var line = Lines[_curIndex];
             var res = RunLine(line);
             if (res.Exit)
                 return res.Result;
@@ -130,7 +125,7 @@ public class Motor
     {
         fileScope ??= GetFileScope();
         var lineNumber = 1;
-        var pos = position ?? Lines[curIndex] switch
+        var pos = position ?? Lines[_curIndex] switch
         {
             TokenLine tl => tl.Tokens[0].Position.Start,
             SingleTokenLine stl => stl.Token.Position.Start,
@@ -239,7 +234,7 @@ public class Motor
             }
             case LineType.AssignerAssignment:
             {
-                IAssigner assigner = null;
+                IAssigner assigner;
                 if (line.Tokens[0] is DotGroupPosToken dotGroup)
                 {
                     assigner = GetAssigner(dotGroup.Tokens);
@@ -511,22 +506,22 @@ public class Motor
             {
                 CodeBlockToken? catchBlock = null;
                 CodeBlockToken? finallyBlock = null;
-                if (Lines.Count - curIndex > 1 && Lines[curIndex + 1] is TokenLine
+                if (Lines.Count - _curIndex > 1 && Lines[_curIndex + 1] is TokenLine
                     {
                         Type: LineType.CatchBlock
                     } catchBlockLine)
                     catchBlock = (CodeBlockToken)catchBlockLine.Tokens[1];
-                else if (Lines.Count - curIndex > 1 && Lines[curIndex + 1] is TokenLine
+                else if (Lines.Count - _curIndex > 1 && Lines[_curIndex + 1] is TokenLine
                          {
                              Type: LineType.FinallyBlock
                          } finallyBlockLine)
                     finallyBlock = (CodeBlockToken)finallyBlockLine.Tokens[1];
-                if (Lines.Count - curIndex > 2 && Lines[curIndex + 2] is TokenLine
+                if (Lines.Count - _curIndex > 2 && Lines[_curIndex + 2] is TokenLine
                     {
                         Type: LineType.FinallyBlock
                     } finallyBlockLine2)
                     finallyBlock = (CodeBlockToken)finallyBlockLine2.Tokens[1];
-                var pastIndex = curIndex;
+                var pastIndex = _curIndex;
                 var pastLines = Lines;
                 try
                 {
@@ -552,7 +547,7 @@ public class Motor
                 }
                 finally
                 {
-                    curIndex = pastIndex;
+                    _curIndex = pastIndex;
                     Lines = pastLines;
                     if (finallyBlock is not null)
                     {
@@ -575,12 +570,12 @@ public class Motor
 
     public object? RunLinesList(IList<Line> lines)
     {
-        var prevIndex = curIndex;
+        var prevIndex = _curIndex;
         var prevLines = Lines;
-        curIndex = 0;
+        _curIndex = 0;
         Lines = lines;
         var r = Run();
-        curIndex = prevIndex;
+        _curIndex = prevIndex;
         Lines = prevLines;
         return r;
     }
@@ -634,7 +629,7 @@ public class Motor
             #region conversions
 
             case "string":
-                return At(argumentTokens, 0).ToString()!;
+                return At(argumentTokens, 0)?.ToString()!;
             case "float":
                 return Convert.ToSingle(At(argumentTokens, 0));
             case "int32":
@@ -650,7 +645,7 @@ public class Motor
             {
                 var variableName = At(argumentTokens, 0).Expect<string>();
                 var val = GlobalScope.GetVariable(variableName);
-                if (val.Equals(RCaronInsideEnum.VariableNotFound))
+                if (val?.Equals(RCaronInsideEnum.VariableNotFound) ?? false)
                     throw RCaronException.VariableNotFound(variableName);
                 return val;
             }
@@ -692,7 +687,7 @@ public class Motor
                 return RCaronInsideEnum.NoReturnValue;
             }
             case "throw":
-                throw (Exception)At(argumentTokens, 0);
+                throw At(argumentTokens, 0).Expect<Exception>();
             case "range":
             {
                 var long1 = At(argumentTokens, 0).Expect<long>();
@@ -708,9 +703,7 @@ public class Motor
         {
             var args = All(in argumentTokens);
             Type? type = null;
-            string methodName;
             object? target = null;
-            object? variable = null;
             if (instance != null)
             {
                 var obj = instance;
@@ -721,17 +714,14 @@ public class Motor
                     target = obj;
                     type = obj.GetType();
                 }
-
-                goto resolveMethod;
             }
 
-            resolveMethod: ;
             var (bestMethod, needsNumericConversion, isExtensionMethod) =
                 MethodResolver.Resolve(name, type, (fileScope ??= GetFileScope()), instance, args);
 
             if (isExtensionMethod)
             {
-                var argsNew = new object[args.Length + 1];
+                var argsNew = new object?[args.Length + 1];
                 Array.Copy(args, 0, argsNew, 1, args.Length);
                 argsNew[0] = target;
                 args = argsNew;
@@ -794,13 +784,16 @@ public class Motor
             return bestMethod.Invoke(target, args);
         }
 
-        if ((fileScope ??= GetFileScope()).Modules != null)
-            foreach (var module in GetFileScope().Modules)
+        if (((fileScope ??= GetFileScope()).Modules) != null)
+        {
+            Debug.Assert(fileScope.Modules != null, "fileScope.Modules != null");
+            foreach (var module in fileScope.Modules)
             {
                 var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
                 if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? false)
                     return v;
             }
+        }
 
         throw new RCaronException($"method '{name}' not found", ExceptionCode.MethodNotFound);
     }
@@ -808,11 +801,11 @@ public class Motor
     public IAssigner GetAssigner(Span<PosToken> tokens)
     {
         object? val = null;
-        Type type = null;
+        Type type = null!;
         if (tokens.Length != 1)
         {
             val = EvaluateDotThings(tokens[..^1]);
-            type = val.GetType();
+            type = val?.GetType() ?? typeof(object);
         }
 
         if (val is RCaronType rCaronType)
@@ -846,7 +839,7 @@ public class Motor
                 throw new();
             }
 
-            var p = type!.GetProperty(str,
+            var p = type.GetProperty(str,
                 BindingFlags.Public | BindingFlags.IgnoreCase | BindingFlags.Instance | BindingFlags.Static);
             if (p != null)
                 return new PropertyAssigner(p, val);
@@ -1153,7 +1146,7 @@ public class Motor
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
         ArraySegment<PosToken> argumentTokens = default, ClassInstance? classInstance = null)
     {
-        LocalScope scope = null;
+        LocalScope? scope = null;
         if (function.Arguments != null)
         {
             scope ??= classInstance == null ? new LocalScope() : new ClassFunctionScope(classInstance);
@@ -1222,7 +1215,7 @@ public class Motor
 
 
         BlockStack.Push(new StackThing(false, true, scope, function.FileScope,
-            Lines.Count - curIndex > 0 ? Lines[curIndex] : null));
+            Lines.Count - _curIndex > 0 ? Lines[_curIndex] : null));
         return RunCodeBlock(function.CodeBlock);
     }
 
@@ -1243,9 +1236,9 @@ public class Motor
         switch (op.Operation)
         {
             case OperationEnum.IsEqual:
-                return val1.Equals(val2);
+                return val1?.Equals(val2) ?? val2 == null;
             case OperationEnum.IsNotEqual:
-                return !val1.Equals(val2);
+                return !val1?.Equals(val2) ?? val2 != null;
             case OperationEnum.IsGreater:
                 return Horrors.IsGreater(val1, val2);
             case OperationEnum.IsGreaterOrEqual:
@@ -1405,7 +1398,7 @@ public class MethodResolver
     public static (MethodBase, bool needsNumericConversion, bool IsExtension) Resolve(ReadOnlySpan<char> name,
         Type type, FileScope fileScope, object? instance, object?[] args)
     {
-        var methodsOrg = type.GetMethods()!;
+        var methodsOrg = type.GetMethods();
         var methodsLength = methodsOrg.Length;
         var arr = ArrayPool<MethodBase>.Shared.Rent(methodsLength);
         var count = 0;
@@ -1503,7 +1496,7 @@ public class MethodResolver
                         break;
                     }
 
-                    if (parameters[j].ParameterType == args[j].GetType())
+                    if (parameters[j].ParameterType == args[j]?.GetType())
                     {
                         score += 100;
                     }
@@ -1513,13 +1506,13 @@ public class MethodResolver
                     }
                     // todo: support actual generic parameters constraints
                     else if (parameters[j].ParameterType.IsGenericType
-                             && ListEx.IsAssignableToGenericType(args[j].GetType(),
+                             && ListEx.IsAssignableToGenericType(args[j]?.GetType() ?? typeof(object),
                                  parameters[j].ParameterType.GetGenericTypeDefinition()))
                         // parameters[j].ParameterType.GetGenericParameterConstraints()
                     {
                         score += 10;
                     }
-                    else if (parameters[j].ParameterType.IsNumericType() && args[j].GetType().IsNumericType())
+                    else if (parameters[j].ParameterType.IsNumericType() && (args[j]?.GetType().IsNumericType() ?? false))
                     {
                         score += 10;
                         needsNumericConversions[i] = true;

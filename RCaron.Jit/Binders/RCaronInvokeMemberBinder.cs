@@ -22,17 +22,16 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
     public override DynamicMetaObject FallbackInvoke(DynamicMetaObject target, DynamicMetaObject[] args,
         DynamicMetaObject? errorSuggestion)
     {
-        return _do(target, args, errorSuggestion);
+        return _do(target, args);
     }
 
     public override DynamicMetaObject FallbackInvokeMember(DynamicMetaObject target, DynamicMetaObject[] args,
         DynamicMetaObject? errorSuggestion)
     {
-        return _do(target, args, errorSuggestion);
+        return _do(target, args);
     }
 
-    private DynamicMetaObject _do(DynamicMetaObject target, DynamicMetaObject[] args,
-        DynamicMetaObject? errorSuggestion)
+    private DynamicMetaObject _do(DynamicMetaObject target, DynamicMetaObject[] args)
     {
         if (target.RuntimeType == typeof(ClassDefinition) &&
             Name.Equals("new", StringComparison.InvariantCultureIgnoreCase))
@@ -46,15 +45,15 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
             if (classDefinition.PropertyInitializers != null)
             {
                 var compiledClass = Context.GetClass(classDefinition);
+                Debug.Assert(compiledClass != null);
                 Debug.Assert(compiledClass.PropertyInitializers != null);
                 for (var j = 0; j < compiledClass.PropertyInitializers.Length; j++)
                 {
-                    var bruh = nameof(ClassInstance.PropertyValues);
                     if (compiledClass.PropertyInitializers[j] != null)
                         expressions.Add(Expression.Assign(
                             Expression.ArrayAccess(Expression.Property(classVar, nameof(ClassInstance.PropertyValues)),
                                 Expression.Constant(j)),
-                            compiledClass.PropertyInitializers[j].EnsureIsType(typeof(object))));
+                            compiledClass.PropertyInitializers[j]!.EnsureIsType(typeof(object))));
                 }
             }
 
@@ -136,7 +135,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     Expression.New(constructorInfo, finalArgs).EnsureIsType(ReturnType),
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)) :
                 method is MethodInfo methodInfo ? new DynamicMetaObject(
-                    Expression.Call(methodInfo.IsStatic ? null : target.Expression.EnsureIsType(target.RuntimeType),
+                    Expression.Call(methodInfo.IsStatic ? null : target.Expression.EnsureIsType(target.LimitType),
                         methodInfo,
                         finalArgs).EnsureIsType(ReturnType),
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)) : throw new();

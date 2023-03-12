@@ -1,11 +1,9 @@
 ﻿using System.CommandLine;
-using System.CommandLine.Invocation;
 using System.Drawing;
 using Log73;
 using Log73.LogPres;
 using PrettyPrompt;
 using PrettyPrompt.Highlighting;
-using RCaron;
 using RCaron.FunLibrary;
 using RCaron.Shell;
 using RCaron.Shell.Prompt;
@@ -47,7 +45,7 @@ rootCommand.AddOption(interactiveOption);
 rootCommand.AddArgument(argsArgument);
 
 rootCommand.Description = "RCaron Shell";
-rootCommand.SetHandler((Func<InvocationContext, Task>)(async (context) =>
+rootCommand.SetHandler(async context =>
 {
     var file = context.ParseResult.GetValueForArgument(fileArgument);
     var interactive = context.ParseResult.GetValueForOption(interactiveOption);
@@ -102,7 +100,7 @@ rootCommand.SetHandler((Func<InvocationContext, Task>)(async (context) =>
             if (shell.PromptFunction != null)
             {
                 var promptResult = shell.Motor.FunctionCall(shell.PromptFunction);
-                promptConfig.Prompt = new FormattedString(promptResult.ToString());
+                promptConfig.Prompt = new FormattedString(promptResult?.ToString());
             }
 
             var input = await prompt.ReadLineAsync();
@@ -125,18 +123,7 @@ rootCommand.SetHandler((Func<InvocationContext, Task>)(async (context) =>
             }
         }
     }
-}));
+});
 
 // Parse the incoming args and invoke the handler
 return await rootCommand.InvokeAsync(args);
-
-
-void AddFun(Motor motor)
-{
-    motor.MainFileScope.Modules.Add(new FunModule());
-    motor.MainFileScope.Modules.Add(new JsonModule());
-    motor.MainFileScope.IndexerImplementations ??= new();
-    motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());
-    motor.MainFileScope.PropertyAccessors ??= new();
-    motor.MainFileScope.PropertyAccessors.Add(new JsonObjectPropertyAccessor());
-}

@@ -21,6 +21,6 @@ public partial class ShellStuffModule : IRCaronModule
     [Method("Set-Prompt")]
     public void SetPrompt(Motor _, string functionName)
     {
-        Shell.PromptFunction = Shell.Motor.MainFileScope!.Functions![functionName];
+        Shell.PromptFunction = Shell.Motor.MainFileScope.Functions![functionName];
     }
 }

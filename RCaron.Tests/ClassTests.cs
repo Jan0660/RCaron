@@ -39,7 +39,7 @@ class Funny {
 
 $h = #Funny:New().prop;
 ");
-        m.AssertVariableEquals("h", (object)null);
+        m.AssertVariableEquals("h", (object?)null);
     }
 
     [Fact]

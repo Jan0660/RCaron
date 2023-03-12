@@ -2,7 +2,6 @@
 using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
-using Dynamitey.DynamicObjects;
 using RCaron.Binders;
 
 namespace RCaron.Jit.Binders;
@@ -27,33 +26,36 @@ public class RCaronGetMemberBinder : GetMemberBinder
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
 
-        var property = target.RuntimeType.GetProperty(Name,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (property != null)
+        if (target.RuntimeType != null)
         {
-            return new DynamicMetaObject(
-                Expression.Property(target.Expression.EnsureIsType(target.RuntimeType), property)
-                    .EnsureIsType(ReturnType),
-                GetRestrictions(target));
-        }
+            var property = target.RuntimeType.GetProperty(Name,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (property != null)
+            {
+                return new DynamicMetaObject(
+                    Expression.Property(target.Expression.EnsureIsType(target.RuntimeType), property)
+                        .EnsureIsType(ReturnType),
+                    GetRestrictions(target));
+            }
 
-        var field = target.RuntimeType.GetField(Name,
-            BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
-        if (field != null)
-        {
-            return new DynamicMetaObject(
-                Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field).EnsureIsType(ReturnType),
-                GetRestrictions(target));
-        }
+            var field = target.RuntimeType.GetField(Name,
+                BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase);
+            if (field != null)
+            {
+                return new DynamicMetaObject(
+                    Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field).EnsureIsType(ReturnType),
+                    GetRestrictions(target));
+            }
 
-        if (target.RuntimeType.IsAssignableTo(typeof(IDictionary)))
-        {
-            return new DynamicMetaObject(
-                Expression.Call(
-                    Expression.Convert(target.Expression, typeof(IDictionary)),
-                    typeof(IDictionary).GetMethod("get_Item")!,
-                    Expression.Constant(Name)),
-                GetRestrictions(target));
+            if (target.RuntimeType.IsAssignableTo(typeof(IDictionary)))
+            {
+                return new DynamicMetaObject(
+                    Expression.Call(
+                        Expression.Convert(target.Expression, typeof(IDictionary)),
+                        typeof(IDictionary).GetMethod("get_Item")!,
+                        Expression.Constant(Name)),
+                    GetRestrictions(target));
+            }
         }
 
         if (FileScope.PropertyAccessors != null && target.HasValue)
@@ -70,7 +72,7 @@ public class RCaronGetMemberBinder : GetMemberBinder
             }
         }
 
-        throw new RCaronException($"Unable to find property or field {Name} on type {target.RuntimeType.Name}",
+        throw new RCaronException($"Unable to find property or field {Name} on type {target.LimitType.Name}",
             RCaronExceptionCode.CannotResolveInDotThing);
     }
 

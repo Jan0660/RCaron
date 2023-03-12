@@ -1,6 +1,5 @@
 ﻿using System.CommandLine;
 using System.Drawing;
-using System.IO;
 using Log73;
 using Log73.LogPres;
 using RCaron;
@@ -103,7 +102,7 @@ return rootCommand.Invoke(args);
 
 void AddFun(Motor motor)
 {
-    motor.MainFileScope.Modules.Add(new FunModule());
+    motor.MainFileScope.Modules!.Add(new FunModule());
     motor.MainFileScope.Modules.Add(new JsonModule());
     motor.MainFileScope.IndexerImplementations ??= new();
     motor.MainFileScope.IndexerImplementations.Add(new JsonNodeIndexer());

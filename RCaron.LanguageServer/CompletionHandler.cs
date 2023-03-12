@@ -27,17 +27,17 @@ public class CompletionHandler : CompletionHandlerBase
         };
 
     public override async Task<CompletionList> Handle(CompletionParams request, CancellationToken cancellationToken)
-        => CompletionList.From(await GetCompletions(request.TextDocument, request.Position,
+        => CompletionList.From(await GetCompletionsAsync(request.TextDocument, request.Position,
             cancellationToken: cancellationToken));
 
     public override Task<CompletionItem> Handle(CompletionItem request, CancellationToken cancellationToken)
         => throw new();
 
-    public async Task<ICollection<CompletionItem>> GetCompletions(TextDocumentIdentifier textDocument,
+    public async Task<ICollection<CompletionItem>> GetCompletionsAsync(TextDocumentIdentifier textDocument,
         Position caretPosition, int maxCompletions = 40, CancellationToken cancellationToken = default)
     {
         var list = new List<CompletionItem>(maxCompletions);
-        var code = await Util.GetDocumentText(textDocument.Uri.GetFileSystemPath());
+        var code = await Util.GetDocumentTextAsync(textDocument.Uri.GetFileSystemPath());
         cancellationToken.ThrowIfCancellationRequested();
         var caretPositionInt = Util.GetPositionInt(code, caretPosition);
         var completions = new CompletionProvider().GetCompletions(

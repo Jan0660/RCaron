@@ -233,7 +233,7 @@ $h = v();
         var m = RCaronRunner.Run(@"$h = sum(sum(1 + 2, 2 * 2 - 4), 1 + 3 + sum(1 + 1, 2 - 1 - 1));");
         m.AssertVariableEquals("h", (long)9);
         // todo: some better test like this
-        m = RCaronRunner.Run("println(1, 2, 3, 4, 5 + 1);");
+        RCaronRunner.Run("println(1, 2, 3, 4, 5 + 1);");
     }
 
     [Fact]
@@ -311,8 +311,25 @@ foreach($item in $arr)
 "));
         m.GlobalScope.SetVariable("list", new System.Collections.ArrayList());
         m.Run();
-        var list = (System.Collections.ArrayList)m.GlobalScope.GetVariable("list");
+        var list = (System.Collections.ArrayList)m.GlobalScope.GetVariable("list")!;
         Assert.Equal(6, list.Count);
         Assert.Equal(2L, list[2]);
+    }
+
+    [Fact]
+    public void Null()
+    {
+        var m = RCaronRunner.Run(@"$on_eq = 1 == $null;
+$on_neq = 1 != $null;
+$no_eq = $null == 1;
+$no_neq = $null != 1;
+$nn_eq = $null == $null;
+$nn_neq = $null != $null;");
+        m.AssertVariableEquals("on_eq", false);
+        m.AssertVariableEquals("on_neq", true);
+        m.AssertVariableEquals("no_eq", false);
+        m.AssertVariableEquals("no_neq", true);
+        m.AssertVariableEquals("nn_eq", true);
+        m.AssertVariableEquals("nn_neq", false);
     }
 }

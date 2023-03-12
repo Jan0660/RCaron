@@ -26,4 +26,7 @@ public class ParsingException : RCaronException
 
     public static ParsingException LonelyVariableStart(TextSpan location)
         => new("Variable start with no variable name after it", RCaronExceptionCode.LonelyVariableStart, location);
+    
+    public static ParsingException ExpectedConstant(TextSpan location)
+        => new("Expected constant", RCaronExceptionCode.ExpectedConstant, location);
 }

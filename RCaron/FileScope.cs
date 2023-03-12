@@ -5,8 +5,8 @@ namespace RCaron;
 public class FileScope
 {
     public string? FileName { get; set; }
-    public string Raw { get; set; }
-    public IList<Line> Lines { get; set; }
+    public required string Raw { get; set; }
+    public required IList<Line> Lines { get; set; }
     public List<IRCaronModule>? Modules { get; set; }
     public List<ClassDefinition>? ClassDefinitions { get; set; }
     public Dictionary<string, Function>? Functions { get; set; }
@@ -22,13 +22,7 @@ public class FileScope
 
 public record Function(CodeBlockToken CodeBlock, FunctionArgument[]? Arguments, FileScope FileScope);
 
-public class FunctionArgument
+public record FunctionArgument(string Name)
 {
-    public FunctionArgument(string Name)
-    {
-        this.Name = Name;
-    }
-
-    public string Name { get; }
     public object? DefaultValue { get; set; } = RCaronInsideEnum.NoDefaultValue;
 }

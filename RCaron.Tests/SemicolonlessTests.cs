@@ -48,13 +48,13 @@ $h = 1");
     [Fact]
     public void DotGroupCall1()
     {
-        var m = RCaronRunner.Run(@"#System.Random:Shared.Next(1, 2)");
+        RCaronRunner.Run(@"#System.Random:Shared.Next(1, 2)");
     }
 
     [Fact]
     public void DotGroupCall2()
     {
-        var m = RCaronRunner.Run(@"#System.Random:Shared.Next(1, 2)
+        RCaronRunner.Run(@"#System.Random:Shared.Next(1, 2)
 $h = 1");
     }
 }

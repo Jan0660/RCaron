@@ -5,7 +5,7 @@ public ref struct ArgumentEnumerator
     public string? CurrentName { get; private set; }
     public ArraySegment<PosToken> CurrentTokens { get; private set; }
     private CallLikePosToken? _callToken;
-    public ArraySegment<PosToken> _argumentTokens;
+    private ArraySegment<PosToken> _argumentTokens;
     public int Index { get; private set; }
     public bool HitNamedArgument { get; private set; }
 

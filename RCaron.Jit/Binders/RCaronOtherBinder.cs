@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using System.Dynamic;
+﻿using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using RCaron.Binders;
@@ -81,8 +80,8 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
                 var namedArg = CallInfo.ArgumentNames[namedArgIndex];
                 var found = false;
                 for (var i = 1; i < parameters.Length; i++)
-                    if (parameters[i].Name.Equals(namedArg,
-                            StringComparison.InvariantCultureIgnoreCase))
+                    if (parameters[i].Name?.Equals(namedArg,
+                            StringComparison.InvariantCultureIgnoreCase) ?? false)
                     {
                         exps[i] = args[
                                 namedArgIndex + CallInfo.ArgumentCount - CallInfo.ArgumentNames.Count]

@@ -31,7 +31,7 @@ public static class ListEx
     public static ArraySegment<T> Segment<T>(this ArraySegment<T> segment, Range range)
     {
         var (start, length) = range.GetOffsetAndLength(segment.Count);
-        return new ArraySegment<T>(segment.Array, segment.Offset + start, length);
+        return new ArraySegment<T>(segment.Array!, segment.Offset + start, length);
     }
     
     #region IList<T> stuffs
@@ -118,7 +118,7 @@ public static class ListEx
         if (givenType.IsGenericType && givenType.GetGenericTypeDefinition() == genericType)
             return true;
 
-        Type baseType = givenType.BaseType;
+        var baseType = givenType.BaseType;
         if (baseType == null) return false;
 
         return IsAssignableToGenericType(baseType, genericType);
