@@ -60,6 +60,15 @@ rootCommand.SetHandler(async context =>
     shell.Motor.SetVar("args", arguments);
     shell.Motor.SetVar("current_shell", shell);
     shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
+
+    var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
+    var profileFile = Path.Combine(profilePath, "profile.rcaron");
+    if (File.Exists(profileFile))
+    {
+        logger.Debug($"Executing profile file {profileFile}");
+        shell.RunString(File.ReadAllText(profileFile), true, profileFile);
+    }
+
     if (file is not null)
     {
         logger.Info($"Executing file {file.FullName}");
@@ -69,7 +78,7 @@ rootCommand.SetHandler(async context =>
         //     AddFun(motor);
         try
         {
-            shell.RunString(File.ReadAllText(file.FullName), true, file.FullName);
+            shell.RunString(File.ReadAllText(file.FullName), false, file.FullName);
         }
         catch (Exception exc)
         {
@@ -83,14 +92,6 @@ rootCommand.SetHandler(async context =>
                 logger.Error(exc);
             }
         }
-    }
-
-    var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
-    var profileFile = Path.Combine(profilePath, "profile.rcaron");
-    if (File.Exists(profileFile))
-    {
-        logger.Debug($"Executing profile file {profileFile}");
-        shell.RunString(File.ReadAllText(profileFile), true, profileFile);
     }
 
     if (interactive)
