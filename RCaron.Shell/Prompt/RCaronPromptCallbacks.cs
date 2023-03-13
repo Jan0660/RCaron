@@ -32,6 +32,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
     public bool UseTextMateHighlighting { get; private set; }
 
     public int MaxCompletions { get; set; } = 40;
+    public bool EnableAutoCompletions { get; set; } = true;
 
     protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text,
         CancellationToken cancellationToken)
@@ -153,6 +154,8 @@ public class RCaronPromptCallbacks : PromptCallbacks
     protected override Task<IReadOnlyList<CompletionItem>> GetCompletionItemsAsync(string text, int caret,
         TextSpan spanToBeReplaced, CancellationToken cancellationToken)
     {
+        if (!EnableAutoCompletions)
+            return Task.FromResult<IReadOnlyList<CompletionItem>>(Array.Empty<CompletionItem>());
         var items = new List<CompletionItem>();
         var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions);
         foreach (var item in h)
