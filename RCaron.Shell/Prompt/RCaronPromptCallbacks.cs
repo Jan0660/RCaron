@@ -21,6 +21,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
     };
 
     public ConsoleFormat PairErrorFormat { get; set; } = new(AnsiColor.BrightRed, Underline: true);
+    public int NestedPairLimit { get; set; } = 10;
     public bool ColorizeBracketsOutOfLimit { get; set; } = false;
     public bool HighlightBracketPairs { get; set; } = true;
 
@@ -65,9 +66,9 @@ public class RCaronPromptCallbacks : PromptCallbacks
             short roundDepth = -1;
             short squareDepth = -1;
             short curlyDepth = -1;
-            StackStack<int> roundStack = new(stackalloc int[10]);
-            StackStack<int> squareStack = new(stackalloc int[10]);
-            StackStack<int> curlyStack = new(stackalloc int[10]);
+            StackStack<int> roundStack = new(stackalloc int[NestedPairLimit]);
+            StackStack<int> squareStack = new(stackalloc int[NestedPairLimit]);
+            StackStack<int> curlyStack = new(stackalloc int[NestedPairLimit]);
             for (var i = 0; i < text.Length; i++)
             {
                 if (text[i] == '\'')
