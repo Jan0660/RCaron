@@ -146,10 +146,6 @@ public class Motor
 
     public (bool Exit, object? Result) RunLine(Line baseLine)
     {
-        Debug.WriteLine(baseLine is TokenLine tokenLine
-            ? GetFileScope().Raw[tokenLine.Tokens[0].Position.Start..(tokenLine.Tokens[^1].Position.End - 1)]
-            : (
-                baseLine is CodeBlockLine ? "CodeBlockLine" : "invalid line type?"));
         if (baseLine is CodeBlockLine codeBlockLine)
         {
             BlockStack.Push(new(false, false, null, GetFileScope()));
