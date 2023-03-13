@@ -49,7 +49,7 @@ public class TokenReader
             // return new ValuePosToken(TokenType.VariableIdentifier, (initialPosition, position));
         }
         // shebang
-        else if (txt[_position] == '#' && txt[_position + 1] == '!')
+        else if (txt.Length - _position > 1 && txt[_position] == '#' && txt[_position + 1] == '!')
         {
             _position += 2;
             // collect until line ending
@@ -160,8 +160,8 @@ public class TokenReader
         }
         // range operator
         // it is here, instead of in CollectOperation, because it would conflict with TokenType.Dot
-        else if (txt.Length - _position > 1 && txt[_position] == '.' && txt[_position + 1] == '.' &&
-                 (txt.Length - _position > 2 && txt[_position + 2] != '.'))
+        else if (txt.Length - _position > 2 && txt[_position] == '.' && txt[_position + 1] == '.'
+                 && txt[_position + 2] != '.')
         {
             _position += 2;
             return new PosToken(TokenType.Range, (initialPosition, _position));

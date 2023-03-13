@@ -356,7 +356,7 @@ public static class RCaronParser
             if (t[i].Type == TokenType.LineEnding)
                 continue;
             // class definition
-            if (t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
+            if (t.Length - i > 2 && t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
                 var name = ((KeywordToken)t[i + 1]).String;
                 Dictionary<string, Function>? functions = null;
@@ -402,7 +402,7 @@ public static class RCaronParser
                         { Functions = functions });
             }
             // function
-            else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
+            else if (t.Length - i > 2 && tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
             {
                 var (name, arguments) = DoFunction(tokens, errorHandler, i);
                 fileScope.Functions ??= new(StringComparer.InvariantCultureIgnoreCase);
