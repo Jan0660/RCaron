@@ -32,6 +32,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
     public bool UseTextMateHighlighting { get; private set; }
 
     public int MaxCompletions { get; set; } = 40;
+    public bool ThrowOnCompletionError { get; set; } = false;
     public bool EnableAutoCompletions { get; set; } = true;
 
     protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text,
@@ -156,23 +157,32 @@ public class RCaronPromptCallbacks : PromptCallbacks
     {
         if (!EnableAutoCompletions)
             return Task.FromResult<IReadOnlyList<CompletionItem>>(Array.Empty<CompletionItem>());
-        var items = new List<CompletionItem>();
-        var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions);
-        foreach (var item in h)
+        try
         {
-            cancellationToken.ThrowIfCancellationRequested();
-            var displayText = item.Thing.Deprecated
-                ? new FormattedString(item.Thing.Word, new FormatSpan(0, item.Thing.Word.Length, AnsiColor.Red))
-                : default;
-            items.Add(new CompletionItem(item.Thing.Word, displayText: displayText,
-                getExtendedDescription: _ =>
-                    Task.FromResult(item.Thing.Detail != null
-                        ? new FormattedString(item.Thing.Detail + "\n" + item.Thing.Documentation,
-                            new FormatSpan(0, item.Thing.Detail.Length, AnsiColor.BrightBlack))
-                        : new FormattedString(item.Thing.Documentation))));
-        }
+            var items = new List<CompletionItem>();
+            var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions);
+            foreach (var item in h)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var displayText = item.Thing.Deprecated
+                    ? new FormattedString(item.Thing.Word, new FormatSpan(0, item.Thing.Word.Length, AnsiColor.Red))
+                    : default;
+                items.Add(new CompletionItem(item.Thing.Word, displayText: displayText,
+                    getExtendedDescription: _ =>
+                        Task.FromResult(item.Thing.Detail != null
+                            ? new FormattedString(item.Thing.Detail + "\n" + item.Thing.Documentation,
+                                new FormatSpan(0, item.Thing.Detail.Length, AnsiColor.BrightBlack))
+                            : new FormattedString(item.Thing.Documentation))));
+            }
 
-        return Task.FromResult<IReadOnlyList<CompletionItem>>(items);
+            return Task.FromResult<IReadOnlyList<CompletionItem>>(items);
+        }
+        catch
+        {
+            if (ThrowOnCompletionError)
+                throw;
+            return Task.FromResult<IReadOnlyList<CompletionItem>>(Array.Empty<CompletionItem>());
+        }
     }
 
     public void UseTextMate(LocalRegistryOptions registryOptions)
