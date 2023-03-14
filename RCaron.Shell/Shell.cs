@@ -31,7 +31,10 @@ public class Shell
             }
         }
 
+        var isFirstRun = Motor.MainFileScope == null!;
         Motor.UseContext(ctx, Motor.MainFileScope == null!);
+        if (isFirstRun)
+            Motor.MainFileScope!.Modules!.Add(new ShellStuffModule(this));
         if (import && Motor.MainFileScope != null!)
             Motor.MainFileScope.FileName = fileName;
         Motor.Run();
