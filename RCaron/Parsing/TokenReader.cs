@@ -119,7 +119,7 @@ public class TokenReader
             if (isDecimal)
                 return new ConstToken(TokenType.DecimalNumber,
                     (initialPosition, _position),
-                    Decimal.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
+                    Double.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
             return new ConstToken(TokenType.Number, (initialPosition, _position),
                 Int64.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
         }

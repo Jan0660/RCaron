@@ -147,7 +147,7 @@ $h println 'huh';"), ExceptionCode.ParseInvalidLine);
     {
         var m = RCaronRunner.Run(@"$long = 123; $decimal = 123.123;");
         m.AssertVariableEquals("long", (long)123);
-        m.AssertVariableEquals("decimal", 123.123M);
+        m.AssertVariableEquals("decimal", 123.123D);
     }
 
     [Fact]
