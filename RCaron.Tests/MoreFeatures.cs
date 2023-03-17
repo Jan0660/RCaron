@@ -221,12 +221,14 @@ else { $h = 2; }
         Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[0]).Arguments[0][0]);
     }
 
-    [Fact]
-    public void OperationOrderWithBooleanOps()
+    [Theory]
+    [InlineData("3 == 3 && 4 == 4")]
+    [InlineData("3 == 3 && 4 == 4 && $true")]
+    [InlineData("3 + 0 == 3 && 4 == 4")]
+    [InlineData("1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1")]
+    public void OperationOrderWithBooleanOps(string code)
     {
-        var m = RCaronRunner.Run("$h = 3 == 3 && 4 == 4;");
-        m.AssertVariableEquals("h", true);
-        m = RCaronRunner.Run("$h = 1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1;");
+        var m = RCaronRunner.Run($"$h = {code};");
         m.AssertVariableEquals("h", true);
     }
 

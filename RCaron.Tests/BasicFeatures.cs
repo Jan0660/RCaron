@@ -10,8 +10,9 @@ public class BasicFeatures
     }
 
     [Theory]
+    [InlineData("3 * 3")]
     [InlineData("(3 * 3)")]
-    //[InlineData("((3 * 3))")]
+    [InlineData("((3 * 3))")]
     public void ParenthesisMathMore(string code)
     {
         var m = RCaronRunner.Run($"$h = {code};");
@@ -32,12 +33,12 @@ if ($true){ $h2 = 1; }");
     [Fact]
     public void KeywordPlainCall()
     {
-        var m = RCaronRunner.Run(@"dbg_assert_is_one 2 - 1;", new MotorOptions()
+        var m = RCaronRunner.Run(@"dbg_assert_is_one (2 - 1);", new MotorOptions()
         {
             EnableDebugging = true,
         });
         m.AssertVariableEquals("$$assertResult", true);
-        m = RCaronRunner.Run(@"dbg_sum_three 1 1 + 2 - 3 1;", new MotorOptions()
+        m = RCaronRunner.Run(@"dbg_sum_three 1 (1 + 2 - 3) 1;", new MotorOptions()
         {
             EnableDebugging = true,
         });

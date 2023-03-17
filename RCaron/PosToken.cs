@@ -18,7 +18,6 @@ public enum TokenType : byte
     SimpleBlockStart,
     SimpleBlockEnd,
     DecimalNumber,
-    DumbShit,
     KeywordCall,
     Comma,
     UnaryOperation,
@@ -41,6 +40,8 @@ public enum TokenType : byte
     Path,
     Range,
     EndOfFile,
+    Group,
+    TokenGroup
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -98,15 +99,29 @@ public class PosToken
             TokenType.String => true,
             _ => false,
         };
+    public bool IsKeywordWithIgnoredWhitespace(in string raw)
+        => Type == TokenType.Keyword && this.ToSpan(raw) switch
+        {
+            "if" => true,
+            "else" => true,
+            "for" => true,
+            "qfor" => true,
+            "while" => true,
+            "dowhile" => true,
+            "switch" => true,
+            _ => false,
+        };
 }
 
 public class ConstToken : ValuePosToken
 {
     public object Value { get; }
+    public bool IsExecutable { get; }
 
-    public ConstToken(TokenType type, (int Start, int End) position, object value) : base(type, position)
+    public ConstToken(TokenType type, (int Start, int End) position, object value, bool isExecutable = false) : base(type, position)
     {
         Value = value;
+        IsExecutable = isExecutable;
     }
 }
 
@@ -123,7 +138,7 @@ public class VariableToken : ValuePosToken
 public class KeywordToken : PosToken
 {
     public string String { get; }
-    public bool IsExecutable { get; set; }
+    public bool IsExecutable { get; }
 
     public KeywordToken((int Start, int End) position, string str, bool isExecutable = false) : base(TokenType.Keyword,
         position)
@@ -171,14 +186,25 @@ public class ValuePosToken : PosToken
     }
 }
 
-public class MathValueGroupPosToken : ValuePosToken
+public class GroupValuePosToken : ValuePosToken
 {
-    public ValuePosToken[] ValueTokens { get; }
+    public PosToken[] Tokens { get; }
 
-    public MathValueGroupPosToken(TokenType type, (int Start, int End) position, ValuePosToken[] tokens) : base(type,
+    public GroupValuePosToken(TokenType type, (int Start, int End) position, PosToken[] tokens) : base(type,
         position)
     {
-        ValueTokens = tokens;
+        Tokens = tokens;
+    }
+}
+
+public class TokenGroupPosToken : ValuePosToken
+{
+    public PosToken[] Tokens { get; }
+
+    public TokenGroupPosToken(TokenType type, (int Start, int End) position, PosToken[] tokens) : base(type,
+        position)
+    {
+        Tokens = tokens;
     }
 }
 

@@ -136,8 +136,8 @@ public class Compiler
                     return Expression.Constant("/");
                 case ValueOperationValuePosToken { Operation: OperationEnum.Multiply }:
                     return Expression.Constant("*");
-                case MathValueGroupPosToken mathValueGroupPosToken:
-                    return GetMathExpression(mathValueGroupPosToken.ValueTokens);
+                case GroupValuePosToken groupToken:
+                    return GetMathExpression(groupToken.Tokens);
                 case LogicalOperationValuePosToken logicalToken:
                     return GetLogicalExpression(logicalToken);
                 case ComparisonValuePosToken comparisonToken:
@@ -174,6 +174,8 @@ public class Compiler
                 }
                 case KeywordToken keywordToken:
                     return Expression.Constant(keywordToken.String);
+                case TokenGroupPosToken tokenGroup:
+                    return GetHighExpression(tokenGroup.Tokens);
             }
 
             throw new Exception($"Single expression {token.Type} not implemented");
@@ -181,8 +183,8 @@ public class Compiler
 
         Expression GetMathExpression(ReadOnlySpan<PosToken> tokens)
         {
-            if (tokens.Length == 1 && tokens[0] is MathValueGroupPosToken mathToken)
-                return GetMathExpression(mathToken.ValueTokens);
+            if (tokens is [GroupValuePosToken mathToken])
+                return GetMathExpression(mathToken.Tokens);
             var exp = GetSingleExpression(tokens[0]);
             for (var i = 1; i < tokens.Length; i++)
             {

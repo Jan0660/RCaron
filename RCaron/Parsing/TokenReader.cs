@@ -206,12 +206,13 @@ public class TokenReader
         else if (txt[_position] == '@')
         {
             _position++;
-            var index = CollectExecutableKeyword(txt[_position..]);
+            var (index, str, isPath) = CollectPathOrKeyword(txt[_position..]);
             if (index == 0)
-                throw new("wtf");
+                throw new("Invalid token at position " + _position);
             _position += index;
-            return new KeywordToken((initialPosition, _position),
-                _code.Substring(initialPosition + 1, _position - initialPosition - 1), true);
+            return isPath
+                ? new ConstToken(TokenType.Path, (initialPosition, _position), str, true)
+                : new KeywordToken((initialPosition, _position), str, true);
         }
         // operation
         else

@@ -26,7 +26,7 @@ public static class RCaronParser
         var blockDepth = -1;
         var blockNumber = -1;
 
-        // todo(perf): this is absolutely horrendous
+        // todo(perf): this is absolutely horrendous, make this not be local method
         void DoCodeBlockToken()
         {
             if (tokens.Count < 2)
@@ -59,7 +59,8 @@ public static class RCaronParser
                 token = new PosToken(TokenType.EndOfFile, (text.Length, text.Length));
             }
 
-            if (token!.Type == TokenType.Whitespace || token.Type == TokenType.Comment || token.Type == TokenType.Ignore)
+            if (token!.Type == TokenType.Whitespace || token.Type == TokenType.Comment ||
+                token.Type == TokenType.Ignore)
             {
                 token = reader.Read();
                 continue;
@@ -93,7 +94,6 @@ public static class RCaronParser
                 }
 
                 var dontAddCurrent = token.Type == TokenType.EndOfFile;
-                var dontDoSimpleBlockEndCheck = false;
 
                 if (token is BlockPosToken { Type: TokenType.IndexerEnd } ace)
                 {
@@ -190,23 +190,13 @@ public static class RCaronParser
                         // may not be needed?
                         if (h.tokens[1] is not { Type: TokenType.MathOperator })
                             goto beforeAdd;
-                        // AAAAAA
-                        // remove those replace with fucking imposter thing
-                        var rem = h.index - 1;
-                        if (rem < 1 || tokens[rem].Type != TokenType.SimpleBlockStart ||
-                            posToken.Type != TokenType.SimpleBlockEnd)
-                            rem += 1;
+                        var rem = h.index;
                         if (tokens[rem - 1] is not ValuePosToken && tokens[rem] is not BlockPosToken &&
                             tokens[rem] is not ValuePosToken)
                             goto beforeAdd;
-                        if (tokens[rem].Type == TokenType.SimpleBlockStart)
-                        {
-                            dontDoSimpleBlockEndCheck = true;
-                            dontAddCurrent = true;
-                        }
 
                         tokens.RemoveFrom(rem);
-                        tokens.Add(new MathValueGroupPosToken(TokenType.DumbShit,
+                        tokens.Add(new TokenGroupPosToken(TokenType.TokenGroup,
                             (h.tokens.First().Position.Start, h.tokens.Last().Position.End), h.tokens));
                     }
                 }
@@ -244,50 +234,21 @@ public static class RCaronParser
 
                 afterComparisonAndLogicalGrouping: ;
 
-                if (posToken is BlockPosToken { Type: TokenType.SimpleBlockEnd } &&
-                    tokens[^1] is { Type: TokenType.EqualityOperationGroup or TokenType.LogicalOperationGroup } &&
-                    tokens[^2].Type == TokenType.SimpleBlockStart)
-                {
-                    tokens.RemoveAt(tokens.Count - 2);
-                    dontDoSimpleBlockEndCheck = true;
-                    dontAddCurrent = true;
-                }
-
                 if (posToken is BlockPosToken
                     {
                         Type: TokenType.SimpleBlockEnd
                     } blockToken)
                 {
-                    int startIndex;
-                    if (!dontDoSimpleBlockEndCheck)
-                        startIndex = tokens.FindIndex(
-                            t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
-                                 bpt.Number == blockToken.Number);
-                    else
-                    {
-                        if (!(tokens[^1].Type is TokenType.DumbShit or TokenType.EqualityOperationGroup
-                                or TokenType.LogicalOperationGroup))
-                            throw new();
-                        var m = tokens[^1];
-                        var nameToken = tokens[^2];
-                        if (!(nameToken.Type == TokenType.Keyword || nameToken.Type == TokenType.ArrayLiteralStart ||
-                              nameToken.IsDotJoinableSomething()))
-                            goto afterCallLikePosTokenThing;
-                        tokens.RemoveAt(tokens.Count - 1);
-                        tokens.RemoveAt(tokens.Count - 1);
-                        tokens.Add(new CallLikePosToken(TokenType.KeywordCall,
-                            (nameToken.Position.Start, m.Position.End),
-                            new[] { new[] { m } },
-                            nameToken.Position.End, nameToken.ToString(text)
-                        ));
-                        goto afterCallLikePosTokenThing;
-                    }
+                    var startIndex = tokens.FindIndex(
+                        t => t is BlockPosToken { Type: TokenType.SimpleBlockStart } bpt &&
+                             bpt.Number == blockToken.Number);
 
-                    if (tokens[startIndex - 1] is
-                        {
-                            Type: TokenType.Keyword or TokenType.ArrayLiteralStart
-                        }
-                        || tokens[startIndex - 1].IsDotJoinableSomething())
+                    if (tokens[startIndex - 1].Type == TokenType.ArrayLiteralStart ||
+                        // keyword with a ( immediately after it
+                        (tokens[startIndex - 1].Type == TokenType.Keyword &&
+                         (tokens[startIndex - 1].Position.End == tokens[startIndex].Position.Start
+                          || tokens[startIndex - 1].IsKeywordWithIgnoredWhitespace(raw: text)))
+                       )
                     {
                         // todo: dear lord
                         var tks = CollectionsMarshal.AsSpan(tokens)[(startIndex + 1)..];
@@ -326,6 +287,16 @@ public static class RCaronParser
                         );
                         tokens.RemoveFrom(startIndex - 1);
                         tokens.Add(h);
+                        dontAddCurrent = true;
+                    }
+                    else
+                    {
+                        var group = new GroupValuePosToken(TokenType.Group,
+                            (tokens[startIndex - 1].Position.Start, posToken.Position.End),
+                            tokens.GetRangeAsArray((startIndex + 1)..)
+                        );
+                        tokens.RemoveFrom(startIndex);
+                        tokens.Add(group);
                         dontAddCurrent = true;
                     }
                 }
@@ -488,7 +459,8 @@ public static class RCaronParser
             i++;
         }
         // property without initializer in class
-        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.LineEnding)
+        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier &&
+                 tokens[i + 1].Type == TokenType.LineEnding)
         {
             res = new SingleTokenLine(tokens[i], LineType.PropertyWithoutInitializer);
             i++;
@@ -521,7 +493,8 @@ public static class RCaronParser
             i = endingIndex.toSet;
         }
         // unary operation
-        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier && tokens[i + 1].Type == TokenType.UnaryOperation)
+        else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier &&
+                 tokens[i + 1].Type == TokenType.UnaryOperation)
         {
             res = new TokenLine(tokens[i..(i + 2)], LineType.UnaryOperation);
             i += 2;
@@ -633,7 +606,8 @@ public static class RCaronParser
         return res;
     }
 
-    public static (string name, FunctionArgument[]? arguments) DoFunction(IList<PosToken> tokens, IParsingErrorHandler errorHandler, int offset = 0)
+    public static (string name, FunctionArgument[]? arguments) DoFunction(IList<PosToken> tokens,
+        IParsingErrorHandler errorHandler, int offset = 0)
     {
         string name;
         FunctionArgument[]? arguments = null;

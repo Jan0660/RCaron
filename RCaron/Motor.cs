@@ -43,8 +43,6 @@ public class Motor
 {
     public IList<Line> Lines { get; set; }
 
-    // public record StackThing(int LineIndex, bool IsBreakWorthy, bool IsReturnWorthy,
-    //     Conditional? Conditional, int PreviousLineIndex, LocalScope? Scope);
     public class StackThing
     {
         public StackThing(bool isBreakWorthy, bool isReturnWorthy,
@@ -1066,8 +1064,8 @@ public class Motor
             return "*";
         switch (token.Type)
         {
-            case TokenType.DumbShit when token is MathValueGroupPosToken valueGroupPosToken:
-                return SimpleEvaluateExpressionValue(valueGroupPosToken.ValueTokens);
+            case TokenType.Group when token is GroupValuePosToken valueGroupPosToken:
+                return SimpleEvaluateExpressionHigh(valueGroupPosToken.Tokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.Name, callToken: callToken);
             // case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
@@ -1098,6 +1096,8 @@ public class Motor
                 return EvaluateLogicalOperation(logicalOperationValuePosToken);
             case TokenType.Dot:
                 return ".";
+            case TokenType.TokenGroup when token is TokenGroupPosToken tokenGroupPosToken:
+                return SimpleEvaluateExpressionHigh(tokenGroupPosToken.Tokens);
         }
 
         throw new Exception($"invalid tokentype to evaluate: {token.Type}");
