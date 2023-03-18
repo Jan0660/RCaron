@@ -65,6 +65,8 @@ public class Motor
     public NiceStack<StackThing> BlockStack { get; set; } = new();
     public FileScope MainFileScope { get; set; }
     public MotorOptions Options { get; }
+    [UsedImplicitly]
+    internal Func<Motor, string, ArraySegment<PosToken>, FileScope, object?>? InvokeRunExecutable { get; set; } = null;
 
     /// <summary>
     /// If true and meets an else(if), it will be skipped.
@@ -498,6 +500,13 @@ public class Motor
                 MethodCall(keywordString, line.Tokens.Segment(1..));
                 break;
             }
+            case LineType.PathCall when line.Tokens[0] is ConstToken pathToken:
+            {
+                if(InvokeRunExecutable == null)
+                    throw new("InvokeRunExecutable is null");
+                InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope());
+                break;
+            }
             case LineType.TryBlock when line.Tokens[1] is CodeBlockToken codeBlockToken:
             {
                 CodeBlockToken? catchBlock = null;
@@ -786,9 +795,16 @@ public class Motor
             foreach (var module in fileScope.Modules)
             {
                 var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
-                if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? false)
+                if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? true)
                     return v;
             }
+        }
+
+        if (InvokeRunExecutable != null && instance == null && callToken == null)
+        {
+            var ret = InvokeRunExecutable(this, name.ToString(), argumentTokens, fileScope ??= GetFileScope());
+            if (!ret?.Equals(RCaronInsideEnum.MethodNotFound) ?? true)
+                return ret;
         }
 
         throw new RCaronException($"method '{name}' not found", ExceptionCode.MethodNotFound);
@@ -1510,7 +1526,8 @@ public class MethodResolver
                     {
                         score += 10;
                     }
-                    else if (parameters[j].ParameterType.IsNumericType() && (args[j]?.GetType().IsNumericType() ?? false))
+                    else if (parameters[j].ParameterType.IsNumericType() &&
+                             (args[j]?.GetType().IsNumericType() ?? false))
                     {
                         score += 10;
                         needsNumericConversions[i] = true;

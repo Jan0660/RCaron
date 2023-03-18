@@ -100,8 +100,9 @@ public static class RCaronParser
                     var number = ace.Number;
                     var acs = tokens.FindIndex(t => t is BlockPosToken blockPosToken && blockPosToken.Number == number);
                     var range = tokens.GetRangeAsArray((acs + 1)..);
+                    var position = (tokens[acs].Position.Start, ace.Position.End);
                     tokens.RemoveFrom(acs);
-                    tokens.Add(new IndexerToken(range));
+                    tokens.Add(new IndexerToken(range, position));
                     dontAddCurrent = true;
                 }
 
@@ -109,7 +110,7 @@ public static class RCaronParser
                 {
                     var i = tokens.Count - 1;
                     while ((i != 0 && i != -1) &&
-                           tokens[i].IsDotJoinableSomething() && tokens[i - 1].IsDotJoinableSomething() &&
+                           tokens[i].IsDotJoinable() && tokens[i - 1].IsDotJoinable() &&
                            (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range } ||
                             (tokens[i].Type == TokenType.Colon && tokens[i - 1].Type == TokenType.ExternThing) ||
                             (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
@@ -121,11 +122,12 @@ public static class RCaronParser
                     return (i, tokens.Take(i..).ToArray());
                 }
 
-                if (tokens.Count > 2 && tokens[^1].IsDotJoinableSomething() &&
+                if (tokens.Count > 1 && tokens[^1].IsDotJoinable() &&
                     (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
-                    (!posToken.IsDotJoinableSomething() || _isNewLineBetweenTokens(tokens[^1], posToken, text)) &&
+                    (!posToken.IsDotJoinable() || tokens[^1].Position.End != posToken.Position.Start) &&
                     posToken.Type != TokenType.IndexerStart &&
-                    posToken.Type != TokenType.SimpleBlockStart
+                    ((posToken.Type != TokenType.SimpleBlockStart && posToken.Type != TokenType.Dot) || tokens[^1].Position.End != posToken.Position.Start)
+                    && posToken.Type != TokenType.IndexerEnd
                    )
                 {
                     // todo(perf): it gets here when array literal
@@ -185,7 +187,8 @@ public static class RCaronParser
                    )
                 {
                     var h = BackwardsCollectValuePosToken();
-                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2)
+                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2
+                        )
                     {
                         // may not be needed?
                         if (h.tokens[1] is not { Type: TokenType.MathOperator })
@@ -202,7 +205,7 @@ public static class RCaronParser
                 }
 
                 // comparison and logical operation grouping
-                if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinableSomething() &&
+                if (tokens.Count > 2 && token is not ValuePosToken && !token.IsDotJoinable() &&
                     token.Type != TokenType.MathOperator && tokens[^1] is ValuePosToken right &&
                     tokens[^3] is ValuePosToken left)
                 {
@@ -572,6 +575,15 @@ public static class RCaronParser
             res = new TokenLine(
                 tokens[i..(endingIndex.toUse)],
                 LineType.KeywordPlainCall);
+            i = endingIndex.toSet;
+        }
+        // path call
+        else if (tokens[i].Type == TokenType.Path)
+        {
+            var endingIndex = _findLineEnding(tokens, i, text);
+            res = new TokenLine(
+                tokens[i..(endingIndex.toUse)],
+                LineType.PathCall);
             i = endingIndex.toSet;
         }
         // code block

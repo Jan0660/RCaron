@@ -72,7 +72,7 @@ public class PosToken
     public ReadOnlySpan<char> ToSpan(in ReadOnlySpan<char> span)
         => span[Position.Start..(Position.End)];
 
-    public bool IsDotJoinableSomething()
+    public bool IsDotJoinable()
         => Type switch
         {
             TokenType.Dot => true,
@@ -283,8 +283,7 @@ public class IndexerToken : PosToken
     public PosToken[] Tokens { get; }
     public CallSite<Func<CallSite, object?, object?, object?>>? CallSite { get; set; }
 
-    public IndexerToken(PosToken[] tokens) : base(TokenType.Indexer,
-        (tokens[0].Position.Start, tokens[^1].Position.End))
+    public IndexerToken(PosToken[] tokens, (int Start, int End) position) : base(TokenType.Indexer, position)
     {
         Tokens = tokens;
     }

@@ -112,3 +112,18 @@ jobs:
         run: dotnet restore RCaron.Shell
       - name: build
         run: dotnet build RCaron.Shell --no-restore
+  shell-test:
+    needs: shell-build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup .NET Core SDK
+        uses: actions/setup-dotnet@v3
+        with:
+          dotnet-version: 7.0.x
+      - name: restore
+        run: dotnet restore RCaron.Shell.Tests
+      - name: build
+        run: dotnet build RCaron.Shell.Tests --no-restore
+      - name: test
+        run: dotnet test RCaron.Shell.Tests --no-build

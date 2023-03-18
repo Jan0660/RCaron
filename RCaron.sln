@@ -26,6 +26,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Shell", "RCaron.Shel
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.AutoCompletion", "RCaron.AutoCompletion\RCaron.AutoCompletion.csproj", "{178C1E20-341F-4D6A-A0C5-D2DD47F06942}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RCaron.Shell.Tests", "RCaron.Shell.Tests\RCaron.Shell.Tests.csproj", "{A4FBD2CF-476C-4962-814F-812EAB4982E0}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -84,5 +86,9 @@ Global
 		{178C1E20-341F-4D6A-A0C5-D2DD47F06942}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{178C1E20-341F-4D6A-A0C5-D2DD47F06942}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{178C1E20-341F-4D6A-A0C5-D2DD47F06942}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A4FBD2CF-476C-4962-814F-812EAB4982E0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A4FBD2CF-476C-4962-814F-812EAB4982E0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A4FBD2CF-476C-4962-814F-812EAB4982E0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A4FBD2CF-476C-4962-814F-812EAB4982E0}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

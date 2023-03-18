@@ -272,7 +272,7 @@ public class TokenReader
                 index++;
             path.Append(span[index]);
             index++;
-            if (allowFirstDoubleDot && span[index] == ':')
+            if (allowFirstDoubleDot && index < span.Length && span[index] == ':')
                 path.Append(span[index++]);
         }
 

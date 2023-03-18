@@ -8,6 +8,12 @@ public class Shell
     public Shell()
     {
         Motor = new(new(null!));
+        Motor.InvokeRunExecutable = InvokeRunExecutable;
+    }
+
+    private object? InvokeRunExecutable(Motor motor, string name, ArraySegment<PosToken> args, FileScope fileScope)
+    {
+        return RunExecutable.Run(motor, name, args, fileScope.Raw);
     }
 
     public void RunString(string code, bool import = true, string? fileName = null)
