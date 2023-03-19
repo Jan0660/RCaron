@@ -1,7 +1,7 @@
 # RCaron
 
 A .NET shell and scripting language.
-I Currently wouldn't recommend switching to it. You can also call it ř or Ř.
+It is currently unusable as a shell, a little usable as a scripting language. You can also call it ř or Ř.
 
 Documentation for the language is available at [rcaron.jan0660.dev](https://rcaron.jan0660.dev).
 
