@@ -140,6 +140,6 @@ jobs:
         run: dotnet pack RCaron.Shell -c release
       - name: push
         if: startsWith(github.ref, 'refs/tags/')
-        run: dotnet nuget push ./RCaron.Shell/bin/nupkg/*.nupkg -k ${NUGET_KEY}
+        run: dotnet nuget push ./RCaron.Shell/bin/nupkg/*.nupkg -k ${NUGET_KEY} -s https://api.nuget.org/v3/index.json
         env:
           NUGET_KEY: ${{ secrets.NUGET_KEY }}
