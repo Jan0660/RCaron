@@ -60,8 +60,11 @@ public partial class {classSymbol.Name}{{");
                     .Any(pair => pair is { Key: "ImplementModuleRun", Value.Value: false }))
                     goto afterImplementModuleRun;
                 source.AppendLine(
-                    @"public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken){
-switch(name){");
+                    """
+[System.CodeDom.Compiler.GeneratedCode("RCaron.LibrarySourceGenerator", null)]
+public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken){
+switch(name){
+""");
 
                 void AppendArgumentGet(IParameterSymbol param)
                 {
