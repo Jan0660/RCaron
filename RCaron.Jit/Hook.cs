@@ -39,8 +39,8 @@ public static class Hook
     public static void EmptyMethod()
     {
         Debug.Assert(true);
-#if !RCARONJIT
-        throw new("RCARONJIT is not set for RCaron.Jit");
-#endif
+// #if !RCARONJIT
+//         throw new("RCARONJIT is not set for RCaron.Jit");
+// #endif
     }
 }

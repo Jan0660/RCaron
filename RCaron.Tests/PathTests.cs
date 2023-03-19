@@ -1,4 +1,6 @@
-﻿namespace RCaron.Tests;
+﻿using RCaron.Parsing;
+
+namespace RCaron.Tests;
 
 public class PathTests
 {
@@ -70,7 +72,7 @@ public class PathTests
     [MemberData(nameof(GetPathTestDataWithTemplates))]
     public void PathInUsage(string template, string path, string expected)
     {
-        var m = RCaronRunner.Run(string.Format(template, path));
+        var m = TestRunner.Run(string.Format(template, path));
         m.AssertVariableEquals("h", expected);
     }
 
@@ -78,7 +80,7 @@ public class PathTests
     [MemberData(nameof(GetPathTestDataExecutable))]
     public void PathAsLine(string path, string expected)
     {
-        var parsed = RCaronRunner.Parse(path);
+        var parsed = RCaronParser.Parse(path);
         var tokenLine = Assert.IsType<TokenLine>(parsed.FileScope.Lines[0]);
         Assert.Single(tokenLine.Tokens);
         Assert.Equal(expected, tokenLine.Tokens[0] switch

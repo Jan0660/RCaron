@@ -7,7 +7,7 @@ public class ClassTests
     [Fact]
     public void PropertyGet()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     $prop = 1 + 2;
 }
@@ -20,19 +20,20 @@ $h = #Funny:New().prop;
     [Fact]
     public void PropertySet()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     $prop = 1 + 2;
 }
 $f = #Funny:New();
 $f.prop = 5;
 ");
-        Assert.Equal(((ClassInstance)m.GlobalScope.Variables!["f"]!).PropertyValues![0], 5L);
+        var f = m.AssertVariableIsType<ClassInstance>("f");
+        Assert.Equal(f.PropertyValues![0], 5L);
     }
     [Fact]
     public void PropertyWithoutInitializer()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     $prop;
 }
@@ -45,7 +46,7 @@ $h = #Funny:New().prop;
     [Fact]
     public void Function()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     func Function(){ return 3; }
 }
@@ -57,7 +58,7 @@ $h = #Funny:New().Function();
     [Fact]
     public void FunctionPropertyGet()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     $prop = 1 + 2;
     func Function(){ return $prop; }
@@ -70,7 +71,7 @@ $h = #Funny:New().Function();
     [Fact]
     public void FunctionPropertySet()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     $prop = 1 + 2;
     func Function(){ $prop = 5; }
@@ -85,7 +86,7 @@ $h = $f.prop;
     [Fact]
     public void Function_WithArgs()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 class Funny {
     func Function($must, $opt = 2){ return $must + $opt; }
 }
@@ -104,7 +105,7 @@ $h6 = $f.Function(opt: 1, must: 5);
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"
+            TestRunner.Run(@"
 class Funny {
 }
 $h = #Funny:New().Function();");
@@ -116,14 +117,14 @@ $h = #Funny:New().Function();");
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"
+            TestRunner.Run(@"
 class Funny {
 }
 $h = #Funny:New().noprop;");
         }, RCaronExceptionCode.ClassPropertyNotFound);
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"
+            TestRunner.Run(@"
 class Funny {
 }
 #Funny:New().noprop = 0;");

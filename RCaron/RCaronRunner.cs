@@ -8,13 +8,6 @@ public static class RCaronRunner
         var ctx = Parse(text);
         if (!ctx.AllowsExecution)
             throw RCaronException.ExecutionNotAllowed();
-#if RCARONJIT
-        var fakedMotor =
-            // ReSharper disable twice RedundantNameQualifier
-            // ReSharper disable once InvokeAsExtensionMethod
-            System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook")!.GetMethod("Run")!.Invoke(null, new object[] { ctx, motorOptions, null });
-        return (Motor)fakedMotor!;
-#endif
         var motor = new Motor(ctx, motorOptions);
         motor.Run();
         return motor;

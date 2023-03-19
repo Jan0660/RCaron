@@ -7,7 +7,7 @@
 
         <IsPackable>false</IsPackable>
         <EnablePreviewFeatures>True</EnablePreviewFeatures>
-        
+
         <DefineConstants>RCARONJIT</DefineConstants>
     </PropertyGroup>
 
@@ -26,12 +26,8 @@
 
     <ItemGroup>
         <Compile Include="..\RCaron.Tests\*.cs"/>
-        <ProjectReference Include="..\RCaron.Jit\RCaron.Jit.csproj">
-            <Properties>DefineConstants=RCARONJIT</Properties>
-        </ProjectReference>
-        <ProjectReference Include="..\RCaron\RCaron.csproj">
-            <Properties>DefineConstants=RCARONJIT</Properties>
-        </ProjectReference>
+        <ProjectReference Include="..\RCaron.Jit\RCaron.Jit.csproj"/>
+        <ProjectReference Include="..\RCaron\RCaron.csproj"/>
     </ItemGroup>
 
 </Project>

@@ -1,5 +1,7 @@
 ﻿using System.Collections;
 using System.Text;
+using RCaron.Parsing;
+using Xunit.Sdk;
 
 namespace RCaron.Tests;
 
@@ -8,7 +10,7 @@ public class MoreFeatures
     [Fact]
     public void ExtensionMethods()
     {
-        var m = RCaronRunner.Run(@"open_ext 'System.Linq';
+        var m = TestRunner.Run(@"open_ext 'System.Linq';
 $array = @(0, 1, 2, 3, 4, 5);
 $g = $array.ToList();
 $i5 = $g[5];");
@@ -23,7 +25,7 @@ $i5 = $g[5];");
     globalset('global', $Arg + $OptArg);
     return $Arg + $OptArg;
 }";
-        var m = RCaronRunner.Run(@$"
+        var m = TestRunner.Run(@$"
 {definition}
 
 $h1 = @Funny 2 -OptArg 2;
@@ -37,22 +39,22 @@ $h2 = @Funny 2;");
         m.AssertVariableEquals("global", (long)5);
         Assert.Equal(0, m.BlockStack.Count);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @InvalidName 2;"), RCaronExceptionCode.MethodNotFound);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @Funny 2 -InvalidOptArg 2;"), RCaronExceptionCode.NamedArgumentNotFound);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @Funny;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @Funny -OptArg 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @Funny 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = @Funny -OptArg 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
     }
 
@@ -63,7 +65,7 @@ $h = @Funny -OptArg 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgu
     globalset('global', $Arg + $OptArg);
     return $Arg + $OptArg;
 }";
-        var m = RCaronRunner.Run(@$"
+        var m = TestRunner.Run(@$"
 {definition}
 
 $h1 = Funny(2, OptArg: 2);
@@ -77,35 +79,35 @@ Funny(2, OptArg: 3);");
         m.AssertVariableEquals("global", (long)5);
         Assert.Equal(0, m.BlockStack.Count);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = InvalidName(2);"), RCaronExceptionCode.MethodNotFound);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = Funny(2, InvalidOptArg: 2);"), RCaronExceptionCode.NamedArgumentNotFound);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = Funny();"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = Funny(OptArg: 3);"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = Funny(2, 4, 5);"), RCaronExceptionCode.LeftOverPositionalArgument);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run($@"{definition}
+        ExtraAssert.ThrowsCode(() => TestRunner.Run($@"{definition}
 $h = Funny(OptArg: 3, 4);"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
     }
 
     [Fact]
     public void FunctionNoParameters()
     {
-        RCaronRunner.Run(@"func NoParameters(){}");
+        TestRunner.Run(@"func NoParameters(){}");
     }
 
     [Fact]
     public void ModuleMethodCall()
     {
-        var m = RCaronRunner.Run(@$"
+        var m = TestRunner.Run(@$"
 $h1 = @ForUnitTests 2 -b 2;
 $h2 = @ForUnitTests 2;");
         m.AssertVariableEquals("h1", (long)4);
@@ -116,26 +118,26 @@ $h2 = @ForUnitTests 2;");
         m.AssertVariableEquals("global", (long)5);
         Assert.Equal(0, m.BlockStack.Count);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run("$h = @ForUnitTests 2 -InvalidOptArg 2;"),
+        ExtraAssert.ThrowsCode(() => TestRunner.Run("$h = @ForUnitTests 2 -InvalidOptArg 2;"),
             RCaronExceptionCode.NamedArgumentNotFound);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 $h = @ForUnitTests;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 $h = @ForUnitTests -b 3;"), RCaronExceptionCode.ArgumentsLeftUnassigned);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 $h = @ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamedArgument);
 
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 $h = @ForUnitTests 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
     }
 
     [Fact]
     public void RangeOperator()
     {
-        var m = RCaronRunner.Run(@"$count = 0;
+        var m = TestRunner.Run(@"$count = 0;
 $last = 0;
 foreach($num in range(0, 10)){
     $last = $num;
@@ -148,7 +150,7 @@ foreach($num in range(0, 10)){
     [Fact]
     public void ConstructorNew()
     {
-        var m = RCaronRunner.Run(@"$h = #System.Text.StringBuilder:New(int32(20));");
+        var m = TestRunner.Run(@"$h = #System.Text.StringBuilder:New(int32(20));");
         var str = (StringBuilder)m.GlobalScope.GetVariable("h")!;
         Assert.Equal(20, str.Capacity);
     }
@@ -156,7 +158,7 @@ foreach($num in range(0, 10)){
     [Fact]
     public void AllowShebang()
     {
-        var m = RCaronRunner.Run(@"#! me when the
+        var m = TestRunner.Run(@"#! me when the
 $h = 1;");
         m.AssertVariableEquals("h", 1L);
     }
@@ -164,7 +166,7 @@ $h = 1;");
     [Fact]
     public void SwitchStatement()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $ls = #System.Collections.ArrayList:New();
 for ($h = 0; $h < 4; $h++) {
     switch($h) {
@@ -184,7 +186,7 @@ for ($h = 0; $h < 4; $h++) {
     [Fact]
     public void ElseIfStatement()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $h = 0;
 if ($true) { $h = 1; }
 else if ($true) { $h = 2; }
@@ -195,7 +197,7 @@ else if ($true) { $h = 2; }
     [Fact]
     public void ElseStatement()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $h = 0;
 if ($false) { $h = 1; }
 else { $h = 2; }
@@ -206,17 +208,17 @@ else { $h = 2; }
     [Fact]
     public void ArrayIndexerDoesntGetConfused()
     {
-        var m = RCaronRunner.Run(@"$arr = @(0); $h = 0; if(0 == $arr[0]){$h = 1;}");
+        var m = TestRunner.Run(@"$arr = @(0); $h = 0; if(0 == $arr[0]){$h = 1;}");
         m.AssertVariableEquals("h", 1L);
     }
 
     [Fact]
     public void EqualityGroupWorks()
     {
-        var ctx = RCaronRunner.Parse(@"$h = 0 + 1 == 1;");
+        var ctx = RCaronParser.Parse(@"$h = 0 + 1 == 1;");
         var l = (TokenLine)ctx.FileScope.Lines[0];
         Assert.IsType<ComparisonValuePosToken>(l.Tokens[^1]);
-        ctx = RCaronRunner.Parse("if(0 + 1 == 1){}");
+        ctx = RCaronParser.Parse("if(0 + 1 == 1){}");
         l = (TokenLine)ctx.FileScope.Lines[0];
         Assert.IsType<ComparisonValuePosToken>(((CallLikePosToken)l.Tokens[0]).Arguments[0][0]);
     }
@@ -228,14 +230,14 @@ else { $h = 2; }
     [InlineData("1 + 2 == 2 + 1 && 3 + 1 == 2 + 1 + 1")]
     public void OperationOrderWithBooleanOps(string code)
     {
-        var m = RCaronRunner.Run($"$h = {code};");
+        var m = TestRunner.Run($"$h = {code};");
         m.AssertVariableEquals("h", true);
     }
 
     [Fact]
     public void BooleanAnd()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $tt = $true && $true;
 $tf = $true && $false;
 $ft = $false && $true;
@@ -250,7 +252,7 @@ $ff = $false && $false;
     [Fact]
     public void BooleanOr()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $tt = $true || $true;
 $tf = $true || $false;
 $ft = $false || $true;
@@ -269,24 +271,34 @@ $ff = $false || $false;
     ]
     public void GetLineNumber()
     {
-        var m = RCaronRunner.Run(@"$l1 = 1;
+        var m = TestRunner.Run(@"$l1 = 1;
 $l2 = 2;
 $l3 = 3;
 dbg_exit;
-$l5 = 5;", new MotorOptions() { EnableDebugging = true });
+$l5 = 5;", motorOptions: new MotorOptions { EnableDebugging = true });
         Assert.Equal(5, m.Lines.Count);
         Assert.Equal(4, m.GetLineNumber());
-        m = RCaronRunner.Run(@"dbg_exit;", new MotorOptions() { EnableDebugging = true });
+        m = TestRunner.Run(@"dbg_exit;", motorOptions: new MotorOptions { EnableDebugging = true });
         Assert.Equal(1, m.Lines.Count);
         Assert.Equal(1, m.GetLineNumber());
+    }
+
+    [Fact
+#if RCARONJIT
+            (Skip = "JIT does not plan to support this")
+#endif
+    ]
+    public void GetLineNumber_Throws()
+    {
         // when exception it thrown it returns the previous line number
-        m = new Motor(RCaronRunner.Parse(@"$l1 = 1;
+        var prepared = TestRunner.Prepare(@"$l1 = 1;
 $l2 = 2;
 $l3 = 3;
 dbg_throw;
-$l5 = 5;"), new MotorOptions() { EnableDebugging = true });
-        var exc = Assert.Throws<Exception>(() => { m.Run(); });
+$l5 = 5;", motorOptions: new MotorOptions() { EnableDebugging = true });
+        var exc = ExtraAssert.Throws<Exception>(() => { TestRunner.RunPrepared(prepared); });
         Assert.Equal("dbg_throw", exc.Message);
+        var m = prepared.motor;
         Assert.Equal(5, m.Lines.Count);
         Assert.Equal(4, m.GetLineNumber());
     }
@@ -294,32 +306,30 @@ $l5 = 5;"), new MotorOptions() { EnableDebugging = true });
     [Fact]
     public void ComparisonInParentheses()
     {
-        var m = RCaronRunner.Run("$h = (1 == 1);");
+        var m = TestRunner.Run("$h = (1 == 1);");
         m.AssertVariableEquals("h", true);
     }
 
     [Fact]
     public void LogicalInParentheses()
     {
-        var m = RCaronRunner.Run("$h = ($true && $true);");
+        var m = TestRunner.Run("$h = ($true && $true);");
         m.AssertVariableEquals("h", true);
     }
 
     [Fact]
     public void Throw()
     {
-        var m = new Motor(RCaronRunner.Parse("throw(#System.Exception:new('funny'));"));
-        var exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
+        var exc = ExtraAssert.Throws<Exception>(() => { TestRunner.Run("throw(#System.Exception:new('funny'));"); });
         Assert.Equal("funny", exc.Message);
-        m = new Motor(RCaronRunner.Parse("throw #System.Exception:new('funny');"));
-        exc = ExtraAssert.Throws<Exception>(() => { m.Run(); });
+        exc = ExtraAssert.Throws<Exception>(() => { TestRunner.Run("throw #System.Exception:new('funny');"); });
         Assert.Equal("funny", exc.Message);
     }
 
     [Fact]
     public void TryAndCatchBlock()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $h = 0;
 $exc = $null;
 try {
@@ -339,7 +349,7 @@ $h = $h + 1;");
     [Fact]
     public void TryAndFinallyBlock()
     {
-        var m = new Motor(RCaronRunner.Parse(@"
+        var prepared = TestRunner.Prepare(@"
 $h = 0;
 try {
     throw(#System.Exception:new('funny'));
@@ -348,8 +358,9 @@ try {
 finally {
     $h = $h + 2;
 }
-$h = $h + 1;"));
-        ExtraAssert.Throws<Exception>(() => m.Run());
+$h = $h + 1;");
+        ExtraAssert.Throws<Exception>(() => TestRunner.RunPrepared(prepared));
+        var m = prepared.motor;
         m.AssertVariableEquals("h", 2L);
         Assert.Equal(0, m.BlockStack.Count);
     }
@@ -357,7 +368,7 @@ $h = $h + 1;"));
     [Fact]
     public void TryAndCatchAndFinallyBlock()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $h = 0;
 try {
     throw(#System.Exception:new('funny'));
@@ -377,19 +388,19 @@ $h = $h + 1;");
     [Fact]
     public void LetVariable()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 let $h = 1;
 $h = $h + 1;");
         m.AssertVariableEquals("h", 2L);
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"
+            TestRunner.Run(@"
 let $h = 1;
 $h = 1.2;");
         }, RCaronExceptionCode.LetVariableTypeMismatch);
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"
+            TestRunner.Run(@"
 let $h = 1;
 $h = $null;");
         }, RCaronExceptionCode.LetVariableTypeMismatch);
@@ -399,7 +410,7 @@ $h = $null;");
     public void DotNetCallNumericConversion_OnConstructor()
     {
         // uses Timespan(int, int, int) constructor
-        var m = RCaronRunner.Run("$h = #System.TimeSpan:new(1, 2, 3);");
+        var m = TestRunner.Run("$h = #System.TimeSpan:new(1, 2, 3);");
         var timeSpan = m.AssertVariableIsType<TimeSpan>("h");
         Assert.Equal(1, timeSpan.Hours);
         Assert.Equal(2, timeSpan.Minutes);
@@ -409,7 +420,7 @@ $h = $null;");
     [Fact]
     public void DotNetCallNumericConversion()
     {
-        var m = RCaronRunner.Run("$h = #System.TimeSpan:FromMilliseconds(10);");
+        var m = TestRunner.Run("$h = #System.TimeSpan:FromMilliseconds(10);");
         var timeSpan = m.AssertVariableIsType<TimeSpan>("h");
         Assert.Equal(10, timeSpan.TotalMilliseconds);
     }

@@ -7,7 +7,7 @@ public class MultiFileTests
     [Fact]
     public void OpenFromString()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $code = 'func Hello() { return 1; }
 class Funny { func Hello() { return 2; } }';
 
@@ -21,7 +21,7 @@ $hell = #Funny:new().Hello();
     [Fact]
     public void OpenFromString_FunctionsSpecified()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $code = 'func Hello() { return 1; }';
 
 Open-FromString($code, functions: @('Hello'));
@@ -35,7 +35,7 @@ $h = Hello();
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"Open-FromString('func DoNot(){}', functions: @()); DoNot();");
+            TestRunner.Run(@"Open-FromString('func DoNot(){}', functions: @()); DoNot();");
         }, RCaronExceptionCode.MethodNotFound);
     }
     
@@ -44,13 +44,13 @@ $h = Hello();
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"Open-FromString('', functions: @('Wont'));");
+            TestRunner.Run(@"Open-FromString('', functions: @('Wont'));");
         }, RCaronExceptionCode.ImportNotFound);
     }
     [Fact]
     public void OpenFromString_ClassesSpecified()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 $code = 'class Funny { }';
 
 Open-FromString($code, classes: @('Funny'));
@@ -64,7 +64,7 @@ $h = #Funny:new();
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"Open-FromString('class DoNot{}', classes: @()); $h = #DoNot:new();");
+            TestRunner.Run(@"Open-FromString('class DoNot{}', classes: @()); $h = #DoNot:new();");
         }, RCaronExceptionCode.TypeNotFound);
     }
     
@@ -73,7 +73,7 @@ $h = #Funny:new();
     {
         ExtraAssert.ThrowsCode(() =>
         {
-            RCaronRunner.Run(@"Open-FromString('', functions: @('Wont'));");
+            TestRunner.Run(@"Open-FromString('', functions: @('Wont'));");
         }, RCaronExceptionCode.ImportNotFound);
     }
 }

@@ -5,7 +5,7 @@ public class ScopeTests
     [Fact]
     public void Set()
     {
-        var m = RCaronRunner.Run(@"
+        var m = TestRunner.Run(@"
 func Woo{
     $h = 2;
 }
@@ -17,7 +17,7 @@ Woo;
     [Fact]
     public void Get()
     {
-        ExtraAssert.ThrowsCode(() => RCaronRunner.Run(@"
+        ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 func Woo{
     $g = $h;
 }

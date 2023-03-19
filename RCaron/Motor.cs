@@ -105,10 +105,6 @@ public class Motor
 
     public object? Run(int startIndex = 0)
     {
-#if RCARONJIT
-        System.Linq.Enumerable.First(System.AppDomain.CurrentDomain.GetAssemblies(), ass => ass.GetName().Name == "RCaron.Jit").GetType("RCaron.Jit.Hook")!.GetMethod("Run")!.Invoke(null, new object[] { new RCaronParserContext(MainFileScope), null, this });
-        return null;
-#endif
         _curIndex = startIndex;
         for (; _curIndex < Lines.Count; _curIndex++)
         {
