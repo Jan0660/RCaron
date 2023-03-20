@@ -477,10 +477,10 @@ public class Motor
                                 SimpleEvaluateExpressionSingle(args[0]).Expect<long>() == 1);
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_sum_three":
-                            GlobalScope.SetVariable("$$assertResult", Horrors.Sum(
-                                Horrors.Sum(SimpleEvaluateExpressionSingle(args[0]).NotNull(),
-                                    SimpleEvaluateExpressionSingle(args[1]).NotNull()),
-                                SimpleEvaluateExpressionSingle(args[2]).NotNull()));
+                            GlobalScope.SetVariable("$$assertResult", 
+                                SimpleEvaluateExpressionSingle(args[0]).Expect<long>() +
+                                    SimpleEvaluateExpressionSingle(args[1]).Expect<long>() +
+                                SimpleEvaluateExpressionSingle(args[2]).Expect<long>());
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_exit":
                             return (true, RCaronInsideEnum.NoReturnValue);
@@ -641,8 +641,6 @@ public class Motor
 
             #endregion
 
-            case "sum":
-                return Horrors.Sum(At(argumentTokens, 0).NotNull(), At(argumentTokens, 1).NotNull());
             case "globalget":
             {
                 var variableName = At(argumentTokens, 0).Expect<string>();

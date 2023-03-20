@@ -241,15 +241,6 @@ $h = v();
     }
 
     [Fact]
-    public void KeywordCall()
-    {
-        var m = TestRunner.Run(@"$h = sum(sum(1 + 2, 2 * 2 - 4), 1 + 3 + sum(1 + 1, 2 - 1 - 1));");
-        m.AssertVariableEquals("h", (long)9);
-        // todo: some better test like this
-        TestRunner.Run("println(1, 2, 3, 4, 5 + 1);");
-    }
-
-    [Fact]
     public void ForLoop()
     {
         var m = TestRunner.Run(@"$l = 0; for($h = 0; $h < 10; $h = $h + 1){$l = $h;}");
