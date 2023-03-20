@@ -65,6 +65,7 @@ public class Motor
     public NiceStack<StackThing> BlockStack { get; set; } = new();
     public FileScope MainFileScope { get; set; }
     public MotorOptions Options { get; }
+
     [UsedImplicitly]
     internal Func<Motor, string, ArraySegment<PosToken>, FileScope, object?>? InvokeRunExecutable { get; set; } = null;
 
@@ -498,7 +499,7 @@ public class Motor
             }
             case LineType.PathCall when line.Tokens[0] is ConstToken pathToken:
             {
-                if(InvokeRunExecutable == null)
+                if (InvokeRunExecutable == null)
                     throw new("InvokeRunExecutable is null");
                 InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope());
                 break;
@@ -1449,26 +1450,42 @@ public class MethodResolver
                 var assemblies = AppDomain.CurrentDomain.GetAssemblies();
                 foreach (var ass in assemblies)
                 {
-                    foreach (var exportedType in ass.GetTypes())
+                    static void HandleTypes(Type?[] types, ReadOnlySpan<char> name, List<MethodBase> foundMethods,
+                        FileScope fileScope)
                     {
-                        if (!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
-                            continue;
-                        if (!(fileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
-                              false))
-                            continue;
-                        // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
-                        // {
-                        //     endingMatch = type;
-                        // }
-                        // exact match
-                        foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
+                        foreach (var exportedType in types)
                         {
-                            if (MemoryExtensions.Equals(method.Name, name,
-                                    StringComparison.InvariantCultureIgnoreCase))
+                            if (exportedType is null)
+                                continue;
+                            if (!(exportedType.IsSealed && exportedType.IsAbstract) || !exportedType.IsPublic)
+                                continue;
+                            if (!(fileScope.UsedNamespacesForExtensionMethods?.Contains(exportedType.Namespace!) ??
+                                  false))
+                                continue;
+                            // if (type.FullName?.EndsWith(name, StringComparison.InvariantCultureIgnoreCase) ?? false)
+                            // {
+                            //     endingMatch = type;
+                            // }
+                            // exact match
+                            foreach (var method in exportedType.GetMethods(BindingFlags.Public | BindingFlags.Static))
                             {
-                                foundMethods.Add(method);
+                                if (MemoryExtensions.Equals(method.Name, name,
+                                        StringComparison.InvariantCultureIgnoreCase))
+                                {
+                                    foundMethods.Add(method);
+                                }
                             }
                         }
+                    }
+
+                    try
+                    {
+                        var types = ass.GetTypes();
+                        HandleTypes(types, name, foundMethods, fileScope);
+                    }
+                    catch (ReflectionTypeLoadException e)
+                    {
+                        HandleTypes(e.Types, name, foundMethods, fileScope);
                     }
                 }
 
