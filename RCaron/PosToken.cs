@@ -99,6 +99,7 @@ public class PosToken
             TokenType.String => true,
             _ => false,
         };
+
     public bool IsKeywordWithIgnoredWhitespace(in string raw)
         => Type == TokenType.Keyword && this.ToSpan(raw) switch
         {
@@ -118,7 +119,8 @@ public class ConstToken : ValuePosToken
     public object Value { get; }
     public bool IsExecutable { get; }
 
-    public ConstToken(TokenType type, (int Start, int End) position, object value, bool isExecutable = false) : base(type, position)
+    public ConstToken(TokenType type, (int Start, int End) position, object value, bool isExecutable = false) : base(
+        type, position)
     {
         Value = value;
         IsExecutable = isExecutable;
@@ -213,6 +215,7 @@ public class ComparisonValuePosToken : ValuePosToken
     public ValuePosToken Left { get; }
     public ValuePosToken Right { get; }
     public OperationPosToken ComparisonToken { get; set; }
+    public CallSite<Func<CallSite, object?, object?, object>>? CallSite { get; set; }
 
     public ComparisonValuePosToken(ValuePosToken left, ValuePosToken right, OperationPosToken comparisonToken,
         (int Start, int End) position) : base(

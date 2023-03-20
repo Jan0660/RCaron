@@ -206,38 +206,10 @@ public class Compiler
         }
 
         Expression GetComparisonExpression(ComparisonValuePosToken comparisonToken)
-        {
-            Expression DoDynamic(ExpressionType expressionType)
-            {
-                // todo: for some reason have to convert to bool instead of the returnType param in the Expression.Dynamic call being typeof(bool)
-                return Expression.Convert(Expression.Dynamic(Binder.BinaryOperation(CSharpBinderFlags.None,
-                        expressionType, null,
-                        new[]
-                        {
-                            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
-                            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
-                        }), typeof(object), GetSingleExpression(comparisonToken.Left),
-                    GetSingleExpression(comparisonToken.Right)), typeof(bool));
-            }
-
-            switch (comparisonToken.ComparisonToken)
-            {
-                case { Operation: OperationEnum.IsEqual }:
-                    return DoDynamic(ExpressionType.Equal);
-                case { Operation: OperationEnum.IsNotEqual }:
-                    return DoDynamic(ExpressionType.NotEqual);
-                case { Operation: OperationEnum.IsGreater }:
-                    return DoDynamic(ExpressionType.GreaterThan);
-                case { Operation: OperationEnum.IsGreaterOrEqual }:
-                    return DoDynamic(ExpressionType.GreaterThanOrEqual);
-                case { Operation: OperationEnum.IsLess }:
-                    return DoDynamic(ExpressionType.LessThan);
-                case { Operation: OperationEnum.IsLessOrEqual }:
-                    return DoDynamic(ExpressionType.LessThanOrEqual);
-            }
-
-            throw new($"GetComparisonExpression for {comparisonToken.ComparisonToken.Type} not implemented");
-        }
+            => Expression.Convert(Expression.Dynamic(
+                BinderUtil.GetComparisonOperationBinder(comparisonToken.ComparisonToken.Operation), typeof(object),
+                GetSingleExpression(comparisonToken.Left),
+                GetSingleExpression(comparisonToken.Right)), typeof(bool));
 
         Expression GetLogicalExpression(LogicalOperationValuePosToken logicalToken)
         {

@@ -55,4 +55,29 @@ public static class BinderUtil
         var callsite = CallSite<Func<CallSite, object, object, object>>.Create(b);
         return callsite;
     }
+
+    public static CallSiteBinder GetComparisonOperationBinder(OperationEnum operation)
+    {
+        return Binder.BinaryOperation(CSharpBinderFlags.None, operation switch
+        {
+            OperationEnum.IsEqual => ExpressionType.Equal,
+            OperationEnum.IsNotEqual => ExpressionType.NotEqual,
+            OperationEnum.IsGreater => ExpressionType.GreaterThan,
+            OperationEnum.IsGreaterOrEqual => ExpressionType.GreaterThanOrEqual,
+            OperationEnum.IsLess => ExpressionType.LessThan,
+            OperationEnum.IsLessOrEqual => ExpressionType.LessThanOrEqual,
+            _ => throw new ArgumentOutOfRangeException(nameof(operation), operation, "Invalid comparison operation."),
+        }, null, new[]
+        {
+            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null),
+            CSharpArgumentInfo.Create(CSharpArgumentInfoFlags.None, null)
+        });
+    }
+
+    public static CallSite<Func<CallSite, object?, object?, object>> GetComparisonOperationCallSite(OperationEnum operation)
+    {
+        var b = GetComparisonOperationBinder(operation);
+        var callsite = CallSite<Func<CallSite, object?, object?, object>>.Create(b);
+        return callsite;
+    }
 }

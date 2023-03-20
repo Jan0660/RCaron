@@ -1241,26 +1241,11 @@ public class Motor
 
     public bool EvaluateComparisonOperation(ComparisonValuePosToken comparisonValuePosToken)
     {
-        var val1 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left);
-        var val2 = SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right);
-        var op = comparisonValuePosToken.ComparisonToken;
-        switch (op.Operation)
-        {
-            case OperationEnum.IsEqual:
-                return val1?.Equals(val2) ?? val2 == null;
-            case OperationEnum.IsNotEqual:
-                return !val1?.Equals(val2) ?? val2 != null;
-            case OperationEnum.IsGreater:
-                return Horrors.IsGreater(val1, val2);
-            case OperationEnum.IsGreaterOrEqual:
-                return val1.Equals(val2) || Horrors.IsGreater(val1, val2);
-            case OperationEnum.IsLess:
-                return !val1.Equals(val2) && Horrors.IsLess(val1, val2);
-            case OperationEnum.IsLessOrEqual:
-                return val1.Equals(val2) || Horrors.IsLess(val1, val2);
-            default:
-                throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
-        }
+        comparisonValuePosToken.CallSite ??=
+            BinderUtil.GetComparisonOperationCallSite(comparisonValuePosToken.ComparisonToken.Operation);
+        return (bool)comparisonValuePosToken.CallSite.Target(comparisonValuePosToken.CallSite,
+            SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left),
+            SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right));
     }
 
     public bool EvaluateLogicalOperation(LogicalOperationValuePosToken comparisonValuePosToken)
