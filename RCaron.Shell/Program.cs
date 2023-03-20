@@ -37,12 +37,16 @@ var interactiveOption = new Option<bool?>("--interactive", () => null,
 interactiveOption.AddAlias("-i");
 var argsArgument = new Argument<string[]>("arguments", "Arguments to pass to the file");
 argsArgument.SetDefaultValue(Array.Empty<string>());
+var noProfileOption = new Option<bool>("--no-profile", () => false,
+    "Don't execute the profile file.");
+noProfileOption.AddAlias("--noprofile");
 
 // Add the options to a root command:
 var rootCommand = new RootCommand();
 rootCommand.AddArgument(fileArgument);
 rootCommand.AddOption(interactiveOption);
 rootCommand.AddArgument(argsArgument);
+rootCommand.AddOption(noProfileOption);
 
 rootCommand.Description = "RCaron Shell";
 rootCommand.SetHandler(async context =>
@@ -50,6 +54,7 @@ rootCommand.SetHandler(async context =>
     var file = context.ParseResult.GetValueForArgument(fileArgument);
     var interactive = context.ParseResult.GetValueForOption(interactiveOption);
     var arguments = context.ParseResult.GetValueForArgument(argsArgument);
+    var noProfile = context.ParseResult.GetValueForOption(noProfileOption);
     var shell = new Shell();
     var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
     var profileHistoryPath = Path.Combine(profilePath, "history");
@@ -66,7 +71,7 @@ rootCommand.SetHandler(async context =>
     shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
 
     var profileFile = Path.Combine(profilePath, "profile.rcaron");
-    if (File.Exists(profileFile))
+    if (File.Exists(profileFile) && !noProfile)
     {
         logger.Debug($"Executing profile file {profileFile}");
         shell.RunString(File.ReadAllText(profileFile), true, profileFile);
