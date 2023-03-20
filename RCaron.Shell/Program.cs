@@ -50,18 +50,21 @@ rootCommand.SetHandler(async context =>
     var file = context.ParseResult.GetValueForArgument(fileArgument);
     var interactive = context.ParseResult.GetValueForOption(interactiveOption);
     var arguments = context.ParseResult.GetValueForArgument(argsArgument);
+    var shell = new Shell();
+    var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
+    var profileHistoryPath = Path.Combine(profilePath, "history");
+
     var promptConfig = new PromptConfiguration(proportionOfWindowHeightForCompletionPane: 0.1)
     {
         Prompt = new(),
     };
     var promptCallbacks = new RCaronPromptCallbacks();
-    var prompt = new Prompt(configuration: promptConfig, callbacks: promptCallbacks);
-    var shell = new Shell();
+    var prompt = new Prompt(configuration: promptConfig, callbacks: promptCallbacks,
+        persistentHistoryFilepath: profileHistoryPath);
     shell.Motor.SetVar("args", arguments);
     shell.Motor.SetVar("current_shell", shell);
     shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
 
-    var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
     var profileFile = Path.Combine(profilePath, "profile.rcaron");
     if (File.Exists(profileFile))
     {
