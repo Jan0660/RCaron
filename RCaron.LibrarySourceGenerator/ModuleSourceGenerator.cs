@@ -232,7 +232,10 @@ else
                     if (GetMethodAttribute(member) == null)
                         continue;
                     source.Append(
-                        $"public object {methodSymbol.Name}_ReturnsNoReturnValue(");
+                        $"""
+[System.CodeDom.Compiler.GeneratedCode("RCaron.LibrarySourceGenerator", null)]
+public object {methodSymbol.Name}_ReturnsNoReturnValue(
+""");
                     for (var i = 0; i < methodSymbol.Parameters.Length; i++)
                     {
                         var param = methodSymbol.Parameters[i];
