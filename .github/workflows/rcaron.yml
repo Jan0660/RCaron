@@ -2,6 +2,8 @@ name: rcaron
 
 on: [ push, pull_request ]
 
+# we currently have to use `-maxcpucount:1` because of https://github.com/dotnet/sdk/issues/2902
+
 jobs:
   rcaron-build:
     runs-on: ubuntu-latest
@@ -14,7 +16,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron
       - name: build
-        run: dotnet build RCaron --no-restore
+        run: dotnet build RCaron --no-restore -maxcpucount:1
   rcaron-test:
     needs: rcaron-build
     runs-on: ubuntu-latest
@@ -27,7 +29,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Tests
       - name: build
-        run: dotnet build RCaron.Tests --no-restore
+        run: dotnet build RCaron.Tests --no-restore -maxcpucount:1
       - name: test
         run: dotnet test RCaron.Tests --no-build
   rcaron-jit-build:
@@ -42,7 +44,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Jit
       - name: build
-        run: dotnet build RCaron.Jit --no-restore
+        run: dotnet build RCaron.Jit --no-restore -maxcpucount:1
   rcaron-jit-test:
     needs: rcaron-jit-build
     runs-on: ubuntu-latest
@@ -55,7 +57,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Jit.Tests
       - name: build
-        run: dotnet build RCaron.Jit.Tests --no-restore
+        run: dotnet build RCaron.Jit.Tests --no-restore -maxcpucount:1
       - name: test
         run: dotnet test RCaron.Jit.Tests --no-build
   cli-build:
@@ -70,7 +72,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Cli
       - name: build
-        run: dotnet build RCaron.Cli --no-restore
+        run: dotnet build RCaron.Cli --no-restore -maxcpucount:1
   language-server-build:
     needs: rcaron-build
     runs-on: ubuntu-latest
@@ -83,7 +85,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.LanguageServer
       - name: build
-        run: dotnet build RCaron.LanguageServer --no-restore
+        run: dotnet build RCaron.LanguageServer --no-restore -maxcpucount:1
   benchmarks-build-and-check:
     needs: rcaron-build
     runs-on: ubuntu-latest
@@ -96,7 +98,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Benchmarks
       - name: build
-        run: dotnet build RCaron.Benchmarks --no-restore
+        run: dotnet build RCaron.Benchmarks --no-restore -maxcpucount:1
       - name: check
         run: dotnet run --project RCaron.Benchmarks --no-build -- checkAllWork
   shell-build:
@@ -111,7 +113,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Shell
       - name: build
-        run: dotnet build RCaron.Shell --no-restore
+        run: dotnet build RCaron.Shell --no-restore -maxcpucount:1
   shell-test:
     needs: shell-build
     runs-on: ubuntu-latest
@@ -124,7 +126,7 @@ jobs:
       - name: restore
         run: dotnet restore RCaron.Shell.Tests
       - name: build
-        run: dotnet build RCaron.Shell.Tests --no-restore
+        run: dotnet build RCaron.Shell.Tests --no-restore -maxcpucount:1
       - name: test
         run: dotnet test RCaron.Shell.Tests --no-build
   shell-nuget-release:
