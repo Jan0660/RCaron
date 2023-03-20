@@ -32,8 +32,8 @@ var fileArgument = new Argument<FileInfo?>(
     "file",
     "A file to execute.");
 fileArgument.SetDefaultValue(null);
-var interactiveOption = new Option<bool>("--interactive", () => true,
-    "Run interactive.");
+var interactiveOption = new Option<bool?>("--interactive", () => null,
+    "Run interactive. If no file is specified, true is the default.");
 interactiveOption.AddAlias("-i");
 var argsArgument = new Argument<string[]>("arguments", "Arguments to pass to the file");
 argsArgument.SetDefaultValue(Array.Empty<string>());
@@ -81,7 +81,7 @@ rootCommand.SetHandler(async context =>
         //     AddFun(motor);
         try
         {
-            shell.RunString(File.ReadAllText(file.FullName), false, file.FullName);
+            shell.RunString(File.ReadAllText(file.FullName), true, file.FullName);
         }
         catch (Exception exc)
         {
@@ -95,9 +95,11 @@ rootCommand.SetHandler(async context =>
                 logger.Error(exc);
             }
         }
+
+        interactive ??= false;
     }
 
-    if (interactive)
+    if (interactive ?? true)
     {
         while (true)
         {
