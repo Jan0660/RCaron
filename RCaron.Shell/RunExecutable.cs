@@ -78,6 +78,12 @@ public static class RunExecutable
                         doTokens(motor, stringBuilder, startInfo, tokenGroupPosToken.Tokens, code);
                         break;
                     }
+                    case { Type: TokenType.Range }:
+                        stringBuilder.Append("..");
+                        break;
+                    case { Type: TokenType.Dot }:
+                        stringBuilder.Append('.');
+                        break;
                     default:
                         throw new($"Unexpected token type {token.Type}");
                 }
