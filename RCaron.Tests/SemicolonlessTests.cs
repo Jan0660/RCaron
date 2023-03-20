@@ -55,4 +55,11 @@ $h = 1")]
     {
         TestRunner.Run(code);
     }
+
+    [Fact]
+    public void LastTokenIsRange()
+    {
+        var m = TestRunner.Run(@"$h = ..");
+        m.AssertVariableEquals("h", "..");
+    }
 }
