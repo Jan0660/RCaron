@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="../RCaron.targets"/>
+    <Import Project="../RCaron.targets" />
     <PropertyGroup>
         <OutputType>Library</OutputType>
         <TargetFramework>net7.0</TargetFramework>
@@ -10,15 +10,15 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <PackageReference Include="Dynamitey" Version="2.0.10.189"/>
-        <PackageReference Include="JetBrains.Annotations" Version="2022.1.0"/>
-        <PackageReference Include="Log73" Version="0.8.0-preview2"/>
-        <PackageReference Include="System.Runtime.Experimental" Version="6.0.2"/>
-        <PackageReference Include="ZSpitz.Util" Version="0.1.125"/>
+        <PackageReference Include="Dynamitey" Version="2.0.10.189" />
+        <PackageReference Include="JetBrains.Annotations" Version="2022.3.1" />
+        <PackageReference Include="Log73" Version="0.8.0-preview2" />
+        <PackageReference Include="System.Runtime.Experimental" Version="6.0.2" />
+        <PackageReference Include="ZSpitz.Util" Version="0.1.125" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all"/>
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all" />
     </ItemGroup>
 
 </Project>
