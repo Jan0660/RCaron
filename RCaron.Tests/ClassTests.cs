@@ -130,4 +130,14 @@ class Funny {
 #Funny:New().noprop = 0;");
         }, RCaronExceptionCode.ClassPropertyNotFound);
     }
+
+    [Fact]
+    public void ClassTypeOf()
+    {
+        var m = TestRunner.Run(@"
+class Funny { }
+$h = #Funny:new().GetType();
+");
+        m.AssertVariableEquals("h", typeof(ClassInstance));
+    }
 }

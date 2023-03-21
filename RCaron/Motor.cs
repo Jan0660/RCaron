@@ -947,6 +947,12 @@ public class Motor
                 }
                 else if (val is ClassInstance classInstance)
                 {
+                    if (callLikePosToken.Name.Equals("gettype", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = typeof(ClassInstance);
+                        type = typeof(Type);
+                        continue;
+                    }
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)
                         throw RCaronException.ClassFunctionNotFound(callLikePosToken.Name);

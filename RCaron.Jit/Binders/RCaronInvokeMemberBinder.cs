@@ -67,6 +67,9 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
 
         if (target.RuntimeType == typeof(ClassInstance))
         {
+            if (Name.Equals("gettype", StringComparison.InvariantCultureIgnoreCase))
+                return new DynamicMetaObject(Expression.Constant(typeof(ClassInstance)),
+                    BindingRestrictions.GetTypeRestriction(target.Expression, typeof(ClassInstance)));
             var classInstance = (ClassInstance)target.Value!;
             var compiledClass = Context.GetClass(classInstance.Definition);
             var compiledFunction = compiledClass?.Functions?[Name];
