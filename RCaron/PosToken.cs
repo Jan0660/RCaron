@@ -41,7 +41,8 @@ public enum TokenType : byte
     Range,
     EndOfFile,
     Group,
-    TokenGroup
+    TokenGroup,
+    HexNumber,
 }
 
 [DebuggerDisplay("Type = {Type}")]

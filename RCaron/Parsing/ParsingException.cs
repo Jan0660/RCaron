@@ -1,4 +1,6 @@
-﻿namespace RCaron.Parsing;
+﻿using System.Diagnostics;
+
+namespace RCaron.Parsing;
 
 public class ParsingException : RCaronException
 {
@@ -26,7 +28,24 @@ public class ParsingException : RCaronException
 
     public static ParsingException LonelyVariableStart(TextSpan location)
         => new("Variable start with no variable name after it", RCaronExceptionCode.LonelyVariableStart, location);
-    
+
     public static ParsingException ExpectedConstant(TextSpan location)
         => new("Expected constant", RCaronExceptionCode.ExpectedConstant, location);
+
+    public static ParsingException InvalidHexNumber(TextSpan location)
+        => new("Invalid hex number", RCaronExceptionCode.InvalidHexNumber, location);
+
+    public static ParsingException InvalidNumberSuffix(TextSpan location,
+        bool unsignedOnFloatingPoint = false, bool hexOnFloatingPoint = false)
+    {
+        string? message = null;
+        if (unsignedOnFloatingPoint)
+            message =
+                "Invalid number suffix, the suffix 'u' or 'U' for unsigned cannot be used on floating point numbers";
+        if (hexOnFloatingPoint)
+            message =
+                "Invalid number suffix, cannot have a floating point suffix or number and a hex prefix at the same time";
+        Debug.Assert(message != null);
+        return new(message, RCaronExceptionCode.InvalidNumberSuffix, location);
+    }
 }

@@ -32,6 +32,8 @@ public enum RCaronExceptionCode
     TooShortUnicodeEscape,
     LonelyVariableStart,
     ExpectedConstant,
+    InvalidHexNumber,
+    InvalidNumberSuffix,
 }
 
 public class RCaronException : Exception

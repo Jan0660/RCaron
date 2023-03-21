@@ -424,4 +424,49 @@ $h = $null;");
         var timeSpan = m.AssertVariableIsType<TimeSpan>("h");
         Assert.Equal(10, timeSpan.TotalMilliseconds);
     }
+
+    public static IEnumerable<object[]> NumbersDecimal = new[]
+    {
+        new object[]
+        {
+            "123m", 123M,
+        },
+    };
+
+    [Theory]
+    [InlineData("1", 1L)]
+    [InlineData("123", 123L)]
+    [InlineData("1.23", 1.23D)]
+    [InlineData("0x12", 0x12UL)]
+    [InlineData("0xDEADBEEF", 0xDEADBEEFUL)]
+    [InlineData("0xDEADBEEFiu", 0xDEADBEEF)]
+    [InlineData("0xDEADBEEFul", 0xDEADBEEFUL)]
+    [InlineData("123i", 123)]
+    [InlineData("123iu", 123u)]
+    [InlineData("123l", 123L)]
+    [InlineData("123u", 123UL)]
+    [InlineData("123f", 123F)]
+    [InlineData("123d", 123D)]
+    [MemberData(nameof(NumbersDecimal))]
+    public void Numbers(string input, object expected)
+    {
+        var m = TestRunner.Run($"$h = {input}");
+        m.AssertVariableEquals("h", expected);
+    }
+    
+    [Theory]
+    [InlineData("0x11M")]
+    [InlineData("1.1u")]
+    [InlineData("1fu")]
+    [InlineData("1.1fu")]
+    public void InvalidNumberSuffix(string input)
+    {
+        ExtraAssert.ThrowsParsingCode(() => TestRunner.Run($"$h = {input};"), RCaronExceptionCode.InvalidNumberSuffix);
+    }
+
+    [Fact]
+    public void InvalidHexNumber()
+    {
+        ExtraAssert.ThrowsParsingCode(() => TestRunner.Run("$h = 0x;"), RCaronExceptionCode.InvalidHexNumber);
+    }
 }

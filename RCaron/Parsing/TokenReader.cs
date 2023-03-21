@@ -111,17 +111,34 @@ public class TokenReader
             _position++;
             return new BlockPosToken(TokenType.SimpleBlockEnd, (initialPosition, _position));
         }
-        // (decimal|integer) number
+        // hex, decimal or integer number
         else if (char.IsDigit(txt[_position]))
         {
-            var (index, isDecimal) = CollectAnyNumber(txt[_position..]);
-            _position += index;
+            var isHex = txt.Length - _position > 1 && txt[_position] == '0' && txt[_position + 1] is 'x' or 'X';
+            var tokenType = isHex ? TokenType.HexNumber : TokenType.Number;
+            if (isHex)
+                _position += 2;
+            var numberStart = _position;
+            bool isDecimal = false;
+            int index = 0;
+            if (isHex)
+            {
+                index = CollectHexNumber(txt[_position..]);
+                if (index == 0)
+                    ErrorHandler.Handle(
+                        ParsingException.InvalidHexNumber(GetLocation(initialPosition, _position - initialPosition)));
+            }
+            else
+                (index, isDecimal) = CollectAnyNumber(txt[_position..]);
+
             if (isDecimal)
-                return new ConstToken(TokenType.DecimalNumber,
-                    (initialPosition, _position),
-                    Double.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
-            return new ConstToken(TokenType.Number, (initialPosition, _position),
-                Int64.Parse(_code[initialPosition.._position], CultureInfo.InvariantCulture));
+                tokenType = TokenType.DecimalNumber;
+            _position += index;
+            var type = GetNumberSuffixType(txt[_position..], isHex, isDecimal, out var suffixLength);
+            _position += suffixLength;
+            var value = ParseNumber(txt[numberStart..(numberStart + index)], type, isHex);
+
+            return new ConstToken(tokenType, (initialPosition, _position), value);
         }
         // single line comment
         else if (txt.Length - _position > 1 && txt[_position] == '/' && txt[_position + 1] == '/')
@@ -239,6 +256,16 @@ public class TokenReader
 
             return new OperationPosToken(tokenType, (initialPosition, _position), op);
         }
+    }
+
+    private int CollectHexNumber(ReadOnlySpan<char> span)
+    {
+        var index = 0;
+        while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
+                                       (span[index] >= 'a' && span[index] <= 'f') ||
+                                       (span[index] >= 'A' && span[index] <= 'F')))
+            index++;
+        return index;
     }
 
     public int CollectExecutableKeyword(in ReadOnlySpan<char> span)
@@ -482,4 +509,105 @@ public class TokenReader
 
     public TextSpan GetLocation(ReadOnlySpan<char> subSpan, int startIndexInSubSpan, int length)
         => new(startIndexInSubSpan + (_code.Length - subSpan.Length), length);
+
+    public NumberType GetNumberSuffixType(ReadOnlySpan<char> span, bool isHex, bool isDouble, out int suffixLength)
+    {
+        var isUnsigned = false;
+        var isInteger = false;
+        var isLong = !isDouble;
+        var isFloat = false;
+        var isDecimal = false;
+
+        if (span.Length == 0)
+        {
+            suffixLength = 0;
+            return isDouble ? NumberType.Double :
+                isHex ? NumberType.UnsignedLong : NumberType.Long;
+        }
+
+        var i = 0;
+        for (; i < 2 && i < span.Length; i++)
+        {
+            if (span[i] is 'u' or 'U')
+                isUnsigned = true;
+            else
+            {
+                // set the things that could be already set by default to false
+                var defaults = (isDouble, isLong);
+                isDouble = false;
+                isLong = false;
+                if (span[i] is 'i' or 'I')
+                    isInteger = true;
+                else if (span[i] is 'l' or 'L')
+                    isLong = true;
+                else if (span[i] is 'f' or 'F')
+                    isFloat = true;
+                else if (span[i] is 'd' or 'D')
+                    isDouble = true;
+                else if (span[i] is 'm' or 'M')
+                    isDecimal = true;
+                else
+                {
+                    // restore the defaults if there was no suffix
+                    if (i is 0 or 1)
+                        (isDouble, isLong) = defaults;
+                    break;
+                }
+            }
+        }
+
+        suffixLength = i;
+
+        if (isInteger)
+            return isUnsigned ? NumberType.UnsignedInteger : NumberType.Integer;
+        if (isLong)
+            return isUnsigned ? NumberType.UnsignedLong : NumberType.Long;
+        if (isFloat || isDouble || isDecimal)
+        {
+            if (isUnsigned)
+                ErrorHandler.Handle(ParsingException.InvalidNumberSuffix(GetLocation(span, 0, i + 1),
+                    unsignedOnFloatingPoint: true));
+            if (isHex)
+                ErrorHandler.Handle(ParsingException.InvalidNumberSuffix(GetLocation(span, 0, i + 1),
+                    hexOnFloatingPoint: true));
+        }
+
+        if (isFloat)
+            return NumberType.Float;
+        if (isDouble)
+            return NumberType.Double;
+        if (isDecimal)
+            return NumberType.Decimal;
+
+        ErrorHandler.Handle(ParsingException.InvalidNumberSuffix(GetLocation(span, 0, i + 1)));
+        return NumberType.Long;
+    }
+
+    public object ParseNumber(ReadOnlySpan<char> span, NumberType numberType, bool isHex)
+        => numberType switch
+        {
+            NumberType.Integer => int.Parse(span, isHex ? NumberStyles.HexNumber : NumberStyles.Integer,
+                CultureInfo.InvariantCulture),
+            NumberType.UnsignedInteger => uint.Parse(span, isHex ? NumberStyles.HexNumber : NumberStyles.Integer,
+                CultureInfo.InvariantCulture),
+            NumberType.Long => long.Parse(span, isHex ? NumberStyles.HexNumber : NumberStyles.Integer,
+                CultureInfo.InvariantCulture),
+            NumberType.UnsignedLong => ulong.Parse(span, isHex ? NumberStyles.HexNumber : NumberStyles.Integer,
+                CultureInfo.InvariantCulture),
+            NumberType.Float => float.Parse(span, CultureInfo.InvariantCulture),
+            NumberType.Double => double.Parse(span, CultureInfo.InvariantCulture),
+            NumberType.Decimal => decimal.Parse(span, CultureInfo.InvariantCulture),
+            _ => throw new ArgumentOutOfRangeException(nameof(numberType), numberType, null)
+        };
+
+    public enum NumberType
+    {
+        Integer,
+        UnsignedInteger,
+        Long,
+        UnsignedLong,
+        Float,
+        Double,
+        Decimal,
+    }
 }
