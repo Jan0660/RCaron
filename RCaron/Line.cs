@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.CompilerServices;
 
 namespace RCaron;
 
@@ -51,6 +52,14 @@ public class CodeBlockLine : Line
     public CodeBlockLine(CodeBlockToken token) : base(LineType.CodeBlock)
     {
         Token = token;
+    }
+}
+
+public class UnaryOperationLine : TokenLine
+{
+    public CallSite<Func<CallSite, object, object, object>>? CallSite { get; set; }
+    public UnaryOperationLine(PosToken[] tokens, LineType type) : base(tokens, type)
+    {
     }
 }
 

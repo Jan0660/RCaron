@@ -367,20 +367,15 @@ public class Motor
 
                 break;
             }
-            case LineType.UnaryOperation:
+            case LineType.UnaryOperation when line is UnaryOperationLine unaryOperationLine:
             {
                 var variableName = ((VariableToken)line.Tokens[0]).Name;
-                switch (line.Tokens[1])
-                {
-                    case OperationPosToken { Operation: OperationEnum.UnaryIncrement }:
-                        Horrors.AddTo(ref GetVarRef(variableName)!, (long)1);
-                        break;
-                    case OperationPosToken { Operation: OperationEnum.UnaryDecrement }:
-                        SetVar(variableName,
-                            Horrors.Subtract(SimpleEvaluateExpressionSingle(line.Tokens[0]).NotNull(), (long)1));
-                        break;
-                }
-
+                unaryOperationLine.CallSite ??= BinderUtil.GetBinaryOperationCallSite(
+                    line.Tokens[1] is OperationPosToken { Operation: OperationEnum.UnaryIncrement }
+                        ? OperationEnum.Sum
+                        : OperationEnum.Subtract);
+                ref var variable = ref GetVarRef(variableName);
+                variable = unaryOperationLine.CallSite.Target(unaryOperationLine.CallSite, variable!, (long)1);
                 break;
             }
             case LineType.BlockStuff:
@@ -477,9 +472,9 @@ public class Motor
                                 SimpleEvaluateExpressionSingle(args[0]).Expect<long>() == 1);
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_sum_three":
-                            GlobalScope.SetVariable("$$assertResult", 
+                            GlobalScope.SetVariable("$$assertResult",
                                 SimpleEvaluateExpressionSingle(args[0]).Expect<long>() +
-                                    SimpleEvaluateExpressionSingle(args[1]).Expect<long>() +
+                                SimpleEvaluateExpressionSingle(args[1]).Expect<long>() +
                                 SimpleEvaluateExpressionSingle(args[2]).Expect<long>());
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_exit":
@@ -953,6 +948,7 @@ public class Motor
                         type = typeof(Type);
                         continue;
                     }
+
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)
                         throw RCaronException.ClassFunctionNotFound(callLikePosToken.Name);

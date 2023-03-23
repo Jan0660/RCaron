@@ -499,7 +499,7 @@ public static class RCaronParser
         else if (tokens.Length - i > 1 && tokens[i].Type == TokenType.VariableIdentifier &&
                  tokens[i + 1].Type == TokenType.UnaryOperation)
         {
-            res = new TokenLine(tokens[i..(i + 2)], LineType.UnaryOperation);
+            res = new UnaryOperationLine(tokens[i..(i + 2)], LineType.UnaryOperation);
             i += 2;
         }
         // if statement
