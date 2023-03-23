@@ -1178,19 +1178,19 @@ public class Motor
                             throw RCaronException.NamedArgumentNotFound(enumerator.CurrentName);
                     }
 
-                    scope.Variables ??= new();
-                    scope.Variables[function.Arguments[index].Name] =
+                    var variables = scope.GetVariables();
+                    variables[function.Arguments[index].Name] =
                         SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
                     assignedArguments[index] = true;
                 }
                 else if (!enumerator.HitNamedArgument)
                 {
-                    scope.Variables ??= new();
+                    var variables = scope.GetVariables();
                     for (var i = 0; i < function.Arguments.Length; i++)
                     {
-                        if (!scope.Variables.ContainsKey(function.Arguments[i].Name))
+                        if (!variables.ContainsKey(function.Arguments[i].Name))
                         {
-                            scope.Variables[function.Arguments[i].Name] =
+                            variables[function.Arguments[i].Name] =
                                 SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
                             assignedArguments[i] = true;
                             break;
@@ -1208,8 +1208,8 @@ public class Motor
             {
                 if (!assignedArguments[i])
                 {
-                    scope.Variables ??= new();
-                    scope.Variables[function.Arguments[i].Name] = function.Arguments[i].DefaultValue;
+                    var variables = scope.GetVariables();
+                    variables[function.Arguments[i].Name] = function.Arguments[i].DefaultValue;
                 }
             }
 

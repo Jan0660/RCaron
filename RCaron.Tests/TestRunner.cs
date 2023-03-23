@@ -12,7 +12,8 @@ public static class TestRunner
         var ctx = RCaronParser.Parse(code);
         var motor = new Motor(ctx, motorOptions);
         if (variables != null)
-            motor.GlobalScope.Variables = variables;
+            foreach (var (key, value) in variables)
+                motor.SetVar(key, value);
         if (indexers != null)
             motor.MainFileScope.IndexerImplementations = indexers;
         if (propertyAccessors != null)

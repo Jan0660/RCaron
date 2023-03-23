@@ -5,7 +5,12 @@ namespace RCaron;
 
 public class LocalScope
 {
-    public Dictionary<string, object?>? Variables;
+    public static Dictionary<string, object?> GetNewVariablesDictionary()
+        => new(StringComparer.InvariantCultureIgnoreCase);
+    public Dictionary<string, object?>? Variables { get; private set; }
+    
+    public Dictionary<string, object?> GetVariables()
+        => Variables ??= GetNewVariablesDictionary();
 
     public virtual object? GetVariable(string name)
     {
@@ -24,7 +29,7 @@ public class LocalScope
 
     public virtual void SetVariable(string name, in object? value)
     {
-        Variables ??= new();
+        Variables ??= GetNewVariablesDictionary();
         ref var r = ref CollectionsMarshal.GetValueRefOrAddDefault(Variables, name, out var exists);
         if (exists && r is LetVariableValue letVal && !letVal.Type.IsInstanceOfType(value))
         {
@@ -35,7 +40,7 @@ public class LocalScope
 
     public virtual ref object? GetVariableRef(string name)
     {
-        Variables ??= new();
+        Variables ??= GetNewVariablesDictionary();
         return ref CollectionsMarshal.GetValueRefOrNullRef(Variables, name);
     }
 

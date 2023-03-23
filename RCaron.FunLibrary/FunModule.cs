@@ -43,7 +43,6 @@ public partial class FunModule : IRCaronModule
     {
         var m = MotorPool.GetAndPrepare(parent);
         var scope = new LocalScope();
-        scope.Variables ??= new();
         scope.SetVariable("args", args);
         m.Motor.BlockStack.Push(new(false, true, scope, motor.MainFileScope));
         Task.Run((() =>
