@@ -2,6 +2,7 @@
 using System.Drawing;
 using PrettyPrompt;
 using PrettyPrompt.Completion;
+using PrettyPrompt.Consoles;
 using PrettyPrompt.Documents;
 using PrettyPrompt.Highlighting;
 using RCaron.AutoCompletion;
@@ -150,6 +151,47 @@ public class RCaronPromptCallbacks : PromptCallbacks
             var pos = stack.Pop();
             spans.Add(new FormatSpan(pos, 1, PairErrorFormat));
         }
+    }
+
+    protected override Task<bool> ShouldOpenCompletionWindowAsync(string text, int caret, KeyPress keyPress,
+        CancellationToken cancellationToken)
+        => Task.FromResult(EnableAutoCompletions && (!char.IsWhiteSpace(text[caret - 1])));
+
+    protected override Task<TextSpan> GetSpanToReplaceByCompletionAsync(string text, int caret,
+        CancellationToken cancellationToken)
+    {
+        if (caret == 0)
+            return Task.FromResult(TextSpan.FromBounds(0, 0));
+        var start = caret - 1;
+        int? firstDot = null;
+        var isType = false;
+        while (start >= 0)
+        {
+            var c = text[start];
+            if (char.IsWhiteSpace(c) || c == '(' || c == ')' || c == '[' || c == ']' || c == '{' || c == '}')
+                break;
+            if (c == '.')
+                firstDot ??= start + 1;
+
+            start--;
+
+            if (c == '$')
+                break;
+            if (c == '#')
+            {
+                isType = true;
+                break;
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        start += 1;
+
+        if (!isType)
+            start = firstDot ?? start;
+
+        return Task.FromResult(TextSpan.FromBounds(start, caret));
     }
 
     protected override Task<IReadOnlyList<CompletionItem>> GetCompletionItemsAsync(string text, int caret,
