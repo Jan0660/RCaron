@@ -448,6 +448,15 @@ $h = $null;");
     [InlineData("123f", 123F)]
     [InlineData("123d", 123D)]
     [MemberData(nameof(NumbersDecimal))]
+    // with underscore spacing
+    [InlineData("1_2_3", 123L)]
+    [InlineData("1_2_3.4_5_6", 123.456D)]
+    [InlineData("1_2_3___.4_5_6", 123.456D)]
+    [InlineData("0xDEAD_BEEF", 0xDEADBEEFUL)]
+    [InlineData("0xDEAD_BEEFiu", 0xDEADBEEF)]
+    [InlineData("0xDEAD_BEEF_________ul", 0xDEADBEEFUL)]
+    [InlineData("0x________DEAD_BEEF_________", 0xDEADBEEFUL)]
+    [InlineData("1_2_3_____", 123L)]
     public void Numbers(string input, object expected)
     {
         var m = TestRunner.Run($"$h = {input}");
@@ -464,9 +473,11 @@ $h = $null;");
         ExtraAssert.ThrowsParsingCode(() => TestRunner.Run($"$h = {input};"), RCaronExceptionCode.InvalidNumberSuffix);
     }
 
-    [Fact]
-    public void InvalidHexNumber()
+    [Theory]
+    [InlineData("0x")]
+    [InlineData("0x____")]
+    public void InvalidHexNumber(string code)
     {
-        ExtraAssert.ThrowsParsingCode(() => TestRunner.Run("$h = 0x;"), RCaronExceptionCode.InvalidHexNumber);
+        ExtraAssert.ThrowsParsingCode(() => TestRunner.Run($"$h = {code};"), RCaronExceptionCode.InvalidHexNumber);
     }
 }

@@ -119,24 +119,47 @@ public class TokenReader
             if (isHex)
                 _position += 2;
             var numberStart = _position;
-            bool isDecimal = false;
-            int index = 0;
+            var isDecimal = false;
+            var hasSpacing = false;
+            int index;
             if (isHex)
             {
-                index = CollectHexNumber(txt[_position..]);
+                (index, hasSpacing) = CollectHexNumber(txt[_position..]);
                 if (index == 0)
                     ErrorHandler.Handle(
                         ParsingException.InvalidHexNumber(GetLocation(initialPosition, _position - initialPosition)));
             }
             else
-                (index, isDecimal) = CollectAnyNumber(txt[_position..]);
+                (index, isDecimal, hasSpacing) = CollectAnyNumber(txt[_position..]);
 
             if (isDecimal)
                 tokenType = TokenType.DecimalNumber;
             _position += index;
             var type = GetNumberSuffixType(txt[_position..], isHex, isDecimal, out var suffixLength);
             _position += suffixLength;
-            var value = ParseNumber(txt[numberStart..(numberStart + index)], type, isHex);
+            object value;
+            if (hasSpacing)
+            {
+                // create span without the underscores
+                var span = txt[numberStart..(numberStart + index)];
+                Span<char> spanWithoutUnderscores = stackalloc char[span.Length];
+                var resultSpanIndex = 0;
+                for (var i = 0; i < span.Length; i++)
+                {
+                    if (span[i] == '_')
+                        continue;
+                    spanWithoutUnderscores[resultSpanIndex] = span[i];
+                    resultSpanIndex++;
+                }
+
+                if (isHex && resultSpanIndex == 0)
+                    ErrorHandler.Handle(
+                        ParsingException.InvalidHexNumber(GetLocation(initialPosition, _position - initialPosition)));
+
+                value = ParseNumber(spanWithoutUnderscores[..resultSpanIndex], type, isHex);
+            }
+            else
+                value = ParseNumber(txt[numberStart..(numberStart + index)], type, isHex);
 
             return new ConstToken(tokenType, (initialPosition, _position), value);
         }
@@ -258,14 +281,20 @@ public class TokenReader
         }
     }
 
-    private int CollectHexNumber(ReadOnlySpan<char> span)
+    private (int index, bool hasSpacing) CollectHexNumber(ReadOnlySpan<char> span)
     {
         var index = 0;
+        var hasSpacing = false;
         while (index < span.Length && ((span[index] >= '0' && span[index] <= '9') ||
                                        (span[index] >= 'a' && span[index] <= 'f') ||
-                                       (span[index] >= 'A' && span[index] <= 'F')))
+                                       (span[index] >= 'A' && span[index] <= 'F') || span[index] == '_'))
+        {
+            if (span[index] == '_')
+                hasSpacing = true;
             index++;
-        return index;
+        }
+
+        return (index, hasSpacing);
     }
 
     public int CollectExecutableKeyword(in ReadOnlySpan<char> span)
@@ -306,20 +335,23 @@ public class TokenReader
         return (index, path.ToString(), isPath);
     }
 
-    public (int index, bool isDecimal) CollectAnyNumber(in ReadOnlySpan<char> span)
+    public (int index, bool isDecimal, bool hasSpacing) CollectAnyNumber(in ReadOnlySpan<char> span)
     {
         var index = 0;
         var isDecimal = false;
-        while (index < span.Length && (char.IsDigit(span[index]) || span[index] == '.'))
+        var hasSpacing = false;
+        while (index < span.Length && (char.IsDigit(span[index]) || span[index] == '.' || span[index] == '_'))
         {
             if (span[index] == '.' && char.IsDigit(span[index + 1]))
                 isDecimal = true;
             else if (span[index] == '.')
-                return (index, isDecimal);
+                return (index, isDecimal, hasSpacing);
+            else if (span[index] == '_')
+                hasSpacing = true;
             index++;
         }
 
-        return (index, isDecimal);
+        return (index, isDecimal, hasSpacing);
     }
 
     public int CollectAlphaNumeric(in ReadOnlySpan<char> span)
