@@ -347,7 +347,6 @@ public static class RCaronParser
                         var f = DoFunction(tokenLine.Tokens, errorHandler);
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
                         functions[f.name] = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
-                        j++;
                     }
                     else if (body.Lines[j].Type == LineType.VariableAssignment)
                     {
