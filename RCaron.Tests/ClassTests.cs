@@ -101,6 +101,19 @@ $h6 = $f.Function(opt: 1, must: 5);
     }
 
     [Fact]
+    public void FunctionInFunction()
+    {
+        var m = TestRunner.Run(@"class Funny {
+func Function() { return Second(); }
+
+func Second() { return 3; }
+}
+
+$h = #Funny:New().Function();");
+        m.AssertVariableEquals("h", 3L);
+    }
+
+    [Fact]
     public void ClassFunctionNotFound()
     {
         ExtraAssert.ThrowsCode(() =>

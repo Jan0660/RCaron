@@ -19,10 +19,10 @@ public static class Shared
                 throw RCaronException.LeftOverPositionalArgument();
             var startIndex = target.LimitType == typeof(ClassInstance) ? 1 : 0;
             exps = new Expression?[arguments.Length + startIndex];
-            if(startIndex == 1)
+            if (startIndex == 1)
                 exps[0] = target.Expression;
             for (var i = 0; i < callInfo.ArgumentCount - callInfo.ArgumentNames.Count; i++)
-                exps[i+startIndex] = args[i].Expression;
+                exps[i + startIndex] = args[i].Expression;
             for (var index = 0; index < callInfo.ArgumentNames.Count; index++)
             {
                 var namedArg = callInfo.ArgumentNames[index];
@@ -31,7 +31,7 @@ public static class Shared
                     if (arguments[i].Name.Equals(namedArg,
                             StringComparison.InvariantCultureIgnoreCase))
                     {
-                        exps[i+startIndex] = args[index + callInfo.ArgumentCount - callInfo.ArgumentNames.Count]
+                        exps[i + startIndex] = args[index + callInfo.ArgumentCount - callInfo.ArgumentNames.Count]
                             .Expression;
                         found = true;
                         break;
@@ -45,10 +45,10 @@ public static class Shared
             for (var i = startIndex; i < exps.Length; i++)
                 if (exps[i] == null)
                 {
-                    if (!arguments[i-startIndex].DefaultValue?.Equals(RCaronInsideEnum.NoDefaultValue) ?? true)
-                        exps[i] = Expression.Constant(arguments[i-startIndex].DefaultValue);
+                    if (!arguments[i - startIndex].DefaultValue?.Equals(RCaronInsideEnum.NoDefaultValue) ?? true)
+                        exps[i] = Expression.Constant(arguments[i - startIndex].DefaultValue);
                     else
-                        throw RCaronException.ArgumentsLeftUnassigned(arguments[i-startIndex].Name);
+                        throw RCaronException.ArgumentsLeftUnassigned(arguments[i - startIndex].Name);
                 }
         }
 

@@ -1,7 +1,9 @@
-﻿using System.Dynamic;
+﻿using System.Diagnostics;
+using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using RCaron.Binders;
+using RCaron.Classes;
 using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.Jit.Binders;
@@ -12,13 +14,15 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
     public string Name { get; }
     public CallInfo CallInfo { get; }
     public object EnsureSameOrigin { get; }
+    public ClassDefinition? InsideClassDefinition { get; }
 
-    public RCaronOtherBinder(CompiledContext compiledContext, string name, CallInfo callInfo, object ensureSameOrigin)
+    public RCaronOtherBinder(CompiledContext compiledContext, string name, CallInfo callInfo, object ensureSameOrigin, ClassDefinition? insideClassDefinition)
     {
         CompiledContext = compiledContext;
         Name = name;
         CallInfo = callInfo;
         EnsureSameOrigin = ensureSameOrigin;
+        InsideClassDefinition = insideClassDefinition;
     }
 
     public override DynamicMetaObject Bind(DynamicMetaObject target, DynamicMetaObject[] args)
@@ -26,9 +30,20 @@ public class RCaronOtherBinder : DynamicMetaObjectBinder
         // RCaron function
         var func = CompiledContext.GetFunction(Name);
         if (func != null)
-            return Shared.DoFunction(func, target, args, Name, CallInfo, typeof(object),
+            return Shared.DoFunction(func, target, InsideClassDefinition == null ? args : args[1..], Name, CallInfo, typeof(object),
                 BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
                     Expression.Constant(EnsureSameOrigin))));
+        if (InsideClassDefinition != null)
+        {
+            var compiledClass = CompiledContext.GetClass(InsideClassDefinition);
+            Debug.Assert(compiledClass != null);
+            var classInstance = args[0];
+            var func2 = compiledClass.Functions?[Name];
+            if (func2 != null)
+                return Shared.DoFunction(func2, classInstance, args[1..], Name, CallInfo, typeof(object),
+                    BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
+                        Expression.Constant(EnsureSameOrigin))));
+        }
 
         // module
         if (CompiledContext.FileScope.Modules != null)

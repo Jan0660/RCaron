@@ -483,11 +483,9 @@ public class Motor
                             throw new("dbg_throw");
                     }
 
-                if (TryGetFunction(keywordString, GetFileScope(), out var func))
-                {
-                    FunctionCall(func, null, line.Tokens.Segment(1..));
-                    return (false, RCaronInsideEnum.NoReturnValue);
-                }
+                if (TryCallFunction(keywordString, GetFileScope(), null, line.Tokens.Segment(1..), null,
+                        out var result))
+                    return (false, result);
 
                 MethodCall(keywordString, line.Tokens.Segment(1..));
                 break;
@@ -691,8 +689,8 @@ public class Motor
             }
         }
 
-        if (TryGetFunction(nameArg, (fileScope ??= GetFileScope()), out var func))
-            return FunctionCall(func, callToken, argumentTokens);
+        if (TryCallFunction(nameArg, (fileScope ??= GetFileScope()), callToken, argumentTokens, null, out var result))
+            return result;
 
         if (name[0] == '#' || instance != null)
         {
@@ -1157,10 +1155,9 @@ public class Motor
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
         ArraySegment<PosToken> argumentTokens = default, ClassInstance? classInstance = null)
     {
-        LocalScope? scope = null;
+        var scope = classInstance == null ? new LocalScope() : new ClassFunctionScope(classInstance);
         if (function.Arguments != null)
         {
-            scope ??= classInstance == null ? new LocalScope() : new ClassFunctionScope(classInstance);
             Span<bool> assignedArguments = stackalloc bool[function.Arguments.Length];
             var enumerator = callToken != null
                 ? new ArgumentEnumerator(callToken)
@@ -1384,6 +1381,50 @@ public class Motor
                     return true;
 
         function = null;
+        return false;
+    }
+
+    public bool TryCallFunction(string name, FileScope fileScope, CallLikePosToken? callToken,
+        ArraySegment<PosToken> argumentTokens, ClassInstance? classInstance, out object? result)
+    {
+        if (TryGetFunction(name, fileScope, out var func))
+        {
+            result = FunctionCall(func, callToken, argumentTokens, classInstance);
+            return true;
+        }
+
+        // inside class
+        if (classInstance == null)
+        {
+            ClassFunctionScope? scope = null;
+            for (var i = BlockStack.Count - 1; i >= 0; i--)
+            {
+                var el = BlockStack.At(i);
+                if (el.Scope is ClassFunctionScope classFunctionScope)
+                {
+                    scope = classFunctionScope;
+                    break;
+                }
+
+                if (el.IsReturnWorthy)
+                    break;
+            }
+
+            if (scope == null)
+            {
+                result = null;
+                return false;
+            }
+
+            var classDefinition = scope.ClassInstance.Definition;
+            if (classDefinition.Functions?.TryGetValue(name, out var func2) ?? false)
+            {
+                result = FunctionCall(func2, callToken, argumentTokens, classInstance);
+                return true;
+            }
+        }
+
+        result = null;
         return false;
     }
 }

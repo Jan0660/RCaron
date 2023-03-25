@@ -413,12 +413,31 @@ public class Compiler
             if (target != null)
                 return Expression.Dynamic(new RCaronInvokeMemberBinder(name, true, callInfo, compiledContext),
                     typeof(object), args.Prepend(target));
+
+            IEnumerable<Expression> argsOver = args;
+
+            // get inside class to the context
+            ClassDefinition? insideClass = null;
+            for (var i = contextStack.Count - 1; i >= 0; i--)
+            {
+                var el = contextStack.At(i);
+                if (el is FunctionContext { ClassDefinition: { } classDefinition } functionContext)
+                {
+                    insideClass = classDefinition;
+                    argsOver = argsOver.Prepend(functionContext.ArgumentsInner![0]);
+                    break;
+                }
+
+                if (el.ReturnWorthy)
+                    break;
+            }
+
             var ensureSameCallWhateveThe = new object();
-            var argsOver = args.Prepend(Expression.Constant(ensureSameCallWhateveThe));
+            argsOver = argsOver.Prepend(Expression.Constant(ensureSameCallWhateveThe));
 
             return Expression.Dynamic(
                 new RCaronOtherBinder(compiledContext, name,
-                    callInfo, ensureSameCallWhateveThe), typeof(object), argsOver);
+                    callInfo, ensureSameCallWhateveThe, insideClass), typeof(object), argsOver);
         }
 
         Expression AssignGlobal(string name, Expression value)
@@ -953,9 +972,13 @@ public class Compiler
                     }
             }
 
-            var c = new FunctionContext() { ArgumentsInner = argumentsInner, ClassDefinition = classDefinition };
+            var c = new FunctionContext()
+            {
+                ArgumentsInner = argumentsInner, ClassDefinition = classDefinition, ReturnWorthy = true,
+                ReturnLabel = Expression.Label(typeof(object)),
+            };
             contextStack.Push(c);
-            var body = DoLines(function.CodeBlock.Lines, true);
+            var body = DoLines(function.CodeBlock.Lines, useCurrent: true, theCurrentToUse: c);
             Assert(contextStack.Pop() == c);
             return new CompiledFunction()
             {
