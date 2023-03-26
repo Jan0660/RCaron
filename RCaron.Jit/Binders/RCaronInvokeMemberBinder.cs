@@ -64,6 +64,17 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                 BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
                     Expression.Constant(classDefinition))));
         }
+        if (target.RuntimeType == typeof(ClassDefinition))
+        {
+            var classDefinition = (ClassDefinition)target.Value!;
+            var compiledClass = Context.GetClass(classDefinition);
+            var staticFunction = compiledClass?.StaticFunctions?[Name];
+            if (staticFunction == null)
+                throw RCaronException.ClassStaticFunctionNotFound(Name);
+            return Shared.DoFunction(staticFunction, target, args, Name, CallInfo, typeof(object),
+                BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
+                    Expression.Constant(classDefinition))));
+        }
 
         if (target.RuntimeType == typeof(ClassInstance))
         {

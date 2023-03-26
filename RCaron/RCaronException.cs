@@ -34,6 +34,9 @@ public enum RCaronExceptionCode
     ExpectedConstant,
     InvalidHexNumber,
     InvalidNumberSuffix,
+    InvalidClassMember,
+    ClassStaticFunctionNotFound,
+    ClassStaticPropertyNotFound
 }
 
 public class RCaronException : Exception
@@ -83,9 +86,16 @@ public class RCaronException : Exception
     public static RCaronException ClassPropertyNotFound(string propertyName)
         => new($"Class property of name '{propertyName}' not found", RCaronExceptionCode.ClassPropertyNotFound);
 
+    public static RCaronException ClassStaticPropertyNotFound(string propertyName)
+        => new($"Class static property of name '{propertyName}' not found", RCaronExceptionCode.ClassStaticPropertyNotFound);
+
     public static RCaronException ClassFunctionNotFound(string functionName)
         => new($"Class function '{functionName}' not found",
             RCaronExceptionCode.ClassFunctionNotFound);
+
+    public static RCaronException ClassStaticFunctionNotFound(string functionName)
+        => new($"Class static function '{functionName}' not found",
+            RCaronExceptionCode.ClassStaticFunctionNotFound);
     
     public static RCaronException FunctionToImportNotFound(string functionName)
         => new($"Function '{functionName}' to import not found",

@@ -1,4 +1,6 @@
-﻿namespace RCaron.Classes;
+﻿using System.Diagnostics.CodeAnalysis;
+
+namespace RCaron.Classes;
 
 public sealed class ClassDefinition
 {
@@ -7,7 +9,9 @@ public sealed class ClassDefinition
     public PosToken[]?[]? PropertyInitializers { get; }
 
     public Dictionary<string, Function>? Functions { get; init; }
-    // todo(feat): constructor
+    public Dictionary<string, Function>? StaticFunctions { get; init; }
+    public string[]? StaticPropertyNames { get; init; }
+    public object?[]? StaticPropertyValues { get; init; }
 
     public ClassDefinition(string name, string[]? propertyNames, PosToken[]?[]? propertyInitializers)
     {
@@ -26,5 +30,32 @@ public sealed class ClassDefinition
         }
 
         return -1;
+    }
+
+    public int GetStaticPropertyIndex(ReadOnlySpan<char> name)
+    {
+        if (StaticPropertyNames == null) return -1;
+        for (var i = 0; i < StaticPropertyNames.Length; i++)
+        {
+            if (name.Equals(StaticPropertyNames[i], StringComparison.InvariantCultureIgnoreCase))
+            {
+                return i;
+            }
+        }
+
+        return -1;
+    }
+
+    public bool TryGetStaticPropertyValue(ReadOnlySpan<char> name, out object? value)
+    {
+        var index = GetStaticPropertyIndex(name);
+        if (index == -1)
+        {
+            value = null;
+            return false;
+        }
+
+        value = StaticPropertyValues![index];
+        return true;
     }
 }

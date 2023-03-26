@@ -1,4 +1,5 @@
-﻿using System.Runtime.CompilerServices;
+﻿using System.Diagnostics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Text;
 using RCaron.Classes;
@@ -126,7 +127,8 @@ public static class RCaronParser
                     (tokens[^1].Type != TokenType.Dot && tokens[^1].Type != TokenType.Colon) &&
                     (!posToken.IsDotJoinable() || tokens[^1].Position.End != posToken.Position.Start) &&
                     posToken.Type != TokenType.IndexerStart &&
-                    ((posToken.Type != TokenType.SimpleBlockStart && posToken.Type != TokenType.Dot) || tokens[^1].Position.End != posToken.Position.Start)
+                    ((posToken.Type != TokenType.SimpleBlockStart && posToken.Type != TokenType.Dot) ||
+                     tokens[^1].Position.End != posToken.Position.Start)
                     && posToken.Type != TokenType.IndexerEnd
                    )
                 {
@@ -188,7 +190,7 @@ public static class RCaronParser
                 {
                     var h = BackwardsCollectValuePosToken();
                     if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0 && h.tokens.Length != 2
-                        )
+                       )
                     {
                         // may not be needed?
                         if (h.tokens[1] is not { Type: TokenType.MathOperator })
@@ -334,9 +336,11 @@ public static class RCaronParser
             {
                 var name = ((KeywordToken)t[i + 1]).String;
                 Dictionary<string, Function>? functions = null;
-                // todo: use array
+                Dictionary<string, Function>? staticFunctions = null;
                 List<string>? propertyNames = null;
                 List<PosToken[]?>? propertyInitializers = null;
+                List<string>? staticPropertyNames = null;
+                List<object?>? staticPropertyDefaultValues = null;
                 // get properties and functions
                 var body = (CodeBlockToken)t[i + 2];
                 for (var j = 1; j < body.Lines.Count - 1; j++)
@@ -347,6 +351,14 @@ public static class RCaronParser
                         var f = DoFunction(tokenLine.Tokens, errorHandler);
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
                         functions[f.name] = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
+                    }
+                    else if (body.Lines[j].Type == LineType.StaticFunction)
+                    {
+                        var tokenLine = (TokenLine)body.Lines[j];
+                        var f = DoFunction(tokenLine.Tokens, errorHandler, offset: 1);
+                        staticFunctions ??= new(StringComparer.InvariantCultureIgnoreCase);
+                        staticFunctions[f.name] =
+                            new Function((CodeBlockToken)tokenLine.Tokens[3], f.arguments, fileScope);
                     }
                     else if (body.Lines[j].Type == LineType.VariableAssignment)
                     {
@@ -364,15 +376,34 @@ public static class RCaronParser
                         propertyNames.Add(((VariableToken)tokenLine.Token).Name);
                         propertyInitializers.Add(null);
                     }
+                    else if (body.Lines[j].Type == LineType.StaticProperty)
+                    {
+                        staticPropertyNames ??= new();
+                        staticPropertyDefaultValues ??= new();
+                        var tokenLine = (TokenLine)body.Lines[j];
+                        staticPropertyNames.Add(((VariableToken)tokenLine.Tokens[1]).Name);
+                        staticPropertyDefaultValues.Add(EvaluateConstantToken(tokenLine.Tokens[3], errorHandler));
+                    }
+                    else
+                    {
+                        errorHandler.Handle(ParsingException.InvalidClassMember(body.Lines[j].Type,
+                            body.Lines[j].GetLocation()));
+                    }
                 }
 
                 if (returnDescriptive)
                     lines.Add(new TokenLine(new[] { t[i], t[i + 1], t[i + 2] }, LineType.ClassDefinition));
                 i += 2;
                 fileScope.ClassDefinitions ??= new();
+                Debug.Assert(staticPropertyNames?.Count == staticPropertyDefaultValues?.Count,
+                    "static property names and default values count mismatch");
                 fileScope.ClassDefinitions.Add(
                     new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray())
-                        { Functions = functions });
+                    {
+                        Functions = functions, StaticFunctions = staticFunctions,
+                        StaticPropertyValues = staticPropertyDefaultValues?.ToArray(),
+                        StaticPropertyNames = staticPropertyNames?.ToArray(),
+                    });
             }
             // function
             else if (t.Length - i > 2 && tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "func"))
@@ -555,6 +586,21 @@ public static class RCaronParser
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "foreach"))
         {
             return new TokenLine(new[] { tokens[i], tokens[++i] }, LineType.ForeachLoop);
+        }
+        // static property
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "static") &&
+                 tokens[i + 1].Type == TokenType.VariableIdentifier)
+        {
+            var endingIndex = _findLineEnding(tokens, i, text);
+            res = new TokenLine(tokens[i..(endingIndex.toUse)], LineType.StaticProperty);
+            i = endingIndex.toSet;
+        }
+        // static function
+        else if (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsString(text, "static") &&
+                 tokens[i + 1].Type == TokenType.Keyword && tokens[i + 1].EqualsString(text, "func"))
+        {
+            res = new TokenLine(tokens[i..(i + 4)], LineType.StaticFunction);
+            i += 3;
         }
         // function (should happen only inside a code block)
         // todo(perf): do not do this in code blocks too

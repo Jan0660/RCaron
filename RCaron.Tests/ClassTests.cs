@@ -153,4 +153,92 @@ $h = #Funny:new().GetType();
 ");
         m.AssertVariableEquals("h", typeof(ClassInstance));
     }
+
+    public class StaticTests
+    {
+        [Fact]
+        public void StaticPropertyGet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $prop = 1;
+}
+$h = #Funny:prop;");
+            m.AssertVariableEquals("h", 1L);
+        }
+
+        [Fact]
+        public void StaticPropertySet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $prop = 1;
+}
+#Funny:prop = 5;
+$h = #Funny:prop;");
+            m.AssertVariableEquals("h", 5L);
+        }
+
+        [Fact]
+        public void StaticFunction()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static func Function() { return 3; }
+}
+$h = #Funny:Function();");
+            m.AssertVariableEquals("h", 3L);
+        }
+
+        [Fact]
+        public void StaticFunctionPropertyGet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $staticProp = 1;
+    static func Function() { return $staticProp; }
+}
+$h = #Funny:Function();");
+            m.AssertVariableEquals("h", 1L);
+        }
+        
+        [Fact]
+        public void StaticFunctionPropertySet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $staticProp = 1;
+    static func Function() { $staticProp = 5; }
+}
+#Funny:Function();
+$h = #Funny:staticProp;");
+            m.AssertVariableEquals("h", 5L);
+        }
+        
+        [Fact]
+        public void FunctionStaticPropertyGet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $staticProp = 1;
+    func Function() { return $staticProp; }
+}
+$h = #Funny:New().Function();");
+            m.AssertVariableEquals("h", 1L);
+        }
+        
+        [Fact]
+        public void FunctionStaticPropertySet()
+        {
+            var m = TestRunner.Run(@"
+class Funny {
+    static $staticProp = 1;
+    func Function() { $staticProp = 5; }
+}
+$f = #Funny:New();
+$f.Function();
+$h = #Funny:staticProp;");
+            m.AssertVariableEquals("h", 5L);
+        }
+    }
 }

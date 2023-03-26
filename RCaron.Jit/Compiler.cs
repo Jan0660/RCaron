@@ -83,12 +83,27 @@ public class Compiler
                     // class properties
                     if (functionContext.ClassDefinition is not null)
                     {
+                        // instance property
                         var propertyIndex = functionContext.ClassDefinition.GetPropertyIndex(name);
                         if (propertyIndex != -1)
                         {
                             var classInstance = functionContext.ArgumentsInner![0];
                             return Expression.ArrayAccess(Expression.Property(classInstance, "PropertyValues"),
                                 Expression.Constant(propertyIndex));
+                        }
+                    }
+
+                    // class static properties (inside instance function or static function)
+                    if ((functionContext.ClassDefinition ?? functionContext.InsideStaticClassDefinition) is
+                        { } definition)
+                    {
+                        // static property
+                        var staticPropertyIndex = definition.GetStaticPropertyIndex(name);
+                        if (staticPropertyIndex != -1)
+                        {
+                            return Expression.ArrayAccess(
+                                Expression.Constant(definition.StaticPropertyValues),
+                                Expression.Constant(staticPropertyIndex));
                         }
                     }
                 }
@@ -953,29 +968,32 @@ public class Compiler
             return c == null ? Expression.Block(exps) : Expression.Block(c.Variables?.Select(g => g.Value), exps);
         }
 
-        CompiledFunction DoFunction(Function function, ClassDefinition? classDefinition = null)
+        CompiledFunction DoFunction(Function function, ClassDefinition? insideClassDefinition = null,
+            ClassDefinition? insideStaticClassDefinition = null)
         {
             ParameterExpression[]? argumentsInner = null;
-            if (function.Arguments != null || classDefinition != null)
+            if (function.Arguments != null || insideClassDefinition != null)
             {
                 argumentsInner =
-                    new ParameterExpression[0 + (function.Arguments?.Length ?? 0) + (classDefinition != null ? 1 : 0)];
-                if (classDefinition != null)
+                    new ParameterExpression[0 + (function.Arguments?.Length ?? 0) +
+                                            (insideClassDefinition != null ? 1 : 0)];
+                if (insideClassDefinition != null)
                     argumentsInner[0] = Expression.Parameter(typeof(ClassInstance), "this");
                 if (function.Arguments != null)
-                    for (var i = classDefinition != null ? 1 : 0;
-                         i - (classDefinition != null ? 1 : 0) < function.Arguments.Length;
+                    for (var i = insideClassDefinition != null ? 1 : 0;
+                         i - (insideClassDefinition != null ? 1 : 0) < function.Arguments.Length;
                          i++)
                     {
                         argumentsInner[i] = Expression.Parameter(typeof(object),
-                            function.Arguments[i - (classDefinition != null ? 1 : 0)].Name);
+                            function.Arguments[i - (insideClassDefinition != null ? 1 : 0)].Name);
                     }
             }
 
             var c = new FunctionContext()
             {
-                ArgumentsInner = argumentsInner, ClassDefinition = classDefinition, ReturnWorthy = true,
+                ArgumentsInner = argumentsInner, ClassDefinition = insideClassDefinition, ReturnWorthy = true,
                 ReturnLabel = Expression.Label(typeof(object)),
+                InsideStaticClassDefinition = insideStaticClassDefinition,
             };
             contextStack.Push(c);
             var body = DoLines(function.CodeBlock.Lines, useCurrent: true, theCurrentToUse: c);
@@ -1000,6 +1018,7 @@ public class Compiler
             {
                 Expression?[]? initializers = null;
                 Dictionary<string, CompiledFunction>? classFunctions = null;
+                Dictionary<string, CompiledFunction>? classStaticFunctions = null;
                 // do property initializers
                 if (definition.PropertyInitializers is not null or { Length: 0 })
                 {
@@ -1025,9 +1044,23 @@ public class Compiler
                     }
                 }
 
+                // do static functions
+                if (definition.StaticFunctions is not null or { Count: 0 })
+                {
+                    classStaticFunctions ??=
+                        new Dictionary<string, CompiledFunction>(StringComparer.InvariantCultureIgnoreCase);
+                    foreach (var function in definition.StaticFunctions)
+                    {
+                        var compiledFunction = DoFunction(function.Value, insideStaticClassDefinition: definition);
+                        classStaticFunctions[function.Key] = compiledFunction;
+                    }
+                }
 
                 classes.Add(new CompiledClass
-                    { Definition = definition, PropertyInitializers = initializers, Functions = classFunctions });
+                {
+                    Definition = definition, PropertyInitializers = initializers, Functions = classFunctions,
+                    StaticFunctions = classStaticFunctions
+                });
             }
 
         // do main
@@ -1061,6 +1094,7 @@ public class Compiler
     {
         public ParameterExpression[]? ArgumentsInner { get; init; } = null;
         public ClassDefinition? ClassDefinition { get; init; } = null;
+        public ClassDefinition? InsideStaticClassDefinition { get; init; } = null;
     }
 
     public static void Assert([DoesNotReturnIf(false)] bool condition)
@@ -1103,6 +1137,7 @@ public class CompiledClass
     public required ClassDefinition Definition { get; init; }
     public Expression?[]? PropertyInitializers { get; init; }
     public Dictionary<string, CompiledFunction>? Functions { get; init; }
+    public Dictionary<string, CompiledFunction>? StaticFunctions { get; init; }
 }
 
 public record CompiledContext(Dictionary<string, CompiledFunction> Functions, FileScope FileScope,

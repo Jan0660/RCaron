@@ -62,4 +62,14 @@ public static class Shared
                 .EnsureIsType(returnType),
             restrictions);
     }
+
+    // target itself should be a ClassDefinition
+    public static BindingRestrictions GetSameClassDefinitionRestrictions(DynamicMetaObject target,
+        ClassDefinition classDefinition)
+    {
+        return BindingRestrictions.GetExpressionRestriction(
+            Expression.Equal(
+                target.Expression,
+                Expression.Constant(classDefinition)));
+    }
 }

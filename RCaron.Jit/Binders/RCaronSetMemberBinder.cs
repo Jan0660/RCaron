@@ -2,6 +2,7 @@
 using System.Linq.Expressions;
 using System.Reflection;
 using RCaron.Binders;
+using RCaron.Classes;
 
 namespace RCaron.Jit.Binders;
 
@@ -20,8 +21,21 @@ public class RCaronSetMemberBinder : SetMemberBinder
         if (target.LimitType.IsAssignableTo(typeof(IDynamicMetaObjectProvider)))
         {
             return new DynamicMetaObject(
-                Expression.Call(target.Expression.EnsureIsType(target.LimitType), "GetMetaObject", Array.Empty<Type>(), Expression.Constant(target.Expression)),
+                Expression.Call(target.Expression.EnsureIsType(target.LimitType), "GetMetaObject", Array.Empty<Type>(),
+                    Expression.Constant(target.Expression)),
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
+        }
+
+        // static RCaron class property
+        if (target.Value is ClassDefinition classDefinition)
+        {
+            var staticPropertyIndex = classDefinition.GetStaticPropertyIndex(Name);
+            if (staticPropertyIndex == -1)
+                throw RCaronException.ClassStaticPropertyNotFound(Name);
+            return new DynamicMetaObject(
+                Expression.Assign(Expression.ArrayAccess(Expression.Constant(classDefinition.StaticPropertyValues),
+                    Expression.Constant(staticPropertyIndex)), value.Expression.EnsureIsType(typeof(object))),
+                Shared.GetSameClassDefinitionRestrictions(target, classDefinition));
         }
 
         var property = target.RuntimeType?.GetProperty(Name,

@@ -79,3 +79,19 @@ public class ClassAssigner : IAssigner
         _classInstance.PropertyValues![_propertyIndex] = value;
     }
 }
+
+public class ClassStaticAssigner : IAssigner
+{
+    private readonly ClassDefinition _classDefinition;
+    private readonly int _propertyIndex;
+
+    public ClassStaticAssigner(ClassDefinition classDefinition, int propertyIndex)
+    {
+        (_classDefinition, _propertyIndex) = (classDefinition, propertyIndex);
+    }
+
+    public void Assign(object? value)
+    {
+        _classDefinition.StaticPropertyValues![_propertyIndex] = value;
+    }
+}

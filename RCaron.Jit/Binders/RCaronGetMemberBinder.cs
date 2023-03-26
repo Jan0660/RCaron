@@ -3,6 +3,7 @@ using System.Dynamic;
 using System.Linq.Expressions;
 using System.Reflection;
 using RCaron.Binders;
+using RCaron.Classes;
 
 namespace RCaron.Jit.Binders;
 
@@ -26,6 +27,17 @@ public class RCaronGetMemberBinder : GetMemberBinder
                 BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType));
         }
 
+        if (target.Value is ClassDefinition classDefinition)
+        {
+            var staticPropertyIndex = classDefinition.GetStaticPropertyIndex(Name);
+            if (staticPropertyIndex == -1)
+                throw RCaronException.ClassStaticPropertyNotFound(Name);
+            return new DynamicMetaObject(Expression.ArrayIndex(
+                    Expression.Constant(classDefinition.StaticPropertyValues),
+                    Expression.Constant(staticPropertyIndex)),
+                Shared.GetSameClassDefinitionRestrictions(target, classDefinition));
+        }
+
         if (target.RuntimeType != null)
         {
             var property = target.RuntimeType.GetProperty(Name,
@@ -43,7 +55,8 @@ public class RCaronGetMemberBinder : GetMemberBinder
             if (field != null)
             {
                 return new DynamicMetaObject(
-                    Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field).EnsureIsType(ReturnType),
+                    Expression.Field(target.Expression.EnsureIsType(target.RuntimeType), field)
+                        .EnsureIsType(ReturnType),
                     GetRestrictions(target));
             }
 

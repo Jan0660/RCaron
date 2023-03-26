@@ -48,4 +48,7 @@ public class ParsingException : RCaronException
         Debug.Assert(message != null);
         return new(message, RCaronExceptionCode.InvalidNumberSuffix, location);
     }
+    
+    public static ParsingException InvalidClassMember(LineType lineType, TextSpan location)
+        => new($"Invalid class member: {lineType}", RCaronExceptionCode.InvalidClassMember, location);
 }
