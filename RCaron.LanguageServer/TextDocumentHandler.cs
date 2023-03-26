@@ -54,9 +54,18 @@ namespace RCaron.LanguageServer
             var errorHandler = new ParsingErrorStoreHandler();
             RCaronParser.Parse(content, errorHandler: errorHandler);
             if (errorHandler.Exceptions.Count == 0)
+            {
+                _facade.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams()
+                {
+                    Diagnostics = new Container<Diagnostic>(),
+                    Uri = notification.TextDocument.Uri,
+                    Version = notification.TextDocument.Version,
+                });
                 return Unit.Value;
+            }
+
             var diagnostics = new List<Diagnostic>();
-            
+
             foreach (var exception in errorHandler.Exceptions)
             {
                 diagnostics.Add(new Diagnostic()
@@ -64,13 +73,14 @@ namespace RCaron.LanguageServer
                     Code = exception.Code.ToString(),
                     Severity = DiagnosticSeverity.Error,
                     Message = exception.Message,
-                    Range = Util.GetRange(exception.Location.Position, exception.Location.Position + exception.Location.Length, content),
+                    Range = Util.GetRange(exception.Location.Position,
+                        exception.Location.Position + exception.Location.Length, content),
                     // Source = "XXX",
                     // Tags = new Container<DiagnosticTag>(new DiagnosticTag[] { DiagnosticTag.Unnecessary })
                 });
             }
-            
-            _facade.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams() 
+
+            _facade.TextDocument.PublishDiagnostics(new PublishDiagnosticsParams()
             {
                 Diagnostics = new Container<Diagnostic>(diagnostics.ToArray()),
                 Uri = notification.TextDocument.Uri,
@@ -140,7 +150,7 @@ namespace RCaron.LanguageServer
                 {
                     Detail = name,
                     Deprecated = false,
-                    Kind = kind,          
+                    Kind = kind,
                     Range = Util.GetRange(range.Start, range.End, content),
                     SelectionRange = Util.GetRange(selectionRange.Start, selectionRange.End, content),
                     Name = name,
@@ -155,7 +165,8 @@ namespace RCaron.LanguageServer
                     $"Symbol name: {name}; {range.Start} - {range.End}; {selectionRange.Start} - {selectionRange.End}; kind: {kind}");
             }
 
-            var parsed = RCaronParser.Parse(content, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
+            var parsed = RCaronParser.Parse(content, returnDescriptive: true,
+                errorHandler: new ParsingErrorDontCareHandler());
 
             void EvaluateLines(IList<Line> lines, List<DocumentSymbol>? parentChildren = null, bool insideClass = false)
             {
@@ -190,7 +201,8 @@ namespace RCaron.LanguageServer
                         case LineType.CodeBlock when line is CodeBlockLine codeBlockLine:
                             EvaluateLines(codeBlockLine.Token.Lines, parentChildren);
                             break;
-                        case LineType.PropertyWithoutInitializer when line is SingleTokenLine singleTokenLine && insideClass:
+                        case LineType.PropertyWithoutInitializer
+                            when line is SingleTokenLine singleTokenLine && insideClass:
                         {
                             var token = (VariableToken)singleTokenLine.Token;
                             AddSymbol(token.Name,
@@ -214,7 +226,8 @@ namespace RCaron.LanguageServer
             return symbols;
         }
 
-        protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(DocumentSymbolCapability capability,
+        protected override DocumentSymbolRegistrationOptions CreateRegistrationOptions(
+            DocumentSymbolCapability capability,
             ClientCapabilities clientCapabilities) => new()
         {
             DocumentSelector = Util.DocumentSelector
