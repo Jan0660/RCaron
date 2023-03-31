@@ -334,7 +334,7 @@ public static class RCaronParser
             // class definition
             if (t.Length - i > 2 && t[i].Type == TokenType.Keyword && t[i].EqualsString(text, "class"))
             {
-                var name = ((KeywordToken)t[i + 1]).String;
+                var className = ((KeywordToken)t[i + 1]).String;
                 Dictionary<string, Function>? functions = null;
                 Dictionary<string, Function>? staticFunctions = null;
                 List<string>? propertyNames = null;
@@ -381,8 +381,17 @@ public static class RCaronParser
                         staticPropertyNames ??= new();
                         staticPropertyDefaultValues ??= new();
                         var tokenLine = (TokenLine)body.Lines[j];
-                        staticPropertyNames.Add(((VariableToken)tokenLine.Tokens[1]).Name);
-                        staticPropertyDefaultValues.Add(EvaluateConstantToken(tokenLine.Tokens[3], errorHandler));
+                        var propertyName = ((VariableToken)tokenLine.Tokens[1]).Name;
+                        staticPropertyNames.Add(propertyName);
+                        if (tokenLine.Tokens.Length < 3)
+                        {
+                            errorHandler.Handle(
+                                ParsingException.StaticPropertyWithoutInitializer(propertyName,
+                                    tokenLine.GetLocation()));
+                            staticPropertyDefaultValues.Add(null);
+                        }
+                        else
+                            staticPropertyDefaultValues.Add(EvaluateConstantToken(tokenLine.Tokens[3], errorHandler));
                     }
                     else
                     {
@@ -398,7 +407,7 @@ public static class RCaronParser
                 Debug.Assert(staticPropertyNames?.Count == staticPropertyDefaultValues?.Count,
                     "static property names and default values count mismatch");
                 fileScope.ClassDefinitions.Add(
-                    new ClassDefinition(name, propertyNames?.ToArray(), propertyInitializers?.ToArray())
+                    new ClassDefinition(className, propertyNames?.ToArray(), propertyInitializers?.ToArray())
                     {
                         Functions = functions, StaticFunctions = staticFunctions,
                         StaticPropertyValues = staticPropertyDefaultValues?.ToArray(),

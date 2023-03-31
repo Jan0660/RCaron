@@ -36,7 +36,8 @@ public enum RCaronExceptionCode
     InvalidNumberSuffix,
     InvalidClassMember,
     ClassStaticFunctionNotFound,
-    ClassStaticPropertyNotFound
+    ClassStaticPropertyNotFound,
+    StaticPropertyWithoutInitializer,
 }
 
 public class RCaronException : Exception
