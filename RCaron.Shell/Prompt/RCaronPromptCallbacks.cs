@@ -35,6 +35,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
     public int MaxCompletions { get; set; } = 40;
     public bool ThrowOnCompletionError { get; set; } = false;
     public bool EnableAutoCompletions { get; set; } = true;
+    public Motor? ForMotor { get; set; }
 
     protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text,
         CancellationToken cancellationToken)
@@ -202,7 +203,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
         try
         {
             var items = new List<CompletionItem>();
-            var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions);
+            var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions, ForMotor?.GlobalScope);
             foreach (var item in h)
             {
                 cancellationToken.ThrowIfCancellationRequested();

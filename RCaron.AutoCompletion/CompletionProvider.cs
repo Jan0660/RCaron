@@ -12,7 +12,8 @@ public partial class CompletionProvider
                     $"{(builtInFunction.DetailPreface != null ? builtInFunction.DetailPreface + "\n" : "")}(method) {builtInFunction.Word}(???)";
     }
 
-    public List<Completion> GetCompletions(string code, int caretPosition, int maxCompletions = 40)
+    public List<Completion> GetCompletions(string code, int caretPosition, int maxCompletions = 40,
+        LocalScope? localScope = null)
     {
         var list = new List<Completion>(maxCompletions);
         var parsed = RCaronParser.Parse(code, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
@@ -58,6 +59,25 @@ public partial class CompletionProvider
                                 if (constant.Word.AsSpan().StartsWith(variableToken.ToSpan(code),
                                         StringComparison.InvariantCultureIgnoreCase))
                                     list.Add(new Completion(constant, token.Position));
+                            }
+
+                            if (localScope is { Variables: { } })
+                            {
+                                foreach (var variable in localScope.Variables)
+                                {
+                                    if (list.Count >= maxCompletions) return;
+                                    if (variable.Key.AsSpan().StartsWith(variableToken.ToSpan(code)[1..],
+                                            StringComparison.InvariantCultureIgnoreCase))
+                                        list.Add(new Completion(new CompletionThing()
+                                        {
+                                            Word = '$' + variable.Key,
+                                            Kind = CompletionItemKind.Variable,
+                                            Detail = $"(global variable) {variable.Key}",
+                                            Documentation = variable.Value == null
+                                                ? "Value is `null`."
+                                                : $"Current value(of type `{variable.Value.GetType()}`): `{variable.Value}`",
+                                        }, token.Position));
+                                }
                             }
 
                             break;
