@@ -210,13 +210,8 @@ public class Motor
                     Token: NativePipelineValuePosToken pipeline
                 }:
                 {
-                    if (pipeline.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
-                        keywordToken.IsExecutable = true;
-                    var left = RunLeftPipeline(pipeline.Left);
-                    if (pipeline.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
-                        keywordToken2.IsExecutable = true;
-                    var right = SimpleEvaluateExpressionHigh(pipeline.Right, pipeline: left);
-                    return (false, right);
+                    var val = SimpleEvaluateExpressionSingle(pipeline);
+                    return (false, val);
                 }
                 default:
                     throw new("invalid line");
@@ -510,7 +505,8 @@ public class Motor
             {
                 if (InvokeRunExecutable == null)
                     throw new("InvokeRunExecutable is null");
-                InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope(), null, false);
+                InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope(), null,
+                    false);
                 break;
             }
             case LineType.TryBlock when line.Tokens[1] is CodeBlockToken codeBlockToken:
@@ -1096,7 +1092,7 @@ public class Motor
         return val;
     }
 
-    public object? SimpleEvaluateExpressionSingle(PosToken token)
+    public object? SimpleEvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false)
     {
         if (token is ConstToken constToken)
             return constToken.Value;
@@ -1108,6 +1104,17 @@ public class Motor
             return "/";
         if (token is ValueOperationValuePosToken { Operation: OperationEnum.Multiply })
             return "*";
+        if (token is NativePipelineValuePosToken pipeline)
+        {
+            if (pipeline.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
+                keywordToken.IsExecutable = true;
+            var left = RunLeftPipeline(pipeline.Left);
+            if (pipeline.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
+                keywordToken2.IsExecutable = true;
+            var right = SimpleEvaluateExpressionHigh(pipeline.Right, pipeline: left, isLeftOfPipeline: isLeftOfPipeline);
+            return right;
+        }
+
         switch (token.Type)
         {
             case TokenType.Group when token is GroupValuePosToken valueGroupPosToken:
@@ -1183,7 +1190,7 @@ public class Motor
         {
             > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(keywordToken.String,
                 argumentTokens: tokens.Segment(1..), pipeline: pipeline, isLeftOfPipeline: isLeftOfPipeline),
-            1 => SimpleEvaluateExpressionSingle(tokens[0]),
+            1 => SimpleEvaluateExpressionSingle(tokens[0], isLeftOfPipeline),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("something has gone very wrong with the parsing most probably")
         };
