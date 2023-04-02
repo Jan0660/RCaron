@@ -23,4 +23,10 @@ public partial class ShellStuffModule : IRCaronModule
     {
         Shell.PromptFunction = Shell.Motor.MainFileScope.Functions![functionName];
     }
+
+    [Method("Exit")]
+    public void Exit(Motor _, int code = 0)
+    {
+        Environment.Exit(code);
+    }
 }

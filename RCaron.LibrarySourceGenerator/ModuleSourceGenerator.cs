@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Text;
 using Microsoft.CodeAnalysis;
 using Microsoft.CodeAnalysis.CSharp;
@@ -181,7 +182,7 @@ else
 """);
                             source.AppendLine("}");
                             // check all parameters without a default value are assigned
-                            if (parameters.Length != 0)
+                            if (Array.FindIndex(parameters, p => !p.HasExplicitDefaultValue) != -1)
                             {
                                 source.AppendLine("if(true");
                                 foreach (var param in parameters)

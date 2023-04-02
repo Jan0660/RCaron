@@ -13,6 +13,7 @@ public class ExecutableRunTests
     [InlineData("./hello (1 + 3)", "./hello", new[] { "4" })]
     [InlineData("./hello 1 + 3", "./hello", new[] { "1", "+", "3" })]
     [InlineData("$h = 1; hello $h", "hello", new[] { "1" })]
+    [InlineData("cd ..", "cd", new[] { ".." })]
     public void ArgumentsAreParsedProperly(string code, string name, string[] args)
     {
         var motor = new Motor(RCaronRunner.Parse(code));

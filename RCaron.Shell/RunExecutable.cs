@@ -103,6 +103,9 @@ public static class RunExecutable
                     case { Type: TokenType.NativePipelineOperator }:
                         stringBuilder.Append("|>");
                         break;
+                    case { Type: TokenType.Colon }:
+                        stringBuilder.Append(':');
+                        break;
                     default:
                         throw new($"Unexpected token type {token.Type}");
                 }

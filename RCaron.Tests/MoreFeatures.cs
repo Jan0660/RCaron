@@ -1,9 +1,20 @@
 ﻿using System.Collections;
 using System.Text;
+using RCaron.LibrarySourceGenerator;
 using RCaron.Parsing;
 using Xunit.Sdk;
 
 namespace RCaron.Tests;
+
+[Module("stuff")]
+public partial class ForUnitTestsModule : IRCaronModule
+{
+    [Method("NoRequiredParameters")]
+    public object NoRequiredParameters(Motor _, long optArg = 0)
+    {
+        return optArg;
+    }
+}
 
 public class MoreFeatures
 {
@@ -132,6 +143,18 @@ $h = @ForUnitTests 2 -b 3 4;"), RCaronExceptionCode.PositionalArgumentAfterNamed
 
         ExtraAssert.ThrowsCode(() => TestRunner.Run(@"
 $h = @ForUnitTests 2 3 4;"), RCaronExceptionCode.LeftOverPositionalArgument);
+    }
+
+    [Theory]
+    [InlineData(@"$h = @NoRequiredParameters;", 0L)]
+    [InlineData(@"$h = @NoRequiredParameters 3;", 3L)]
+    public void ModuleNoRequiredParameters(string code, long expected)
+    {
+        var m = TestRunner.Run(code, modules: new()
+        {
+            new ForUnitTestsModule(),
+        });
+        m.AssertVariableEquals("h", expected);
     }
 
     [Fact]
@@ -462,7 +485,7 @@ $h = $null;");
         var m = TestRunner.Run($"$h = {input}");
         m.AssertVariableEquals("h", expected);
     }
-    
+
     [Theory]
     [InlineData("0x11M")]
     [InlineData("1.1u")]

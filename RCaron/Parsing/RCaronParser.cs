@@ -117,7 +117,8 @@ public static class RCaronParser
                             (tokens[i].Type == TokenType.Colon && tokens[i - 1].Type == TokenType.ExternThing) ||
                             (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
                             tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range }
-                           ) && !(tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.Keyword))
+                           ) && !(tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.Keyword) &&
+                           (tokens[i - 1].Position.End == tokens[i].Position.Start))
                         i--;
                     if (tokens.Count - i == 1)
                         return (-1, Array.Empty<PosToken>());

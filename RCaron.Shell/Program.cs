@@ -116,14 +116,8 @@ rootCommand.SetHandler(async context =>
 
             var input = await prompt.ReadLineAsync();
             if (!input.IsSuccess)
-                break;
+                continue;
             var inputText = input.Text;
-            // if (inputText == null)
-            //     break;
-            // Console.WriteLine(input.Text);
-            // var ctx = RCaronRunner.Parse(input);
-            // // todo: doesn't do functions and classes
-            // motor.UseContext(ctx, false);
             try
             {
                 shell.RunString(inputText);
