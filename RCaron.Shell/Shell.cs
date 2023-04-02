@@ -32,10 +32,16 @@ public class Shell
 
             if (ctx.FileScope.ClassDefinitions is not null)
             {
-                // todo: doesn't overwrite existing classes with the same name
                 Motor.MainFileScope.ClassDefinitions ??= new();
                 foreach (var c in ctx.FileScope.ClassDefinitions)
-                    Motor.MainFileScope.ClassDefinitions.Add(c);
+                {
+                    var index = Motor.MainFileScope.ClassDefinitions.FindIndex(@class =>
+                        @class.Name.Equals(c.Name, StringComparison.InvariantCultureIgnoreCase));
+                    if (index == -1)
+                        Motor.MainFileScope.ClassDefinitions.Add(c);
+                    else
+                        Motor.MainFileScope.ClassDefinitions[index] = c;
+                }
             }
         }
 
