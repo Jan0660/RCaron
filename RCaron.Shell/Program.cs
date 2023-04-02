@@ -69,6 +69,7 @@ rootCommand.SetHandler(async context =>
     shell.Motor.SetVar("args", arguments);
     shell.Motor.SetVar("current_shell", shell);
     shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
+    shell.Motor.SetVar("profile_directory", profilePath);
 
     var profileFile = Path.Combine(profilePath, "profile.rcaron");
     if (File.Exists(profileFile) && !noProfile)
