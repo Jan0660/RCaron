@@ -43,6 +43,8 @@ public enum TokenType : byte
     Group,
     TokenGroup,
     HexNumber,
+    NativePipelineOperator,
+    NativePipeline,
 }
 
 [DebuggerDisplay("Type = {Type}")]
@@ -62,9 +64,6 @@ public class PosToken
 
     public bool EqualsString(in string text, in string b)
         => text.AsSpan()[Position.Start..Position.End].SequenceEqual(b);
-
-    public bool IsKeyword(in string raw, in string b)
-        => Type == TokenType.Keyword && EqualsStringCaseInsensitive(raw, "default");
 
     public bool EqualsStringCaseInsensitive(in string text, in string b)
         => text.AsSpan()[Position.Start..Position.End].Equals(b, StringComparison.InvariantCultureIgnoreCase);
@@ -141,7 +140,7 @@ public class VariableToken : ValuePosToken
 public class KeywordToken : PosToken
 {
     public string String { get; }
-    public bool IsExecutable { get; }
+    public bool IsExecutable { get; set; }
 
     public KeywordToken((int Start, int End) position, string str, bool isExecutable = false) : base(TokenType.Keyword,
         position)
@@ -313,5 +312,18 @@ public class OperationPosToken : PosToken
         position)
     {
         Operation = operation;
+    }
+}
+
+public class NativePipelineValuePosToken : ValuePosToken
+{
+    public PosToken[] Left { get; }
+    public PosToken[] Right { get; }
+
+    public NativePipelineValuePosToken(PosToken[] left, PosToken[] right) : base(
+        TokenType.NativePipeline, (left[0].Position.Start, right[^1].Position.End))
+    {
+        Left = left;
+        Right = right;
     }
 }

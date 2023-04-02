@@ -11,9 +11,10 @@ public class Shell
         Motor.InvokeRunExecutable = InvokeRunExecutable;
     }
 
-    private object? InvokeRunExecutable(Motor motor, string name, ArraySegment<PosToken> args, FileScope fileScope)
+    private object? InvokeRunExecutable(Motor motor, string name, ArraySegment<PosToken> args, FileScope fileScope,
+        IPipeline? pipeline, bool isLeftOfPipeline)
     {
-        return RunExecutable.Run(motor, name, args, fileScope.Raw);
+        return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline);
     }
 
     public void RunString(string code, bool import = true, string? fileName = null)
@@ -21,6 +22,7 @@ public class Shell
         var ctx = RCaronRunner.Parse(code);
         if (import && Motor.MainFileScope != null!)
         {
+            Motor.MainFileScope.Raw = code;
             if (ctx.FileScope.Functions is not null)
             {
                 Motor.MainFileScope.Functions ??= new();

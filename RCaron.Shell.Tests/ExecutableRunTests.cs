@@ -17,7 +17,7 @@ public class ExecutableRunTests
     {
         var motor = new Motor(RCaronRunner.Parse(code));
         var ran = false;
-        motor.InvokeRunExecutable = (m, n, a, f) =>
+        motor.InvokeRunExecutable = (m, n, a, f, _, _) =>
         {
             ran = true;
             var startInfo = RunExecutable.ParseArgs(m, n, a, f.Raw);

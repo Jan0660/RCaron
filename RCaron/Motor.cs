@@ -66,7 +66,11 @@ public class Motor
     public MotorOptions Options { get; }
 
     [UsedImplicitly]
-    internal Func<Motor, string, ArraySegment<PosToken>, FileScope, object?>? InvokeRunExecutable { get; set; } = null;
+    internal Func<Motor, string, ArraySegment<PosToken>, FileScope, IPipeline?, bool, object?>? InvokeRunExecutable
+    {
+        get;
+        set;
+    } = null;
 
     /// <summary>
     /// If true and meets an else(if), it will be skipped.
@@ -200,6 +204,19 @@ public class Motor
                     }
 
                     break;
+                }
+                case LineType.NativePipelineRun when baseLine is SingleTokenLine
+                {
+                    Token: NativePipelineValuePosToken pipeline
+                }:
+                {
+                    if (pipeline.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
+                        keywordToken.IsExecutable = true;
+                    var left = RunLeftPipeline(pipeline.Left);
+                    if (pipeline.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
+                        keywordToken2.IsExecutable = true;
+                    var right = SimpleEvaluateExpressionHigh(pipeline.Right, pipeline: left);
+                    return (false, right);
                 }
                 default:
                     throw new("invalid line");
@@ -493,7 +510,7 @@ public class Motor
             {
                 if (InvokeRunExecutable == null)
                     throw new("InvokeRunExecutable is null");
-                InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope());
+                InvokeRunExecutable(this, (string)pathToken.Value, line.Tokens.Segment(1..), GetFileScope(), null, false);
                 break;
             }
             case LineType.TryBlock when line.Tokens[1] is CodeBlockToken codeBlockToken:
@@ -577,8 +594,7 @@ public class Motor
     public object? MethodCall(string nameArg, ArraySegment<PosToken> argumentTokens = default,
         CallLikePosToken? callToken = null
         // , Span<PosToken> instanceTokens = default
-        , object? instance = null
-    )
+        , object? instance = null, IPipeline? pipeline = null, bool isLeftOfPipeline = false)
     {
         FileScope? fileScope = null;
         // // lowercase the string if not all characters are lowercase
@@ -790,7 +806,8 @@ public class Motor
 
         if (InvokeRunExecutable != null && instance == null && callToken == null)
         {
-            var ret = InvokeRunExecutable(this, nameArg, argumentTokens, fileScope ??= GetFileScope());
+            var ret = InvokeRunExecutable(this, nameArg, argumentTokens, fileScope ??= GetFileScope(), pipeline,
+                isLeftOfPipeline);
             if (!ret?.Equals(RCaronInsideEnum.MethodNotFound) ?? true)
                 return ret;
         }
@@ -1160,11 +1177,12 @@ public class Motor
         return value;
     }
 
-    public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens)
+    public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens, IPipeline? pipeline = null,
+        bool isLeftOfPipeline = false)
         => tokens.Count switch
         {
             > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(keywordToken.String,
-                argumentTokens: tokens.Segment(1..)),
+                argumentTokens: tokens.Segment(1..), pipeline: pipeline, isLeftOfPipeline: isLeftOfPipeline),
             1 => SimpleEvaluateExpressionSingle(tokens[0]),
             > 2 => SimpleEvaluateExpressionValue(tokens),
             _ => throw new Exception("something has gone very wrong with the parsing most probably")
@@ -1280,6 +1298,18 @@ public class Motor
             default:
                 throw new RCaronException($"unknown operator: {op}", ExceptionCode.UnknownOperator);
         }
+    }
+
+    public IPipeline RunLeftPipeline(PosToken[] tokens, IPipeline? pipelineIn = null)
+    {
+        var val = SimpleEvaluateExpressionHigh(tokens, pipelineIn, true);
+        return val switch
+        {
+            IPipeline pipeline => pipeline,
+            IEnumerator enumerator => new EnumeratorPipeline(enumerator),
+            IEnumerable enumerable => new EnumeratorPipeline(enumerable.GetEnumerator()),
+            _ => new SingleObjectPipeline(val),
+        };
     }
 
     public object? GetVar(string name)

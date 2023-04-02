@@ -533,6 +533,9 @@ public class TokenReader
             return (1, TokenType.MathOperator, OperationEnum.Divide);
         if (IsMatch(in span, Operations.ModuloOp))
             return (1, TokenType.MathOperator, OperationEnum.Modulo);
+        // pipeline
+        if (IsMatch(in span, Operations.NativePipelineOp))
+            return (2, TokenType.NativePipelineOperator, OperationEnum.NativePipeline);
         return (0, 0, 0);
     }
 

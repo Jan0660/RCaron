@@ -5,12 +5,28 @@ namespace RCaron.Shell;
 
 public static class RunExecutable
 {
-    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code)
+    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, IPipeline? pipeline, bool isLeftOfPipeline)
     {
         var startInfo = ParseArgs(motor, name, tokens, code);
+        if (pipeline is StreamPipeline)
+            startInfo.RedirectStandardInput = true;
+        if(isLeftOfPipeline)
+            startInfo.RedirectStandardOutput = true;
         using var process = Process.Start(startInfo);
-        process?.WaitForExit();
-        return process?.ExitCode;
+        if (process == null)
+            return null;
+        if (pipeline is StreamPipeline streamPipeline)
+        {
+            while (!streamPipeline.StreamReader.EndOfStream)
+            {
+                process.StandardInput.WriteLine(streamPipeline.StreamReader.ReadLine());
+            }
+            process.StandardInput.Close();
+        }
+        if (isLeftOfPipeline)
+            return new StreamPipeline(process.StandardOutput);
+        process.WaitForExit();
+        return process.ExitCode;
     }
 
     public static ProcessStartInfo ParseArgs(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code)
@@ -70,7 +86,7 @@ public static class RunExecutable
                     }
                     case ExternThingToken externThingToken:
                     {
-                        stringBuilder.Append(externThingToken.ToString(code));
+                        stringBuilder.Append('#' + externThingToken.String);
                         break;
                     }
                     case TokenGroupPosToken tokenGroupPosToken:
@@ -83,6 +99,9 @@ public static class RunExecutable
                         break;
                     case { Type: TokenType.Dot }:
                         stringBuilder.Append('.');
+                        break;
+                    case { Type: TokenType.NativePipelineOperator }:
+                        stringBuilder.Append("|>");
                         break;
                     default:
                         throw new($"Unexpected token type {token.Type}");

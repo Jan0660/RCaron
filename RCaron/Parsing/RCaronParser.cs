@@ -26,6 +26,7 @@ public static class RCaronParser
         var token = reader.Read();
         var blockDepth = -1;
         var blockNumber = -1;
+        var unclosedPipeline = false;
 
         // todo(perf): this is absolutely horrendous, make this not be local method
         void DoCodeBlockToken()
@@ -238,6 +239,41 @@ public static class RCaronParser
                 }
 
                 afterComparisonAndLogicalGrouping: ;
+
+                if (unclosedPipeline &&
+                    (posToken.Type is TokenType.NativePipelineOperator or TokenType.LineEnding or TokenType.EndOfFile ||
+                     _isNewLineBetweenTokens(tokens[^1], posToken, text)))
+                {
+                    // find the last pipeline operator
+                    var lastPipelineIndex = tokens.FindLastIndex(t => t.Type == TokenType.NativePipelineOperator);
+                    // collect the tokens before the last pipeline operator
+                    var beforeStartIndex = lastPipelineIndex;
+                    for (int i = lastPipelineIndex - 1; i >= 0; i--)
+                    {
+                        if (tokens[i] is not ValuePosToken or
+                                { Type: TokenType.NativePipelineOperator or TokenType.NativePipeline }
+                                or OperationPosToken
+                                {
+                                    Operation: OperationEnum.Assignment,
+                                } && tokens[i].Type is not TokenType.Dot or TokenType.Keyword or TokenType.Path)
+                        {
+                            beforeStartIndex = i;
+                            break;
+                        }
+
+                        beforeStartIndex = i;
+                    }
+
+                    var before = tokens.Take(beforeStartIndex..lastPipelineIndex).ToArray();
+                    var after = tokens.Take((lastPipelineIndex + 1)..).ToArray();
+                    var pipeline = new NativePipelineValuePosToken(before, after);
+                    tokens.RemoveFrom(beforeStartIndex);
+                    tokens.Add(pipeline);
+                    unclosedPipeline = false;
+                }
+
+                if (posToken.Type == TokenType.NativePipelineOperator)
+                    unclosedPipeline = true;
 
                 if (posToken is BlockPosToken
                     {
@@ -653,6 +689,11 @@ public static class RCaronParser
         else if (tokens[i] is DotGroupPosToken)
         {
             res = new TokenLine(new[] { tokens[i] }, LineType.DotGroupCall);
+        }
+        // pipeline run
+        else if (tokens[i] is { Type: TokenType.NativePipeline })
+        {
+            res = new SingleTokenLine(tokens[i], LineType.NativePipelineRun);
         }
         // invalid line
         else

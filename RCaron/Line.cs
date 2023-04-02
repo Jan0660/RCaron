@@ -116,5 +116,6 @@ public enum LineType : byte
     LetVariableAssignment,
     InvalidLine,
     PathCall,
-    StaticProperty
+    StaticProperty,
+    NativePipelineRun,
 }

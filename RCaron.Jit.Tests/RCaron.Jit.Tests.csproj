@@ -27,6 +27,7 @@
     <ItemGroup>
         <Compile Include="..\RCaron.Tests\*.cs" />
         <ProjectReference Include="..\RCaron.Jit\RCaron.Jit.csproj" />
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all"/>
         <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 

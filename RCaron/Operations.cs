@@ -27,6 +27,9 @@ public static class Operations
     public const string MultiplyOp = "*";
     public const string DivideOp = "/";
     public const string ModuloOp = "%";
+    
+    // pipeline
+    public const string NativePipelineOp = "|>";
 }
 
 public enum OperationEnum : byte
@@ -53,4 +56,5 @@ public enum OperationEnum : byte
     Multiply,
     Divide,
     Modulo,
+    NativePipeline,
 }

@@ -7,7 +7,8 @@ public static class TestRunner
     public static (RCaronParserContext context, Motor motor) Prepare(string code,
         Dictionary<string, object?>? variables = null,
         MotorOptions? motorOptions = null, List<IIndexerImplementation>? indexers = null,
-        List<IPropertyAccessor>? propertyAccessors = null)
+        List<IPropertyAccessor>? propertyAccessors = null,
+        List<IRCaronModule>? modules = null)
     {
         var ctx = RCaronParser.Parse(code);
         var motor = new Motor(ctx, motorOptions);
@@ -18,6 +19,8 @@ public static class TestRunner
             motor.MainFileScope.IndexerImplementations = indexers;
         if (propertyAccessors != null)
             motor.MainFileScope.PropertyAccessors = propertyAccessors;
+        if (modules != null)
+            motor.MainFileScope.Modules = modules;
         return (ctx, motor);
     }
 
@@ -41,9 +44,10 @@ public static class TestRunner
 
     public static Motor Run(string code, Dictionary<string, object?>? variables = null,
         MotorOptions? motorOptions = null, List<IIndexerImplementation>? indexers = null,
-        List<IPropertyAccessor>? propertyAccessors = null)
+        List<IPropertyAccessor>? propertyAccessors = null,
+        List<IRCaronModule>? modules = null)
     {
-        var (ctx, motor) = Prepare(code, variables, motorOptions, indexers, propertyAccessors);
+        var (ctx, motor) = Prepare(code, variables, motorOptions, indexers, propertyAccessors, modules);
         RunPrepared(ctx, motor);
         return motor;
     }

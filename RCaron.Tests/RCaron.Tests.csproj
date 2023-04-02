@@ -23,7 +23,8 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\RCaron\RCaron.csproj" />
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all" />
+        <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 
 </Project>
