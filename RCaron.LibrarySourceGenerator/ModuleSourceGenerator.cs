@@ -62,7 +62,8 @@ public partial class {classSymbol.Name}{{");
                 source.AppendLine(
                     """
 [System.CodeDom.Compiler.GeneratedCode("RCaron.LibrarySourceGenerator", null)]
-public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken){
+public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken)
+{
 switch(name){
 """);
 
@@ -113,17 +114,8 @@ switch(name){
                         // variable definitions
                         foreach (var param in parameters)
                         {
-                            if (param.Name == "arguments")
-                                context.ReportDiagnostic(Diagnostic.Create(
-                                    new DiagnosticDescriptor(
-                                        "RCLG0001",
-                                        "Forbidden parameter name",
-                                        "Parameter cannot have the name 'arguments'. Complain to me and I'll unforbid it.",
-                                        "yeet",
-                                        DiagnosticSeverity.Error,
-                                        true), param.Locations.FirstOrDefault()));
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
-                            source.Append($"{param.Type.ToDisplayString()} {param.Name} = ");
+                            source.Append($"{param.Type.ToDisplayString()} {param.Name}_value = ");
 
                             source.Append(GetDefaultValueString(param));
 
@@ -154,7 +146,7 @@ switch(name){
 
                                 source.AppendLine($"{param.Name}_hasValue = true;");
 
-                                source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
+                                source.Append($"{param.Name}_value = ({param.Type.ToDisplayString()})");
                                 AppendArgumentGet(param);
 
                                 source.AppendLine("}");
@@ -174,7 +166,7 @@ switch(name){
                                     source.Append("else ");
                                 source.AppendLine($@"if(!{param.Name}_hasValue)
 {{");
-                                source.Append($"{param.Name} = ({param.Type.ToDisplayString()})");
+                                source.Append($"{param.Name}_value = ({param.Type.ToDisplayString()})");
                                 AppendArgumentGet(param);
                                 source.AppendLine($@"{param.Name}_hasValue = true;");
                                 source.AppendLine("}");
@@ -208,7 +200,7 @@ else
                             source.Append("return ");
                         source.Append($@"{methodSymbol.Name}(motor");
                         foreach (var param in parameters)
-                            source.Append($", {param.Name}: {param.Name}");
+                            source.Append($", {param.Name}: {param.Name}_value");
                         source.AppendLine(");");
                     }
 
