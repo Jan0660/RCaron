@@ -1,5 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-    <Import Project="../RCaron.targets"/>
+    <Import Project="../RCaron.targets" />
     <PropertyGroup>
         <TargetFramework>net7.0</TargetFramework>
         <ImplicitUsings>enable</ImplicitUsings>
@@ -7,7 +7,8 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\RCaron\RCaron.csproj"/>
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator.Attributes\RCaron.LibrarySourceGenerator.Attributes.csproj" />
+        <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 
 </Project>

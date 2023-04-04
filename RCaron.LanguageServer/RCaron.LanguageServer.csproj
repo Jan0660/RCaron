@@ -25,6 +25,7 @@
 
     <ItemGroup>
       <ProjectReference Include="..\RCaron.AutoCompletion\RCaron.AutoCompletion.csproj" />
+      <ProjectReference Include="..\RCaron.Shell\RCaron.Shell.csproj" />
       <ProjectReference Include="..\RCaron\RCaron.csproj" />
 <!--        <ProjectReference Include="C:\Users\Jan\source\csharp-language-server-protocol\src\Server\Server.csproj" />-->
     </ItemGroup>

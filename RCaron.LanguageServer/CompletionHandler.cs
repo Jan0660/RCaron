@@ -6,6 +6,8 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using RCaron.AutoCompletion;
+using RCaron.BaseLibrary;
+using RCaron.Shell;
 using CompletionItem = OmniSharp.Extensions.LanguageServer.Protocol.Models.CompletionItem;
 using CompletionItemKind = OmniSharp.Extensions.LanguageServer.Protocol.Models.CompletionItemKind;
 
@@ -14,6 +16,12 @@ namespace RCaron.LanguageServer;
 public class CompletionHandler : CompletionHandlerBase
 {
     private readonly ILogger<CompletionHandler> _logger;
+
+    private static readonly IRCaronModule[] Modules = {
+        new ShellStuffModule(new()),
+        new ExperimentalModule(),
+        new LoggingModule(),
+    };
 
     public CompletionHandler(ILogger<CompletionHandler> logger)
         => _logger = logger;
@@ -41,11 +49,11 @@ public class CompletionHandler : CompletionHandlerBase
         cancellationToken.ThrowIfCancellationRequested();
         var caretPositionInt = Util.GetPositionInt(code, caretPosition);
         var completions = new CompletionProvider().GetCompletions(
-            code, caretPositionInt, maxCompletions);
+            code, caretPositionInt, maxCompletions, null, Modules);
         cancellationToken.ThrowIfCancellationRequested();
         foreach (var completion in completions)
         {
-            list.Add(new CompletionItem()
+            list.Add(new CompletionItem
             {
                 Label = completion.Thing.Word,
                 TextEdit = new TextEditOrInsertReplaceEdit(new InsertReplaceEdit()

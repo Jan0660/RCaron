@@ -18,4 +18,5 @@ public class CompletionThing
     public string? Documentation { get; set; }
 
     public bool Deprecated { get; set; } = false;
+    public CompletionItemModifier Modifier { get; set; } = CompletionItemModifier.None;
 }

@@ -71,6 +71,7 @@ public partial class CompletionProvider
             Word = "if",
             Kind = CompletionItemKind.Keyword,
             Detail = "if($condition) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -78,6 +79,7 @@ public partial class CompletionProvider
             Kind = CompletionItemKind.Keyword,
             Detail = @"// must have an if or else if statement before
 else {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -92,56 +94,65 @@ else {...}",
             Detail = @"// can be either
 return;
 return $value;",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "for",
             Kind = CompletionItemKind.Keyword,
             Detail = "for ($i = 0; $i < 10; $i++) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "qfor",
             Kind = CompletionItemKind.Keyword,
             Detail = "qfor ($i = 0; $i < 10; $i++) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "foreach",
             Kind = CompletionItemKind.Keyword,
             Detail = "foreach ($i in $enumerable) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "while",
             Kind = CompletionItemKind.Keyword,
             Detail = "while ($condition) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "dowhile",
             Kind = CompletionItemKind.Keyword,
             Detail = "dowhile ($condition) {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "loop",
             Kind = CompletionItemKind.Keyword,
             Detail = "loop {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "break",
             Kind = CompletionItemKind.Keyword,
             Detail = "break;",
-            Documentation = "Terminates a loop."
+            Documentation = "Terminates a loop.",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
             Word = "continue",
             Kind = CompletionItemKind.Keyword,
             Detail = "continue;",
-            Documentation = "Skips the current iteration of a loop."
+            Documentation = "Skips the current iteration of a loop.",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -156,7 +167,8 @@ switch ('fun') {
     default { print 'default'; }
 }
 // Output: fun
-```"
+```",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -169,6 +181,7 @@ switch ('fun') {
             Word = "try",
             Kind = CompletionItemKind.Keyword,
             Detail = "try {...}",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -177,7 +190,8 @@ switch ('fun') {
             Detail = @"// must be preceded by a try statement
 catch {...}",
             Documentation =
-                "Catches an exception and executes the code in the catch block, with the exception available in the `$exception` variable."
+                "Catches an exception and executes the code in the catch block, with the exception available in the `$exception` variable.",
+            Modifier = CompletionItemModifier.Control,
         },
         new()
         {
@@ -185,6 +199,7 @@ catch {...}",
             Kind = CompletionItemKind.Keyword,
             Detail = @"// must be preceded by a try or catch statement
 finally {...}",
+            Modifier = CompletionItemModifier.Control,
         }
     };
 

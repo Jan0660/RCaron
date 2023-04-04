@@ -530,8 +530,8 @@ public static class RCaronParser
             res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchStatement);
             i++;
         }
-        else if ((tokens[i].IsLiteral() || //tokens[i].Type == TokenType.CodeBlock ||
-                  (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsStringCaseInsensitive(text, "default"))) &&
+        else if (tokens.Length - i > 1 && (tokens[i].IsLiteral() || //tokens[i].Type == TokenType.CodeBlock ||
+                                            (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsStringCaseInsensitive(text, "default"))) &&
                  tokens[i + 1].Type == TokenType.CodeBlock)
         {
             res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchCase);

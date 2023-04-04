@@ -3,6 +3,7 @@ using System.Drawing;
 using Log73;
 using Log73.LogPres;
 using PrettyPrompt;
+using PrettyPrompt.Consoles;
 using PrettyPrompt.Highlighting;
 using RCaron.FunLibrary;
 using RCaron.Shell;
@@ -59,7 +60,10 @@ rootCommand.SetHandler(async context =>
     var profilePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), ".rcaron");
     var profileHistoryPath = Path.Combine(profilePath, "history");
 
-    var promptConfig = new PromptConfiguration(proportionOfWindowHeightForCompletionPane: 0.1)
+    var promptConfig = new PromptConfiguration(proportionOfWindowHeightForCompletionPane: 0.2,
+        maxCompletionItemsCount: 20,
+        keyBindings: new KeyBindings(commitCompletion: new KeyPressPatterns(new KeyPressPattern(ConsoleKey.Tab)))
+    )
     {
         Prompt = new(),
     };
@@ -68,6 +72,7 @@ rootCommand.SetHandler(async context =>
         persistentHistoryFilepath: profileHistoryPath);
     shell.Motor.SetVar("args", arguments);
     shell.Motor.SetVar("current_shell", shell);
+    shell.Motor.SetVar("current_prompt", prompt);
     shell.Motor.SetVar("prompt_callbacks", promptCallbacks);
     shell.Motor.SetVar("profile_directory", profilePath);
 
@@ -81,10 +86,6 @@ rootCommand.SetHandler(async context =>
     if (file is not null)
     {
         logger.Info($"Executing file {file.FullName}");
-        // motor.UseContext(RCaronRunner.Parse(File.ReadAllText(f.FullName)));
-        // motor.MainFileScope.FileName = f.FullName;
-        // if (fun)
-        //     AddFun(motor);
         try
         {
             shell.RunString(File.ReadAllText(file.FullName), true, file.FullName);
