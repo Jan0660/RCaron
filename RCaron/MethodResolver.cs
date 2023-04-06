@@ -107,7 +107,6 @@ public static class MethodResolver
             // check if we have more args than the method has parameters
             if (parameters.Length < args.Length)
             {
-                // todo(feat): support params
                 if (parameters.Length == 0)
                     score = 0;
             }

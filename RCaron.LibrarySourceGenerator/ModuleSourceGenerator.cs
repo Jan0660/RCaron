@@ -85,7 +85,7 @@ switch(name){
                     if (AssignableToPosToken(param.Type) || param.Type.ToDisplayString() == "RCaron.PosToken")
                         source.AppendLine($"enumerator.CurrentTokens[0];");
                     else
-                        source.AppendLine($"motor.SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);");
+                        source.AppendLine($"motor.EvaluateExpressionHigh(enumerator.CurrentTokens);");
                 }
 
                 foreach (var member in classSymbol.GetMembers())

@@ -76,7 +76,7 @@ public static class RunExecutable
                     }
                     case GroupValuePosToken groupValuePosToken:
                     {
-                        stringBuilder.Append(motor.SimpleEvaluateExpressionHigh(groupValuePosToken.Tokens));
+                        stringBuilder.Append(motor.EvaluateExpressionHigh(groupValuePosToken.Tokens));
                         break;
                     }
                     case DotGroupPosToken dotGroupPosToken:

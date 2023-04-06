@@ -81,7 +81,6 @@ rootCommand.SetHandler((FileInfo? f, bool interactive, bool fun, string[] argume
         while (input != null)
         {
             var ctx = RCaronRunner.Parse(input);
-            // todo: doesn't do functions and classes
             motor.UseContext(ctx, false);
             try
             {

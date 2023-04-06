@@ -23,7 +23,6 @@ public partial class MultiFileMethods
         if (!noRun)
         {
             var lambda = Expression.Lambda(compiled.blockExpression);
-            // todo: add option to not compile and use light compile
             lambda.Compile().DynamicInvoke();
         }
         

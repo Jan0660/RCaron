@@ -237,7 +237,7 @@ public class Compiler
                 case OperationEnum.Or:
                     return Expression.Or(left, right);
                 default:
-                    throw new("GetLogicalExpression for {logicalToken.ComparisonToken.Type} not implemented");
+                    throw new($"GetLogicalExpression for {logicalToken.ComparisonToken.Type} not implemented");
             }
         }
 
@@ -249,7 +249,7 @@ public class Compiler
                     argumentTokens: tokens.Segment(1..)),
                 1 => GetSingleExpression(tokens[0]),
                 > 2 => GetMathExpression(tokens),
-                _ => throw new Exception("what he fuck")
+                _ => throw new Exception($"Invalid tokens for {nameof(GetHighExpression)}")
             };
 
         Expression GetBoolExpression(ReadOnlySpan<PosToken> tokens)
@@ -262,7 +262,7 @@ public class Compiler
                 [VariableToken { Name: "true" }] => Expression.Constant(true),
                 [VariableToken { Name: "false" }] => Expression.Constant(false),
                 [VariableToken variable] => GetVariable(variable.Name).EnsureIsType(typeof(bool)),
-                _ => throw new Exception("what he fuck")
+                _ => throw new Exception($"Invalid tokens for {nameof(GetBoolExpression)}")
             };
 
         Expression GetDotGroupExpression(DotGroupPosToken dotGroup, bool doLast = true)
@@ -629,7 +629,6 @@ public class Compiler
                     when tokenLine.Tokens[0] is CallLikePosToken callToken &&
                          tokenLine.Tokens[1] is CodeBlockToken codeBlockToken:
                 {
-                    // todo(perf): make an exceptional case for when it is only `if(){}else{}` to do without the elseState variable and use Expression.IfThenElse
                     var elseState = GetOrNewVariable("$$elseState", mustBeAtCurrent: true, specificType: typeof(bool));
                     expressions.Add(Expression.Assign(elseState, Expression.Constant(false)));
                     expressions.Add(Expression.IfThen(GetBoolExpression(callToken.Arguments[0]),
@@ -921,7 +920,7 @@ public class Compiler
                     expressions.Add(GetSingleExpression(tokenLine.Tokens[0]));
                     break;
                 default:
-                    throw new NotImplementedException($"line type {line.Type} is not implemented");
+                    throw new Exception($"line type {line.Type} is not implemented");
             }
         }
 

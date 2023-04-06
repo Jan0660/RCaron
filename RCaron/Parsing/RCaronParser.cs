@@ -138,10 +138,7 @@ public static class RCaronParser
                     var h = BackwardsCollectDotThing();
                     if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
                     {
-                        // AAAAAA
-                        // remove those replace with fucking imposter thing
-                        var rem = h.index;
-                        tokens.RemoveFrom(rem);
+                        tokens.RemoveFrom(h.index);
                         if (h.tokens[0].Type is TokenType.Dot or TokenType.Range or TokenType.Keyword ||
                             Array.Exists(h.tokens, t => t.Type == TokenType.Path))
                         {
@@ -157,7 +154,7 @@ public static class RCaronParser
                                 else if (pathToken is KeywordToken keywordToken)
                                     path.Append(keywordToken.String);
                                 else
-                                    throw new("something went very wrong with the parsing it seems");
+                                    throw new("Unexpected token type in path: " + pathToken.Type);
                             }
 
                             tokens.Add(new ConstToken(TokenType.Path,

@@ -165,7 +165,7 @@ public class Motor
                 case LineType.ForLoop when baseLine is ForLoopLine forLoopLine:
                 {
                     RunLine(forLoopLine.Initializer);
-                    while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
+                    while (EvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                         var res = RunCodeBlock(forLoopLine.Body);
@@ -187,7 +187,7 @@ public class Motor
                 {
                     RunLine(forLoopLine.Initializer);
                     var scope = new StackThing(true, false, null, GetFileScope());
-                    while (SimpleEvaluateBool(forLoopLine.CallToken.Arguments[1]))
+                    while (EvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(scope);
                         var res = RunCodeBlock(forLoopLine.Body);
@@ -210,7 +210,7 @@ public class Motor
                     Token: NativePipelineValuePosToken pipeline
                 }:
                 {
-                    var val = SimpleEvaluateExpressionSingle(pipeline);
+                    var val = EvaluateExpressionSingle(pipeline);
                     return (false, val);
                 }
                 default:
@@ -225,7 +225,7 @@ public class Motor
             case LineType.VariableAssignment:
             {
                 var variableName = ((VariableToken)line.Tokens[0]).Name;
-                var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..));
+                var obj = EvaluateExpressionHigh(line.Tokens.Segment(2..));
                 SetVar(variableName, obj);
                 Debug.WriteLine($"variable '{variableName}' set to '{obj}'");
                 break;
@@ -233,7 +233,7 @@ public class Motor
             case LineType.LetVariableAssignment:
             {
                 var variableName = ((VariableToken)line.Tokens[1]).Name;
-                var obj = SimpleEvaluateExpressionHigh(line.Tokens.Segment(3..));
+                var obj = EvaluateExpressionHigh(line.Tokens.Segment(3..));
                 SetVar(variableName, new LetVariableValue(obj?.GetType() ?? typeof(object), obj));
                 Debug.WriteLine($"let-variable '{variableName}' set to '{obj}'");
                 break;
@@ -250,13 +250,13 @@ public class Motor
                     assigner = GetAssigner(MemoryMarshal.CreateSpan(ref line.Tokens[0], 1));
                 }
 
-                assigner.Assign(SimpleEvaluateExpressionHigh(line.Tokens.Segment(2..)));
+                assigner.Assign(EvaluateExpressionHigh(line.Tokens.Segment(2..)));
                 break;
             }
             case LineType.IfStatement when line.Tokens[0] is CallLikePosToken callToken:
             {
                 ElseState = false;
-                if (SimpleEvaluateBool(callToken.Arguments[0]))
+                if (EvaluateBool(callToken.Arguments[0]))
                 {
                     ElseState = true;
                     BlockStack.Push(new(false, false, null, GetFileScope()));
@@ -271,7 +271,7 @@ public class Motor
             }
             case LineType.ElseIfStatement when line.Tokens[1] is CallLikePosToken callToken:
             {
-                if (!ElseState && SimpleEvaluateBool(callToken.Arguments[0]))
+                if (!ElseState && EvaluateBool(callToken.Arguments[0]))
                 {
                     ElseState = true;
                     BlockStack.Push(new(false, false, null, GetFileScope()));
@@ -302,7 +302,7 @@ public class Motor
             case LineType.WhileLoop when line.Tokens[0] is CallLikePosToken callToken:
             {
                 var body = (CodeBlockToken)line.Tokens[1];
-                while (SimpleEvaluateBool(callToken.Arguments[0]))
+                while (EvaluateBool(callToken.Arguments[0]))
                 {
                     BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
                     var res = RunCodeBlock(body);
@@ -333,7 +333,7 @@ public class Motor
                             continue;
                         return (true, res);
                     }
-                } while (SimpleEvaluateBool(callToken.Arguments[0]));
+                } while (EvaluateBool(callToken.Arguments[0]));
 
                 break;
             }
@@ -341,7 +341,7 @@ public class Motor
             {
                 var body = (CodeBlockToken)line.Tokens[1];
                 var varName = ((VariableToken)callToken.Arguments[0][0]).Name;
-                foreach (var item in (IEnumerable)SimpleEvaluateExpressionHigh(callToken.Arguments[0][2..])!)
+                foreach (var item in (IEnumerable)EvaluateExpressionHigh(callToken.Arguments[0][2..])!)
                 {
                     var scope = new LocalScope();
                     scope.SetVariable(varName, item);
@@ -413,12 +413,12 @@ public class Motor
             }
             case LineType.SwitchStatement:
             {
-                var switchValue = SimpleEvaluateExpressionHigh(((CallLikePosToken)line.Tokens[0]).Arguments[0]);
+                var switchValue = EvaluateExpressionHigh(((CallLikePosToken)line.Tokens[0]).Arguments[0]);
                 var cases = (CodeBlockToken)line.Tokens[1];
                 for (var i = 1; i < cases.Lines.Count - 1; i++)
                 {
                     var caseLine = ((TokenLine)cases.Lines[i]);
-                    var value = SimpleEvaluateExpressionSingle(caseLine.Tokens[0]);
+                    var value = EvaluateExpressionSingle(caseLine.Tokens[0]);
                     if (caseLine.Tokens[0] is not KeywordToken { String: "default" } &&
                         ((switchValue == null && value == null) ||
                          (!switchValue?.Equals(value) ?? false)))
@@ -457,7 +457,7 @@ public class Motor
                     {
                         var res = args.Length == 0
                             ? RCaronInsideEnum.ReturnWithoutValue
-                            : SimpleEvaluateExpressionHigh(ArgsArray());
+                            : EvaluateExpressionHigh(ArgsArray());
                         var g = BlockStack.Pop();
                         while (!g.IsReturnWorthy)
                             g = BlockStack.Pop();
@@ -476,17 +476,17 @@ public class Motor
                     switch (keywordString)
                     {
                         case "dbg_println":
-                            Console.Debug(SimpleEvaluateExpressionHigh(ArgsArray()));
+                            Console.Debug(EvaluateExpressionHigh(ArgsArray()));
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_assert_is_one":
                             GlobalScope.SetVariable("$$assertResult",
-                                SimpleEvaluateExpressionSingle(args[0]).Expect<long>() == 1);
+                                EvaluateExpressionSingle(args[0]).Expect<long>() == 1);
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_sum_three":
                             GlobalScope.SetVariable("$$assertResult",
-                                SimpleEvaluateExpressionSingle(args[0]).Expect<long>() +
-                                SimpleEvaluateExpressionSingle(args[1]).Expect<long>() +
-                                SimpleEvaluateExpressionSingle(args[2]).Expect<long>());
+                                EvaluateExpressionSingle(args[0]).Expect<long>() +
+                                EvaluateExpressionSingle(args[1]).Expect<long>() +
+                                EvaluateExpressionSingle(args[2]).Expect<long>());
                             return (false, RCaronInsideEnum.NoReturnValue);
                         case "dbg_exit":
                             return (true, RCaronInsideEnum.NoReturnValue);
@@ -589,29 +589,19 @@ public class Motor
 
     public object? MethodCall(string nameArg, ArraySegment<PosToken> argumentTokens = default,
         CallLikePosToken? callToken = null
-        // , Span<PosToken> instanceTokens = default
         , object? instance = null, IPipeline? pipeline = null, bool isLeftOfPipeline = false)
     {
         FileScope? fileScope = null;
-        // // lowercase the string if not all characters are lowercase
-        // for (var i = 0; i < name.Length; i++)
-        // {
-        //     if (!char.IsLower(name[i]))
-        //     {
         Span<char> name = stackalloc char[nameArg.Length];
         MemoryExtensions.ToLowerInvariant(nameArg, name);
-        //         break;
-        //     }
-        // }
 
         object? At(in Span<PosToken> tokens, int index)
         {
             if (callToken != null)
-                return SimpleEvaluateExpressionHigh(callToken.Arguments[index]);
-            return SimpleEvaluateExpressionSingle(tokens[index]);
+                return EvaluateExpressionHigh(callToken.Arguments[index]);
+            return EvaluateExpressionSingle(tokens[index]);
         }
 
-        // todo(perf): could use a ref struct enumerator for when callToken != null but no idea what to do whet callToken == null
         object?[] All(in ArraySegment<PosToken> tokens)
         {
             if (tokens.Count == 0 && (callToken?.ArgumentsEmpty() ?? false))
@@ -620,7 +610,7 @@ public class Motor
             {
                 var res = new object?[callToken.Arguments.Length];
                 for (var ind = 0; ind < callToken.Arguments.Length; ind++)
-                    res[ind] = SimpleEvaluateExpressionHigh(callToken.Arguments[ind]);
+                    res[ind] = EvaluateExpressionHigh(callToken.Arguments[ind]);
                 return res;
             }
 
@@ -912,7 +902,7 @@ public class Motor
     {
         if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
             instanceTokens = dotGroupPosToken.Tokens;
-        var val = SimpleEvaluateExpressionSingle(instanceTokens[0]);
+        var val = EvaluateExpressionSingle(instanceTokens[0]);
         if (val == null)
             throw RCaronException.NullInTokens(instanceTokens, GetFileScope().Raw, 0);
         Type? type;
@@ -931,7 +921,7 @@ public class Motor
                 throw RCaronException.NullInTokens(instanceTokens, GetFileScope().Raw, i);
             if (instanceTokens[i] is IndexerToken arrayAccessorToken)
             {
-                var evaluated = SimpleEvaluateExpressionHigh(arrayAccessorToken.Tokens);
+                var evaluated = EvaluateExpressionHigh(arrayAccessorToken.Tokens);
 
                 arrayAccessorToken.CallSite ??=
                     CallSite<Func<CallSite, object?, object?, object?>>.Create(
@@ -953,7 +943,7 @@ public class Motor
                         {
                             if (classDefinition.PropertyInitializers[j] != null)
                                 classInstance.PropertyValues![j] =
-                                    SimpleEvaluateExpressionHigh(classDefinition.PropertyInitializers[j]!);
+                                    EvaluateExpressionHigh(classDefinition.PropertyInitializers[j]!);
                         }
 
                     type = null;
@@ -1068,7 +1058,7 @@ public class Motor
     {
         var objs = new object?[tokens.Length - tokensStartIndex];
         for (var ind = tokensStartIndex; ind < tokens.Length; ind++)
-            objs[ind - tokensStartIndex] = SimpleEvaluateExpressionSingle(tokens[ind]);
+            objs[ind - tokensStartIndex] = EvaluateExpressionSingle(tokens[ind]);
         return objs;
     }
 
@@ -1092,7 +1082,7 @@ public class Motor
         return val;
     }
 
-    public object? SimpleEvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false)
+    public object? EvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false)
     {
         if (token is ConstToken constToken)
             return constToken.Value;
@@ -1111,14 +1101,14 @@ public class Motor
             var left = RunLeftPipeline(pipeline.Left);
             if (pipeline.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
                 keywordToken2.IsExecutable = true;
-            var right = SimpleEvaluateExpressionHigh(pipeline.Right, pipeline: left, isLeftOfPipeline: isLeftOfPipeline);
+            var right = EvaluateExpressionHigh(pipeline.Right, pipeline: left, isLeftOfPipeline: isLeftOfPipeline);
             return right;
         }
 
         switch (token.Type)
         {
             case TokenType.Group when token is GroupValuePosToken valueGroupPosToken:
-                return SimpleEvaluateExpressionHigh(valueGroupPosToken.Tokens);
+                return EvaluateExpressionHigh(valueGroupPosToken.Tokens);
             case TokenType.KeywordCall when token is CallLikePosToken callToken:
                 return MethodCall(callToken.Name, callToken: callToken);
             // case TokenType.CodeBlock when token is CodeBlockToken codeBlockToken:
@@ -1150,18 +1140,18 @@ public class Motor
             case TokenType.Dot:
                 return ".";
             case TokenType.TokenGroup when token is TokenGroupPosToken tokenGroupPosToken:
-                return SimpleEvaluateExpressionHigh(tokenGroupPosToken.Tokens);
+                return EvaluateExpressionHigh(tokenGroupPosToken.Tokens);
         }
 
         throw new Exception($"invalid tokentype to evaluate: {token.Type}");
     }
 
     [CollectionAccess(CollectionAccessType.Read)]
-    public object SimpleEvaluateExpressionValue(ArraySegment<PosToken> tokens)
+    public object EvaluateExpressionValue(ArraySegment<PosToken> tokens)
     {
         // repeat action something math
         var index = 0;
-        object value = SimpleEvaluateExpressionSingle(tokens[0])!;
+        object value = EvaluateExpressionSingle(tokens[0])!;
         if (tokens[1] is IndexerToken)
         {
         }
@@ -1169,7 +1159,7 @@ public class Motor
         while (index < tokens.Count - 1)
         {
             var op = (ValueOperationValuePosToken)tokens[index + 1];
-            var second = SimpleEvaluateExpressionSingle(tokens[index + 2])!;
+            var second = EvaluateExpressionSingle(tokens[index + 2])!;
             switch (op.Operation)
             {
                 default:
@@ -1184,14 +1174,14 @@ public class Motor
         return value;
     }
 
-    public object? SimpleEvaluateExpressionHigh(ArraySegment<PosToken> tokens, IPipeline? pipeline = null,
+    public object? EvaluateExpressionHigh(ArraySegment<PosToken> tokens, IPipeline? pipeline = null,
         bool isLeftOfPipeline = false)
         => tokens.Count switch
         {
             > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(keywordToken.String,
                 argumentTokens: tokens.Segment(1..), pipeline: pipeline, isLeftOfPipeline: isLeftOfPipeline),
-            1 => SimpleEvaluateExpressionSingle(tokens[0], isLeftOfPipeline),
-            > 2 => SimpleEvaluateExpressionValue(tokens),
+            1 => EvaluateExpressionSingle(tokens[0], isLeftOfPipeline),
+            > 2 => EvaluateExpressionValue(tokens),
             _ => throw new Exception("something has gone very wrong with the parsing most probably")
         };
 
@@ -1223,7 +1213,7 @@ public class Motor
 
                     var variables = scope.GetVariables();
                     variables[function.Arguments[index].Name] =
-                        SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
+                        EvaluateExpressionHigh(enumerator.CurrentTokens);
                     assignedArguments[index] = true;
                 }
                 else if (!enumerator.HitNamedArgument)
@@ -1234,7 +1224,7 @@ public class Motor
                         if (!variables.ContainsKey(function.Arguments[i].Name))
                         {
                             variables[function.Arguments[i].Name] =
-                                SimpleEvaluateExpressionHigh(enumerator.CurrentTokens);
+                                EvaluateExpressionHigh(enumerator.CurrentTokens);
                             assignedArguments[i] = true;
                             break;
                         }
@@ -1272,13 +1262,13 @@ public class Motor
         return RunCodeBlock(function.CodeBlock);
     }
 
-    public bool SimpleEvaluateBool(PosToken[] tokens)
+    public bool EvaluateBool(PosToken[] tokens)
         => tokens switch
         {
             { Length: 1 } when tokens[0] is ComparisonValuePosToken comparisonToken => EvaluateComparisonOperation(
                 comparisonToken),
-            { Length: 1 } when tokens[0] is ValuePosToken => (bool)SimpleEvaluateExpressionSingle(tokens[0])!,
-            _ => throw new Exception("what he fuck")
+            { Length: 1 } when tokens[0] is ValuePosToken => (bool)EvaluateExpressionSingle(tokens[0])!,
+            _ => throw new Exception($"Invalid tokens to evaluate for {nameof(EvaluateBool)}"),
         };
 
     public bool EvaluateComparisonOperation(ComparisonValuePosToken comparisonValuePosToken)
@@ -1286,14 +1276,14 @@ public class Motor
         comparisonValuePosToken.CallSite ??=
             BinderUtil.GetComparisonOperationCallSite(comparisonValuePosToken.ComparisonToken.Operation);
         return (bool)comparisonValuePosToken.CallSite.Target(comparisonValuePosToken.CallSite,
-            SimpleEvaluateExpressionSingle(comparisonValuePosToken.Left),
-            SimpleEvaluateExpressionSingle(comparisonValuePosToken.Right));
+            EvaluateExpressionSingle(comparisonValuePosToken.Left),
+            EvaluateExpressionSingle(comparisonValuePosToken.Right));
     }
 
     public bool EvaluateLogicalOperation(LogicalOperationValuePosToken comparisonValuePosToken)
     {
         bool Evaluate(ValuePosToken token)
-            => (bool)SimpleEvaluateExpressionSingle(token)!;
+            => (bool)EvaluateExpressionSingle(token)!;
 
         var op = comparisonValuePosToken.ComparisonToken;
         switch (op.Operation)
@@ -1309,7 +1299,7 @@ public class Motor
 
     public IPipeline RunLeftPipeline(PosToken[] tokens, IPipeline? pipelineIn = null)
     {
-        var val = SimpleEvaluateExpressionHigh(tokens, pipelineIn, true);
+        var val = EvaluateExpressionHigh(tokens, pipelineIn, true);
         return val switch
         {
             IPipeline pipeline => pipeline,
