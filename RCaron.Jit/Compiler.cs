@@ -798,7 +798,6 @@ public class Compiler
                     break;
                 case ForLoopLine { Type: LineType.ForLoop or LineType.QuickForLoop } forLoopLine:
                 {
-                    // ReSharper disable once ConditionIsAlwaysTrueOrFalseAccordingToNullableAPIContract
                     if (forLoopLine.Initializer is not null)
                     {
                         expressions.Add(DoLines(new[] { forLoopLine.Initializer }, useCurrent: true));
@@ -808,17 +807,24 @@ public class Compiler
                     var @continue = Expression.Label();
                     var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };
                     contextStack.Push(loopContext);
-                    var loop = Expression.Loop(
-                        Expression.Block(
-                            Expression.IfThen(
-                                Expression.NotEqual(Expression.Constant(true),
-                                    GetBoolExpression(forLoopLine.CallToken.Arguments[1])),
-                                Expression.Break(@break)),
-                            DoLines(forLoopLine.Body.Lines),
-                            DoLines(new[] { forLoopLine.Iterator })
-                        ),
-                        @break,
-                        @continue);
+
+                    BlockExpression loopBody;
+                    {
+                        var expr1 = Expression.IfThen(
+                            Expression.NotEqual(Expression.Constant(true),
+                                GetBoolExpression(forLoopLine.CallToken.Arguments[1])),
+                            Expression.Break(@break));
+                        var expr2 = DoLines(forLoopLine.Body.Lines);
+                        if (forLoopLine.Iterator is not null)
+                        {
+                            var expr3 = DoLines(new[] { forLoopLine.Iterator });
+                            loopBody = Expression.Block(expr1, expr2, expr3);
+                        }
+                        else
+                            loopBody = Expression.Block(expr1, expr2);
+                    }
+                    
+                    var loop = Expression.Loop(loopBody, @break, @continue);
                     expressions.Add(loop);
                     var pop = contextStack.Pop();
                     Assert(pop == loopContext);
@@ -919,6 +925,8 @@ public class Compiler
                 case TokenLine { Type: LineType.DotGroupCall } tokenLine:
                     expressions.Add(GetSingleExpression(tokenLine.Tokens[0]));
                     break;
+                case null:
+                    throw new Exception("line is null");
                 default:
                     throw new Exception($"line type {line.Type} is not implemented");
             }

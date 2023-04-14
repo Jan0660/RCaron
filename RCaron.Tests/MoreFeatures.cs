@@ -503,4 +503,22 @@ $h = $null;");
     {
         ExtraAssert.ThrowsParsingCode(() => TestRunner.Run($"$h = {code};"), RCaronExceptionCode.InvalidHexNumber);
     }
+    
+    [Theory]
+    [InlineData("for")]
+    [InlineData("qfor")]
+    public void ForAndQForNoInitializer(string which)
+    {
+        var m = TestRunner.Run($$"""$i = 0; {{which}}(; $i < 3; $i = $i + 1) {  }""");
+        m.AssertVariableEquals("i", 3L);
+    }
+    
+    [Theory]
+    [InlineData("for")]
+    [InlineData("qfor")]
+    public void ForAndQForNoIterator(string which)
+    {
+        var m = TestRunner.Run($$"""{{which}}($i = 0; $i < 3;) { $i = $i + 1; }""");
+        m.AssertVariableEquals("i", 3L);
+    }
 }

@@ -528,7 +528,8 @@ public static class RCaronParser
             i++;
         }
         else if (tokens.Length - i > 1 && (tokens[i].IsLiteral() || //tokens[i].Type == TokenType.CodeBlock ||
-                                            (tokens[i].Type == TokenType.Keyword && tokens[i].EqualsStringCaseInsensitive(text, "default"))) &&
+                                           (tokens[i].Type == TokenType.Keyword &&
+                                            tokens[i].EqualsStringCaseInsensitive(text, "default"))) &&
                  tokens[i + 1].Type == TokenType.CodeBlock)
         {
             res = new TokenLine(tokens[i..(i + 2)], LineType.SwitchCase);
@@ -610,18 +611,26 @@ public static class RCaronParser
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "for"))
         {
             var falseI = 0;
-            var initializer = GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
+            var initializer = callToken.Arguments[0].Length == 0
+                ? null
+                : GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
             falseI = 0;
-            var iterator = GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
+            var iterator = callToken.Arguments[2].Length == 0
+                ? null
+                : GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
             return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i]);
         }
         // qfor loop
         else if (callToken is { Type: TokenType.KeywordCall } && callToken.NameEquals(text, "qfor"))
         {
             var falseI = 0;
-            var initializer = GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
+            var initializer = callToken.Arguments[0].Length == 0
+                ? null
+                : GetLine(callToken.Arguments[0], ref falseI, text, errorHandler);
             falseI = 0;
-            var iterator = GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
+            var iterator = callToken.Arguments[2].Length == 0
+                ? null
+                : GetLine(callToken.Arguments[2], ref falseI, text, errorHandler);
             return new ForLoopLine(callToken, initializer, iterator, (CodeBlockToken)tokens[++i],
                 LineType.QuickForLoop);
         }

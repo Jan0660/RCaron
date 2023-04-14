@@ -164,7 +164,8 @@ public class Motor
             {
                 case LineType.ForLoop when baseLine is ForLoopLine forLoopLine:
                 {
-                    RunLine(forLoopLine.Initializer);
+                    if (forLoopLine.Initializer != null)
+                        RunLine(forLoopLine.Initializer);
                     while (EvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
                         BlockStack.Push(new StackThing(true, false, null, GetFileScope()));
@@ -178,14 +179,16 @@ public class Motor
                             return (true, res);
                         }
 
-                        RunLine(forLoopLine.Iterator);
+                        if (forLoopLine.Iterator != null)
+                            RunLine(forLoopLine.Iterator);
                     }
 
                     break;
                 }
                 case LineType.QuickForLoop when baseLine is ForLoopLine forLoopLine:
                 {
-                    RunLine(forLoopLine.Initializer);
+                    if (forLoopLine.Initializer != null)
+                        RunLine(forLoopLine.Initializer);
                     var scope = new StackThing(true, false, null, GetFileScope());
                     while (EvaluateBool(forLoopLine.CallToken.Arguments[1]))
                     {
@@ -200,7 +203,8 @@ public class Motor
                             return (true, res);
                         }
 
-                        RunLine(forLoopLine.Iterator);
+                        if (forLoopLine.Iterator != null)
+                            RunLine(forLoopLine.Iterator);
                     }
 
                     break;

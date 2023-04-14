@@ -46,11 +46,11 @@ public class SingleTokenLine : Line
 public class ForLoopLine : Line
 {
     public CallLikePosToken CallToken { get; }
-    public Line Initializer { get; }
-    public Line Iterator { get; }
+    public Line? Initializer { get; }
+    public Line? Iterator { get; }
     public CodeBlockToken Body { get; }
 
-    public ForLoopLine(CallLikePosToken callToken, Line initializer, Line iterator, CodeBlockToken body,
+    public ForLoopLine(CallLikePosToken callToken, Line? initializer, Line? iterator, CodeBlockToken body,
         LineType lineType = LineType.ForLoop) : base(lineType)
     {
         CallToken = callToken;
