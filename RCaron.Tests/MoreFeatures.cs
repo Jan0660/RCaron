@@ -2,7 +2,6 @@
 using System.Text;
 using RCaron.LibrarySourceGenerator;
 using RCaron.Parsing;
-using Xunit.Sdk;
 
 namespace RCaron.Tests;
 
@@ -503,7 +502,7 @@ $h = $null;");
     {
         ExtraAssert.ThrowsParsingCode(() => TestRunner.Run($"$h = {code};"), RCaronExceptionCode.InvalidHexNumber);
     }
-    
+
     [Theory]
     [InlineData("for")]
     [InlineData("qfor")]
@@ -512,7 +511,7 @@ $h = $null;");
         var m = TestRunner.Run($$"""$i = 0; {{which}}(; $i < 3; $i = $i + 1) {  }""");
         m.AssertVariableEquals("i", 3L);
     }
-    
+
     [Theory]
     [InlineData("for")]
     [InlineData("qfor")]
@@ -521,7 +520,7 @@ $h = $null;");
         var m = TestRunner.Run($$"""{{which}}($i = 0; $i < 3;) { $i = $i + 1; }""");
         m.AssertVariableEquals("i", 3L);
     }
-    
+
     [Theory]
     [InlineData("byte", typeof(byte))]
     [InlineData("sbyte", typeof(sbyte))]
@@ -543,10 +542,57 @@ $h = $null;");
         var m = TestRunner.Run($"$h = #{input};");
         var type = m.AssertVariableIsType<RCaronType>("h");
         Assert.Equal(expected, type.Type);
-        
-        
+
+
         m = TestRunner.Run($"$h = #{input.ToUpperInvariant()};");
         type = m.AssertVariableIsType<RCaronType>("h");
         Assert.Equal(expected, type.Type);
+    }
+
+    public class DisposeDisposableEnumeratorOnForeachEnumerable : IEnumerable<int>
+    {
+        public bool DisposeCalled { get; set; } = false;
+
+        public IEnumerator<int> GetEnumerator()
+            => new Enumerator(this);
+
+        IEnumerator IEnumerable.GetEnumerator()
+            => GetEnumerator();
+
+        private class Enumerator : IEnumerator<int>
+        {
+            public Enumerator(DisposeDisposableEnumeratorOnForeachEnumerable parent)
+                => Parent = parent;
+
+            private DisposeDisposableEnumeratorOnForeachEnumerable Parent { get; }
+            public int Current => 1;
+
+            object IEnumerator.Current => Current;
+
+            public void Dispose()
+            {
+                Parent.DisposeCalled = true;
+            }
+
+            public bool MoveNext()
+            {
+                return false;
+            }
+
+            public void Reset()
+            {
+            }
+        }
+    }
+
+    [Fact]
+    public void DisposeDisposableEnumeratorOnForeach()
+    {
+        var m = TestRunner.Run("foreach($i in $h) { };", variables: new()
+        {
+            ["h"] = new DisposeDisposableEnumeratorOnForeachEnumerable(),
+        });
+        var type = m.AssertVariableIsType<DisposeDisposableEnumeratorOnForeachEnumerable>("h");
+        Assert.True(type.DisposeCalled);
     }
 }

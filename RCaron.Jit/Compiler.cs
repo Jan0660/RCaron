@@ -823,7 +823,7 @@ public class Compiler
                         else
                             loopBody = Expression.Block(expr1, expr2);
                     }
-                    
+
                     var loop = Expression.Loop(loopBody, @break, @continue);
                     expressions.Add(loop);
                     var pop = contextStack.Pop();
@@ -891,11 +891,12 @@ public class Compiler
                     Assert(pop == loopBodyContext);
 
                     var loop = Expression.Loop(
-                        Expression.Block(
+                        Expression.TryFinally(Expression.Block(
                             Expression.IfThen(Expression.NotEqual(Expression.Constant(true),
                                 Expression.Call(enumerator, "MoveNext", null)), Expression.Break(@break)),
                             loopBody
-                        ),
+                        ), Expression.IfThen(Expression.TypeIs(enumerator, typeof(IDisposable)),
+                            Expression.Call(Expression.Convert(enumerator, typeof(IDisposable)), "Dispose", null))),
                         @break,
                         @continue);
                     expressions.Add(loop);
