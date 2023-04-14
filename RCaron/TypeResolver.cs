@@ -1,14 +1,39 @@
-﻿namespace RCaron;
+﻿using System.Collections.Immutable;
+
+namespace RCaron;
 
 public static class TypeResolver
 {
+    public static readonly ImmutableDictionary<string, Type> CSharpTypes = new Dictionary<string, Type>
+    {
+        { "bool", typeof(bool) },
+        { "byte", typeof(byte) },
+        { "sbyte", typeof(sbyte) },
+        { "char", typeof(char) },
+        { "decimal", typeof(decimal) },
+        { "double", typeof(double) },
+        { "float", typeof(float) },
+        { "int", typeof(int) },
+        { "uint", typeof(uint) },
+        { "long", typeof(long) },
+        { "ulong", typeof(ulong) },
+        { "object", typeof(object) },
+        { "short", typeof(short) },
+        { "ushort", typeof(ushort) },
+        { "string", typeof(string) },
+    }.ToImmutableDictionary(StringComparer.InvariantCultureIgnoreCase);
+
     public static Type? FindType(string name, FileScope? fileScope = null)
     {
+        // CSharp type names
+        if (CSharpTypes.TryGetValue(name, out var cst))
+            return cst;
+
         var usedNamespaces = fileScope?.UsedNamespaces;
         // name with no dot and no used namespaces
         if (!name.Contains('.') && usedNamespaces == null)
             return null;
-        if(fileScope?.TypeCache != null && fileScope.TypeCache.TryGetValue(name, out var t))
+        if (fileScope?.TypeCache != null && fileScope.TypeCache.TryGetValue(name, out var t))
             return t;
         var res = Type.GetType(name, false, true);
         if (res != null)
@@ -17,7 +42,7 @@ public static class TypeResolver
         // Type? endingMatch =  null;
         foreach (var ass in assemblies)
         {
-            if(ass.IsDynamic)
+            if (ass.IsDynamic)
                 continue;
             foreach (var type in ass.ExportedTypes)
             {
@@ -39,6 +64,7 @@ public static class TypeResolver
                         fileScope.TypeCache ??= new();
                         fileScope.TypeCache.Add(name, type);
                     }
+
                     return type;
                 }
             }

@@ -521,4 +521,32 @@ $h = $null;");
         var m = TestRunner.Run($$"""{{which}}($i = 0; $i < 3;) { $i = $i + 1; }""");
         m.AssertVariableEquals("i", 3L);
     }
+    
+    [Theory]
+    [InlineData("byte", typeof(byte))]
+    [InlineData("sbyte", typeof(sbyte))]
+    [InlineData("char", typeof(char))]
+    [InlineData("short", typeof(short))]
+    [InlineData("ushort", typeof(ushort))]
+    [InlineData("int", typeof(int))]
+    [InlineData("uint", typeof(uint))]
+    [InlineData("long", typeof(long))]
+    [InlineData("ulong", typeof(ulong))]
+    [InlineData("float", typeof(float))]
+    [InlineData("double", typeof(double))]
+    [InlineData("decimal", typeof(decimal))]
+    [InlineData("bool", typeof(bool))]
+    [InlineData("string", typeof(string))]
+    [InlineData("object", typeof(object))]
+    public void CSharpTypeNames(string input, Type expected)
+    {
+        var m = TestRunner.Run($"$h = #{input};");
+        var type = m.AssertVariableIsType<RCaronType>("h");
+        Assert.Equal(expected, type.Type);
+        
+        
+        m = TestRunner.Run($"$h = #{input.ToUpperInvariant()};");
+        type = m.AssertVariableIsType<RCaronType>("h");
+        Assert.Equal(expected, type.Type);
+    }
 }
