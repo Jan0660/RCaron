@@ -145,13 +145,27 @@ class Funny {
     }
 
     [Fact]
-    public void ClassTypeOf()
+    public void ClassGetType()
     {
         var m = TestRunner.Run(@"
 class Funny { }
 $h = #Funny:new().GetType();
 ");
         m.AssertVariableEquals("h", typeof(ClassInstance));
+    }
+
+    [Fact]
+    public void ClassFunctionThisVariable()
+    {
+        var m = TestRunner.Run(@"
+class Funny {
+    func Hello() { return $this; }
+}
+
+$h = #Funny:New().Hello();
+");
+        var h = m.AssertVariableIsType<ClassInstance>("h");
+        Assert.Equal("Funny", h.Definition.Name);
     }
 
     public class StaticTests

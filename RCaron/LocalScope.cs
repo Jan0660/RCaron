@@ -59,6 +59,8 @@ public class ClassFunctionScope : ClassStaticFunctionScope
 
     public override object? GetVariable(string name)
     {
+        if (name.Equals("this", StringComparison.InvariantCultureIgnoreCase))
+            return ClassInstance;
         if (ClassInstance.TryGetPropertyValue(name, out var propVal))
             return propVal;
         return base.GetVariable(name);
