@@ -43,7 +43,7 @@ public enum TokenType : byte
     Group,
     TokenGroup,
     HexNumber,
-    NativePipelineOperator,
+    PipelineOperator,
     NativePipeline,
 }
 

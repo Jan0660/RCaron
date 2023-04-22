@@ -3,5 +3,5 @@
 public interface IRCaronModule
 {
     public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments,
-        CallLikePosToken? callToken);
+        CallLikePosToken? callToken, IPipeline? pipeline, bool isLeftOfPipeline);
 }

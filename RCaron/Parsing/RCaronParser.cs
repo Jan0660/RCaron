@@ -239,17 +239,17 @@ public static class RCaronParser
                 afterComparisonAndLogicalGrouping: ;
 
                 if (unclosedPipeline &&
-                    (posToken.Type is TokenType.NativePipelineOperator or TokenType.LineEnding or TokenType.EndOfFile ||
+                    (posToken.Type is TokenType.PipelineOperator or TokenType.LineEnding or TokenType.EndOfFile ||
                      _isNewLineBetweenTokens(tokens[^1], posToken, text)))
                 {
                     // find the last pipeline operator
-                    var lastPipelineIndex = tokens.FindLastIndex(t => t.Type == TokenType.NativePipelineOperator);
+                    var lastPipelineIndex = tokens.FindLastIndex(t => t.Type == TokenType.PipelineOperator);
                     // collect the tokens before the last pipeline operator
                     var beforeStartIndex = lastPipelineIndex;
                     for (int i = lastPipelineIndex - 1; i >= 0; i--)
                     {
                         if (tokens[i] is not ValuePosToken or
-                                { Type: TokenType.NativePipelineOperator or TokenType.NativePipeline }
+                                { Type: TokenType.PipelineOperator or TokenType.NativePipeline }
                                 or OperationPosToken
                                 {
                                     Operation: OperationEnum.Assignment,
@@ -270,7 +270,7 @@ public static class RCaronParser
                     unclosedPipeline = false;
                 }
 
-                if (posToken.Type == TokenType.NativePipelineOperator)
+                if (posToken.Type == TokenType.PipelineOperator)
                     unclosedPipeline = true;
 
                 if (posToken is BlockPosToken
@@ -700,7 +700,7 @@ public static class RCaronParser
         // pipeline run
         else if (tokens[i] is { Type: TokenType.NativePipeline })
         {
-            res = new SingleTokenLine(tokens[i], LineType.NativePipelineRun);
+            res = new SingleTokenLine(tokens[i], LineType.PipelineRun);
         }
         // invalid line
         else

@@ -117,5 +117,5 @@ public enum LineType : byte
     InvalidLine,
     PathCall,
     StaticProperty,
-    NativePipelineRun,
+    PipelineRun,
 }

@@ -63,7 +63,8 @@ public partial class {classSymbol.Name}{{");
                 source.AppendLine(
                     """
 [System.CodeDom.Compiler.GeneratedCode("RCaron.LibrarySourceGenerator", null)]
-public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken)
+public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken,
+    IPipeline? pipeline, bool isLeftOfPipeline)
 {
 switch(name){
 """);
@@ -112,15 +113,35 @@ switch(name){
                     {
                         // todo(error checking): make sure no 2 parameters have the same name except casing differences
                         var parameters = methodSymbol.Parameters.Skip(1).ToArray();
+                        IParameterSymbol? pipelineParam = null;
+                        bool pipelineParamIsIPipeline = false;
                         // variable definitions
                         foreach (var param in parameters)
                         {
+                            if (param.GetAttributes().Any(t =>
+                                    t.AttributeClass?.ToDisplayString() ==
+                                    "RCaron.LibrarySourceGenerator.FromPipelineAttribute"))
+                            {
+                                pipelineParam = param;
+                                pipelineParamIsIPipeline = param.Type.ToDisplayString() == "RCaron.IPipeline";
+                            }
+
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
                             source.Append($"{param.Type.ToDisplayString()} {param.Name}_value = ");
-
                             source.Append(GetDefaultValueString(param));
-
                             source.AppendLine(";");
+
+                            if (ReferenceEquals(pipelineParam, param))
+                            {
+                                source.AppendLine($$"""
+if (pipeline != null)
+{
+    {{param.Name}}_hasValue = true;
+""");
+                                if (pipelineParamIsIPipeline)
+                                    source.AppendLine($"    {param.Name}_value = pipeline;");
+                                source.AppendLine("}");
+                            }
                         }
 
                         // actual arguments parsing
@@ -197,12 +218,88 @@ else
                             }
                         }
 
-                        if (!methodSymbol.ReturnsVoid)
-                            source.Append("return ");
-                        source.Append($@"{methodSymbol.Name}(motor");
-                        foreach (var param in parameters)
-                            source.Append($", {param.Name}: {param.Name}_value");
-                        source.AppendLine(");");
+                        void WriteCall(bool useReturnsNoReturnValue = false)
+                        {
+                            source.Append($@"{methodSymbol.Name}");
+                            if (useReturnsNoReturnValue)
+                                source.Append("_ReturnsNoReturnValue");
+                            source.Append("(motor");
+                            foreach (var param in parameters)
+                                source.Append($", {param.Name}: {param.Name}_value");
+                            source.Append(")");
+                        }
+
+                        // method accepts an IPipeline, just pass it
+                        if (pipelineParam == null || pipelineParamIsIPipeline)
+                        {
+                            if (!methodSymbol.ReturnsVoid)
+                                source.Append("return ");
+                            WriteCall();
+                            source.AppendLine(";");
+                        }
+                        else
+                        {
+                            source.AppendLine("if (pipeline != null) {");
+                            // method accepts an IEnumerator, just pass it
+                            if (pipelineParam.Type.ToDisplayString() == "System.Collections.IEnumerator")
+                            {
+                                source.AppendLine($"{pipelineParam.Name}_value = pipeline.GetEnumerator();");
+                                if (!methodSymbol.ReturnsVoid)
+                                    source.Append("return ");
+                                WriteCall();
+                                source.AppendLine(";");
+                            }
+                            // method accepts an object
+                            else
+                            {
+                                // when we are left of a pipeline, we return a FuncEnumerator
+                                // closure allocations :yum:
+                                source.AppendLine("if (isLeftOfPipeline) {");
+                                source.Append("return new FuncEnumerator((current) => {");
+                                source.AppendLine($$"""
+{{pipelineParam.Name}}_value = ({{pipelineParam.Type.ToDisplayString()}})current;
+""");
+                                source.Append("return ");
+                                WriteCall(methodSymbol.ReturnsVoid);
+                                source.AppendLine(";");
+                                source.AppendLine("}, pipeline.GetEnumerator());");
+                                source.AppendLine("}");
+                                // when we are NOT left of a pipeline, we run for each value from the pipeline and return it as a list
+                                source.AppendLine("else {");
+                                if (!methodSymbol.ReturnsVoid)
+                                    source.Append("var ls = new List<object?>();");
+
+                                source.AppendLine(@"
+var pipelineEnumerator = pipeline.GetEnumerator();
+while (pipelineEnumerator.MoveNext()) {");
+                                source.AppendLine($$"""
+{{pipelineParam.Name}}_value = ({{pipelineParam.Type.ToDisplayString()}})pipelineEnumerator.Current;
+""");
+                                if (!methodSymbol.ReturnsVoid)
+                                    source.Append("ls.Add(");
+                                WriteCall(methodSymbol.ReturnsVoid);
+                                if (!methodSymbol.ReturnsVoid)
+                                    source.Append(")");
+                                source.AppendLine(";");
+                                source.AppendLine("}");
+
+                                if (methodSymbol.ReturnsVoid)
+                                    source.AppendLine("return RCaronInsideEnum.NoReturnValue;");
+                                else source.AppendLine("return ls;");
+                                source.AppendLine("}");
+                            }
+
+                            source.AppendLine("}");
+                            // when we don't have an incoming pipeline
+                            source.AppendLine("else {");
+                            if (!methodSymbol.ReturnsVoid)
+                                source.Append("return ");
+                            WriteCall();
+                            source.AppendLine(";");
+                            if (methodSymbol.ReturnsVoid)
+                                source.AppendLine("return RCaronInsideEnum.NoReturnValue;");
+                            source.AppendLine("}");
+                        }
                     }
 
                     if (methodSymbol.ReturnsVoid)

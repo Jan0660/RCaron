@@ -534,8 +534,8 @@ public class TokenReader
         if (IsMatch(in span, Operations.ModuloOp))
             return (1, TokenType.MathOperator, OperationEnum.Modulo);
         // pipeline
-        if (IsMatch(in span, Operations.NativePipelineOp))
-            return (2, TokenType.NativePipelineOperator, OperationEnum.NativePipeline);
+        if (IsMatch(in span, Operations.PipelineOp))
+            return (1, TokenType.PipelineOperator, OperationEnum.Pipeline);
         return (0, 0, 0);
     }
 

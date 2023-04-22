@@ -5,10 +5,10 @@ namespace RCaron.Shell.Tests;
 public class NativePipelineTests
 {
     [Theory]
-    [InlineData("1 |> 2;", 1, 1)]
-    [InlineData("ls |> grep 'h';", 1, 2)]
-    [InlineData("1 |> 2", 1, 1)]
-    [InlineData("ls |> grep 'h'", 1, 2)]
+    [InlineData("1 | 2;", 1, 1)]
+    [InlineData("ls | grep 'h';", 1, 2)]
+    [InlineData("1 | 2", 1, 1)]
+    [InlineData("ls | grep 'h'", 1, 2)]
     public void Simple(string code, int leftCount, int rightCount)
     {
         var parsed = RCaronParser.Parse(code);

@@ -100,7 +100,7 @@ public static class RunExecutable
                     case { Type: TokenType.Dot }:
                         stringBuilder.Append('.');
                         break;
-                    case { Type: TokenType.NativePipelineOperator }:
+                    case { Type: TokenType.PipelineOperator }:
                         stringBuilder.Append("|>");
                         break;
                     case { Type: TokenType.Colon }:

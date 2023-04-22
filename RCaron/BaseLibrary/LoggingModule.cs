@@ -1,4 +1,5 @@
-﻿using RCaron.LibrarySourceGenerator;
+﻿using System.Collections;
+using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.BaseLibrary;
 
@@ -11,6 +12,7 @@ public partial class LoggingModule : IRCaronModule
         Console.WriteLine("Hello, ř!");
         return RCaronInsideEnum.NoReturnValue;
     }
+
     [Method("Error")]
     public static void Error(Motor motor, object value)
         => Log73.Console.Error(value.ToString());
@@ -33,5 +35,68 @@ public partial class LoggingModule : IRCaronModule
         var v = a + b;
         motor.GlobalScope.SetVariable("global", v);
         return v;
+    }
+
+    [Method("MeasurePipelineCount")]
+    public static long MeasurePipelineCount(Motor motor, [FromPipeline] IPipeline pipeline)
+    {
+        var count = 0;
+        var enumerator = pipeline.GetEnumerator();
+        while (enumerator.MoveNext())
+            count++;
+
+        return count;
+    }
+
+    [Method("SetVarFromPipeline")]
+    public static void SetVarFromPipeline(Motor motor, string name, [FromPipeline] IPipeline pipeline)
+    {
+        object? obj;
+        if (pipeline is SingleObjectPipeline sop)
+            obj = sop.Object;
+        else
+        {
+            var e = pipeline.GetEnumerator();
+            if (!e.MoveNext())
+                throw new("Pipeline is empty.");
+            obj = e.Current;
+        }
+
+        motor.GlobalScope.SetVariable(name, obj);
+    }
+
+    [Method("SetVarFromPipelineObject")]
+    public static void SetVarFromPipeline(Motor motor, string name, [FromPipeline] object obj)
+    {
+        motor.GlobalScope.SetVariable(name, obj);
+    }
+
+    [Method("EnumeratorRange")]
+    public static IEnumerator EnumeratorRange(Motor motor, int start, int end)
+    {
+        for (var i = start; i < end; i++)
+            yield return i;
+    }
+
+    [Method("EnumerableRange")]
+    public static IEnumerable EnumerableRange(Motor motor, int start, int end)
+    {
+        return new RCaronRange(start, end);
+    }
+
+    [Method("MeasureEnumeratorCount")]
+    public static long MeasureEnumeratorCount(Motor motor, [FromPipeline] IEnumerator enumerator)
+    {
+        var count = 0;
+        while (enumerator.MoveNext())
+            count++;
+
+        return count;
+    }
+
+    [Method("Increment")]
+    public static int Increment(Motor motor, [FromPipeline] int value)
+    {
+        return value + 1;
     }
 }

@@ -14,5 +14,5 @@ public static class RCaronRunner
     }
 
     public static RCaronParserContext Parse(string text, bool returnDescriptive = false)
-        => RCaronParser.Parse(text);
+        => RCaronParser.Parse(text, returnDescriptive: returnDescriptive);
 }

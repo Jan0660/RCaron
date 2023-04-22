@@ -29,7 +29,7 @@ public static class Operations
     public const string ModuloOp = "%";
     
     // pipeline
-    public const string NativePipelineOp = "|>";
+    public const string PipelineOp = "|";
 }
 
 public enum OperationEnum : byte
@@ -56,5 +56,5 @@ public enum OperationEnum : byte
     Multiply,
     Divide,
     Modulo,
-    NativePipeline,
+    Pipeline,
 }

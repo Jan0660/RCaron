@@ -209,7 +209,7 @@ public class Motor
 
                     break;
                 }
-                case LineType.NativePipelineRun when baseLine is SingleTokenLine
+                case LineType.PipelineRun when baseLine is SingleTokenLine
                 {
                     Token: NativePipelineValuePosToken pipeline
                 }:
@@ -788,7 +788,7 @@ public class Motor
             Debug.Assert(fileScope.Modules != null, "fileScope.Modules != null");
             foreach (var module in fileScope.Modules)
             {
-                var v = module.RCaronModuleRun(name, this, argumentTokens, callToken);
+                var v = module.RCaronModuleRun(name, this, argumentTokens, callToken, pipeline, isLeftOfPipeline);
                 if (!v?.Equals(RCaronInsideEnum.MethodNotFound) ?? true)
                     return v;
             }
