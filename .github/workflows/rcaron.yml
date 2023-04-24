@@ -132,8 +132,9 @@ jobs:
   nuget-releases:
     needs: [rcaron-test, rcaron-jit-test, language-server-build, shell-test]
     runs-on: ubuntu-latest
-    matrix:
-      project: [RCaron, RCaron.AutoCompletion, RCaron.Jit, RCaron.LanguageServer, RCaron.LibrarySourceGenerator, RCaron.LibrarySourceGenerator.Attributes, RCaron.Shell]
+    strategy:
+      matrix:
+        project: [RCaron, RCaron.AutoCompletion, RCaron.Jit, RCaron.LanguageServer, RCaron.LibrarySourceGenerator, RCaron.LibrarySourceGenerator.Attributes, RCaron.Shell]
     steps:
       - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
