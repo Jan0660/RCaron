@@ -129,9 +129,11 @@ jobs:
         run: dotnet build RCaron.Shell.Tests --no-restore -maxcpucount:1
       - name: test
         run: dotnet test RCaron.Shell.Tests --no-build
-  shell-nuget-release:
-    needs: shell-test
+  nuget-releases:
+    needs: [rcaron-test, rcaron-jit-test, language-server-build, shell-test]
     runs-on: ubuntu-latest
+    matrix:
+      project: [RCaron, RCaron.AutoCompletion, RCaron.Jit, RCaron.LanguageServer, RCaron.LibrarySourceGenerator, RCaron.LibrarySourceGenerator.Attributes, RCaron.Shell]
     steps:
       - uses: actions/checkout@v3
       - name: Setup .NET Core SDK
@@ -139,9 +141,9 @@ jobs:
         with:
           dotnet-version: 7.0.x
       - name: pack
-        run: dotnet pack RCaron.Shell -c release
+        run: dotnet pack ${{ matrix.project }} -c release -o ./${{ matrix.project }}/bin/nupkg
       - name: push
         if: startsWith(github.ref, 'refs/tags/')
-        run: dotnet nuget push ./RCaron.Shell/bin/nupkg/*.nupkg -k ${NUGET_KEY} -s https://api.nuget.org/v3/index.json
+        run: dotnet nuget push ./${{ matrix.project }}/bin/nupkg/*.nupkg -k ${NUGET_KEY} -s https://api.nuget.org/v3/index.json
         env:
           NUGET_KEY: ${{ secrets.NUGET_KEY }}
