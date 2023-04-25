@@ -116,11 +116,13 @@ public static class RCaronParser
                            (tokens[i] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range } ||
                             (tokens[i].Type == TokenType.Colon && tokens[i - 1].Type == TokenType.ExternThing) ||
                             (tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.ExternThing) ||
-                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range }
+                            tokens[i - 1] is { Type: TokenType.Dot or TokenType.Indexer or TokenType.Range } ||
+                            (tokens.Count - i > 2 && tokens[i - 1].Type == TokenType.Number &&
+                             tokens[i - 2].Type == TokenType.Dot)
                            ) && !(tokens[i - 1].Type == TokenType.Colon && tokens[i - 2].Type == TokenType.Keyword) &&
                            (tokens[i - 1].Position.End == tokens[i].Position.Start))
                         i--;
-                    if (tokens.Count - i == 1)
+                    if (tokens.Count - i is 1 or 0)
                         return (-1, Array.Empty<PosToken>());
                     return (i, tokens.Take(i..).ToArray());
                 }
@@ -136,7 +138,7 @@ public static class RCaronParser
                 {
                     // todo(perf): it gets here when array literal
                     var h = BackwardsCollectDotThing();
-                    if (h.index != -1 && h.tokens.Length != 1 && h.tokens.Length != 0)
+                    if (h.index != -1)
                     {
                         tokens.RemoveFrom(h.index);
                         if (h.tokens[0].Type is TokenType.Dot or TokenType.Range or TokenType.Keyword ||
@@ -153,6 +155,8 @@ public static class RCaronParser
                                     path.Append((string)actualPathToken.Value);
                                 else if (pathToken is KeywordToken keywordToken)
                                     path.Append(keywordToken.String);
+                                else if (pathToken.Type == TokenType.Number)
+                                    path.Append(pathToken.ToString(text));
                                 else
                                     throw new("Unexpected token type in path: " + pathToken.Type);
                             }

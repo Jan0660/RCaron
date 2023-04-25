@@ -37,6 +37,8 @@ public class PathTests
         "./file", "../file",
         ".file",
         "~/file",
+        // the dot there and the number after it create a funny situation
+        @"C:/output/net7.0/whatever.dll", "net7.0/whatever.dll",
     };
 
     public static IEnumerable<object[]> GetPathTestDataExecutable()
