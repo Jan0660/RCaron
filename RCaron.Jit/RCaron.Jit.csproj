@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
         <EnablePreviewFeatures>True</EnablePreviewFeatures>
+        <Description>RCaron JIT-compiled using LINQ expression trees.</Description>
     </PropertyGroup>
 
     <ItemGroup>

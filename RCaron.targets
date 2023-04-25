@@ -4,6 +4,20 @@
         <VersionSuffix>preview1</VersionSuffix>
         <Authors>Jan0660</Authors>
         <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
-        <RepositoryUrl>https://github.com/Jan0660/RCaron</RepositoryUrl>
+        <RepositoryUrl>https://github.com/Jan0660/RCaron.git</RepositoryUrl>
+        <PackageProjectUrl>https://rcaron.jan0660.dev</PackageProjectUrl>
+        <PackageReadmeFile>README.md</PackageReadmeFile>
+        <PackageIcon>icon.png</PackageIcon>
+        <PackageIconUrl>https://raw.githubusercontent.com/Jan0660/rcaron-vscode/master/icon.png</PackageIconUrl>
     </PropertyGroup>
+
+    <ItemGroup>
+        <None Include="../icon.png" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+    <ItemGroup Condition="Exists('README.md')">
+        <None Include="README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
+    <ItemGroup Condition="!Exists('README.md')">
+        <None Include="../README.md" Pack="true" PackagePath="\"/>
+    </ItemGroup>
 </Project>

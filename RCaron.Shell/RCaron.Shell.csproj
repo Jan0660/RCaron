@@ -6,6 +6,7 @@
         <ImplicitUsings>enable</ImplicitUsings>
         <Nullable>enable</Nullable>
 
+        <Description>The RCaron shell as a .NET tool.</Description>
         <PackAsTool>true</PackAsTool>
         <ToolCommandName>rcaron</ToolCommandName>
         <PackageOutputPath>./bin/nupkg</PackageOutputPath>

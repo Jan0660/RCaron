@@ -7,6 +7,7 @@
         <Nullable>enable</Nullable>
         <LangVersion>preview</LangVersion>
         <EmitCompilerGeneratedFiles>true</EmitCompilerGeneratedFiles>
+        <Description>Main RCaron package that provides the parser, motor and basic library.</Description>
     </PropertyGroup>
 
     <ItemGroup>
