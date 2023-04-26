@@ -55,4 +55,7 @@ public class ParsingException : RCaronException
     public static ParsingException StaticPropertyWithoutInitializer(string propertyName, TextSpan location)
         => new($"Static property '{propertyName}' must have an initializer",
             RCaronExceptionCode.StaticPropertyWithoutInitializer, location);
+
+    public static ParsingException InvalidCharacterLiteral(TextSpan location)
+        => new("Invalid character literal", RCaronExceptionCode.InvalidCharacterLiteral, location);
 }

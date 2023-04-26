@@ -45,6 +45,7 @@ public enum TokenType : byte
     HexNumber,
     PipelineOperator,
     NativePipeline,
+    CharLiteral,
 }
 
 [DebuggerDisplay("Type = {Type}")]

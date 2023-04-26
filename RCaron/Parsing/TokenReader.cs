@@ -242,6 +242,35 @@ public class TokenReader
             _position += index;
             return new ConstToken(TokenType.Path, (initialPosition, _position), path);
         }
+        // char literal
+        else if (txt.Length - _position > 2 && txt[_position] == '@' && txt[_position + 1] == '"')
+        {
+            _position += 2;
+            char ch;
+            if (txt[_position] == '\\')
+            {
+                _position++;
+                ch = GetEscapedCharacter(txt, ref _position);
+                _position++;
+            }
+            else if (txt[_position] == '"')
+            {
+                ErrorHandler.Handle(
+                    ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
+                        _position - initialPosition)));
+                ch = '\0';
+            }
+            else
+                ch = txt[_position++];
+
+            if (txt[_position] != '"')
+                ErrorHandler.Handle(
+                    ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
+                        _position - initialPosition)));
+            _position++;
+
+            return new ConstToken(TokenType.CharLiteral, (initialPosition, _position), ch);
+        }
         // executable keyword
         else if (txt[_position] == '@')
         {
@@ -405,62 +434,30 @@ public class TokenReader
             if (span[i] == '\\')
             {
                 i++;
-                // single quote
-                if (span[i] == '\'')
-                    str.Append('\'');
-                // backslash
-                else if (span[i] == '\\')
-                    str.Append('\\');
-                // null
-                else if (span[i] == '0')
-                    str.Append('\0');
-                // alert
-                else if (span[i] == 'a')
-                    str.Append('\a');
-                // backspace
-                else if (span[i] == 'b')
-                    str.Append('\b');
-                // form feed
-                else if (span[i] == 'f')
-                    str.Append('\f');
-                // new line
-                else if (span[i] == 'n')
-                    str.Append('\n');
-                // carriage return
-                else if (span[i] == 'r')
-                    str.Append('\r');
-                // horizontal tab
-                else if (span[i] == 't')
-                    str.Append('\t');
-                // vertical tab
-                else if (span[i] == 'v')
-                    str.Append('\v');
-                else if (span[i] == 'u' || span[i] == 'U')
+                // 32-bit unicode character
+                if (span[i] == 'U')
                 {
-                    var length = span[i] == 'u' ? 4 : 8;
-                    var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, length);
-                    if (escape.Length != length)
+                    var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, 8);
+                    if (escape.Length != 8)
                     {
-                        ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, length,
+                        ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, 8,
                             GetLocation(span, i - 1, 2 + escape.Length)));
                         continue;
                     }
 
                     if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
                     {
-                        if (length == 4)
-                            str.Append((char)code);
-                        else
-                            str.Append(char.ConvertFromUtf32(code));
+                        i += 8;
+                        str.Append(char.ConvertFromUtf32(code));
                     }
                     else
                         ErrorHandler.Handle(
-                            ParsingException.InvalidUnicodeEscape(escape, GetLocation(span, i - 1, 2 + length)));
-
-                    i += length;
+                            ParsingException.InvalidUnicodeEscape(escape, GetLocation(span, i - 1, 2 + 8)));
                 }
                 else
-                    ErrorHandler.Handle(ParsingException.InvalidEscapeSequence(span[i], GetLocation(span, i - 1, 2)));
+                {
+                    str.Append(GetEscapedCharacter(span, ref i));
+                }
 
                 continue;
             }
@@ -469,6 +466,78 @@ public class TokenReader
         }
 
         return (index, str.ToString());
+    }
+
+    /// <summary>
+    /// Does not do Utf32 escapes.
+    /// </summary>
+    /// <param name="span"></param>
+    /// <param name="i">The index after the escaping forward slash. Will get incremented by 3 if the escape was Utf16.</param>
+    /// <returns>The escaped character.</returns>
+    public char GetEscapedCharacter(ReadOnlySpan<char> span, ref int i)
+    {
+        // single quote
+        if (span[i] == '\'')
+            return '\'';
+        // double quote
+        else if (span[i] == '"')
+            return '"';
+        // backslash
+        else if (span[i] == '\\')
+            return '\\';
+        // null
+        else if (span[i] == '0')
+            return '\0';
+        // alert
+        else if (span[i] == 'a')
+            return '\a';
+        // backspace
+        else if (span[i] == 'b')
+            return '\b';
+        // form feed
+        else if (span[i] == 'f')
+            return '\f';
+        // new line
+        else if (span[i] == 'n')
+            return '\n';
+        // carriage return
+        else if (span[i] == 'r')
+            return '\r';
+        // horizontal tab
+        else if (span[i] == 't')
+            return '\t';
+        // vertical tab
+        else if (span[i] == 'v')
+            return '\v';
+        // 16-bit unicode escape
+        else if (span[i] == 'u')
+        {
+            var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, 4);
+            if (escape.Length != 4)
+            {
+                ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, 4,
+                    GetLocation(span, i - 1, 2 + escape.Length)));
+                return '\0';
+            }
+
+            if (int.TryParse(escape, NumberStyles.HexNumber, null, out var code))
+            {
+                // for the u and 3 characters, the last increment should be done by the caller
+                i += 4;
+                return (char)code;
+            }
+            else
+            {
+                ErrorHandler.Handle(
+                    ParsingException.InvalidUnicodeEscape(escape, GetLocation(span, i - 1, 2 + escape.Length)));
+                return '\0';
+            }
+        }
+        else
+        {
+            ErrorHandler.Handle(ParsingException.InvalidEscapeSequence(span[i], GetLocation(span, i - 1, 2)));
+            return '\0';
+        }
     }
 
     public ReadOnlySpan<char> GetCharactersInStringForUnicodeEscape(in ReadOnlySpan<char> span, int start, int length)

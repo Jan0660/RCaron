@@ -36,6 +36,7 @@ public enum RCaronExceptionCode
     ClassStaticFunctionNotFound,
     ClassStaticPropertyNotFound,
     StaticPropertyWithoutInitializer,
+    InvalidCharacterLiteral,
 }
 
 public class RCaronException : Exception
