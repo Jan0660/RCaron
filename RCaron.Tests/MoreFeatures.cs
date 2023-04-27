@@ -601,4 +601,14 @@ $h = $null;");
     {
         ExtraAssert.ThrowsParsingCode(() => TestRunner.Run("$h = 'abc"), RCaronExceptionCode.UnterminatedString);
     }
+
+    [Fact]
+    public void ForeachCanDoIEnumerator()
+    {
+        var m = TestRunner.Run("$h = 0; foreach($i in $enumerator) { $h = $h + 1; };", variables: new()
+        {
+            ["enumerator"] = new object[1].GetEnumerator(),
+        });
+        m.AssertVariableEquals("h", 1L);
+    }
 }

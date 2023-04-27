@@ -862,15 +862,24 @@ public class Compiler
                          whileLoopLine.Tokens[1] is CodeBlockToken cbt:
                 {
                     var currentVariableName = ((VariableToken)callToken.Arguments[0][0]).Name;
+                    var evaluated = Expression.Variable(typeof(object));
                     var enumerator = Expression.Variable(typeof(IEnumerator));
                     // todo: not sure if this should be in loopContext, but it doesn't work when I add it there so here it is
                     var currentContext = contextStack.Peek();
                     currentContext.Variables ??= _newVariableDict();
                     currentContext.Variables.Add("\u0159enumerator", enumerator);
-                    expressions.Add(Expression.Assign(enumerator,
-                        Expression.Call(Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(IEnumerable),
-                                null), typeof(IEnumerable), GetHighExpression(callToken.Arguments[0].Segment(2..))),
-                            "GetEnumerator", Array.Empty<Type>())));
+                    currentContext.Variables.Add("\u0159evaluated", evaluated);
+                    expressions.Add(
+                        Expression.Assign(evaluated, GetHighExpression(callToken.Arguments[0].Segment(2..))));
+                    expressions.Add(
+                        Expression.IfThenElse(Expression.TypeIs(evaluated, typeof(IEnumerator)),
+                            Expression.Assign(enumerator, Expression.Convert(evaluated, typeof(IEnumerator))),
+                            Expression.Assign(enumerator, Expression.Call(
+                                Expression.Dynamic(Binder.Convert(CSharpBinderFlags.None, typeof(IEnumerable), null),
+                                    typeof(IEnumerable), evaluated),
+                                "GetEnumerator", Array.Empty<Type>())
+                            ))
+                    );
                     var @break = Expression.Label();
                     var @continue = Expression.Label();
                     var loopContext = new LoopContext() { BreakLabel = @break, ContinueLabel = @continue };

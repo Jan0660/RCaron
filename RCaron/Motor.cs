@@ -345,10 +345,15 @@ public class Motor
             {
                 var body = (CodeBlockToken)line.Tokens[1];
                 var varName = ((VariableToken)callToken.Arguments[0][0]).Name;
-                foreach (var item in (IEnumerable)EvaluateExpressionHigh(callToken.Arguments[0][2..])!)
+                var enumerator = EvaluateExpressionHigh(callToken.Arguments[0][2..]) switch
+                {
+                    IEnumerable enumerable => enumerable.GetEnumerator(),
+                    IEnumerator enumeratorr => enumeratorr,
+                };
+                while (enumerator.MoveNext())
                 {
                     var scope = new LocalScope();
-                    scope.SetVariable(varName, item);
+                    scope.SetVariable(varName, enumerator.Current);
                     BlockStack.Push(new StackThing(true, false, scope, GetFileScope()));
                     var res = RunCodeBlock(body);
                     if (!res?.Equals(RCaronInsideEnum.NoReturnValue) ?? true)
@@ -360,6 +365,9 @@ public class Motor
                         return (true, res);
                     }
                 }
+
+                if (enumerator is IDisposable disposable)
+                    disposable.Dispose();
 
                 break;
             }
