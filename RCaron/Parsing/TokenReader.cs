@@ -243,17 +243,19 @@ public class TokenReader
             return new ConstToken(TokenType.Path, (initialPosition, _position), path);
         }
         // char literal
-        else if (txt.Length - _position > 2 && txt[_position] == '@' && txt[_position + 1] == '"')
+        else if (txt.Length - _position > 2 && txt[_position] == '@' &&
+                 (txt[_position + 1] == '"' || txt[_position + 1] == '\''))
         {
+            var endQuote = txt[_position + 1];
             _position += 2;
             char ch;
             if (txt[_position] == '\\')
             {
                 _position++;
-                ch = GetEscapedCharacter(txt, ref _position);
+                ch = GetEscapedCharacter(txt, ref _position, endQuote);
                 _position++;
             }
-            else if (txt[_position] == '"')
+            else if (txt[_position] == endQuote)
             {
                 ErrorHandler.Handle(
                     ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
@@ -263,7 +265,7 @@ public class TokenReader
             else
                 ch = txt[_position++];
 
-            if (txt[_position] != '"')
+            if (txt[_position] != endQuote)
                 ErrorHandler.Handle(
                     ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
                         _position - initialPosition)));
@@ -414,7 +416,7 @@ public class TokenReader
         return index;
     }
 
-    public (int endIndex, string value) CollectString(in ReadOnlySpan<char> span)
+    public (int endIndex, string value) CollectString(in ReadOnlySpan<char> span, char endQuote = '\'')
     {
         // get index of unescaped ending '
         var index = 0;
@@ -437,7 +439,7 @@ public class TokenReader
                 // 32-bit unicode character
                 if (span[i] == 'U')
                 {
-                    var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, 8);
+                    var escape = GetCharactersForUnicodeEscape(span, i + 1, 8, endQuote);
                     if (escape.Length != 8)
                     {
                         ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, 8,
@@ -474,7 +476,7 @@ public class TokenReader
     /// <param name="span"></param>
     /// <param name="i">The index after the escaping forward slash. Will get incremented by 3 if the escape was Utf16.</param>
     /// <returns>The escaped character.</returns>
-    public char GetEscapedCharacter(ReadOnlySpan<char> span, ref int i)
+    public char GetEscapedCharacter(ReadOnlySpan<char> span, ref int i, char endQuote = '\'')
     {
         // single quote
         if (span[i] == '\'')
@@ -512,7 +514,7 @@ public class TokenReader
         // 16-bit unicode escape
         else if (span[i] == 'u')
         {
-            var escape = GetCharactersInStringForUnicodeEscape(span, i + 1, 4);
+            var escape = GetCharactersForUnicodeEscape(span, i + 1, 4, endQuote);
             if (escape.Length != 4)
             {
                 ErrorHandler.Handle(ParsingException.TooShortUnicodeEscape(escape, 4,
@@ -540,11 +542,12 @@ public class TokenReader
         }
     }
 
-    public ReadOnlySpan<char> GetCharactersInStringForUnicodeEscape(in ReadOnlySpan<char> span, int start, int length)
+    public ReadOnlySpan<char> GetCharactersForUnicodeEscape(in ReadOnlySpan<char> span, int start, int length,
+        char endQuote = '\'')
     {
         var index = start;
         while (index < span.Length && (index - start) < length
-                                   && !(span[index] == '\'' && span[index - 1] != '\\'))
+                                   && !(span[index] == endQuote && span[index - 1] != '\\'))
         {
             index++;
         }

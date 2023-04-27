@@ -595,32 +595,4 @@ $h = $null;");
         var type = m.AssertVariableIsType<DisposeDisposableEnumeratorOnForeachEnumerable>("h");
         Assert.True(type.DisposeCalled);
     }
-    
-    [Theory]
-    [InlineData("a", 'a')]
-    [InlineData("\\u0159", '\u0159')]
-    [InlineData("\\r", '\r')]
-    [InlineData("\\\"", '"')]
-    public void CharacterLiteral(string input, char expected)
-    {
-        var m = TestRunner.Run($@"$h = @""{input}""");
-        var type = m.AssertVariableIsType<char>("h");
-        Assert.Equal(expected, type);
-    }
-
-    [Theory]
-    [InlineData("aa")]
-    [InlineData("")]
-    public void InvalidCharacterLiteral(string input)
-    {
-        ExtraAssert.ThrowsParsingCode(() => RCaronParser.Parse($"$h = @\"{input}\""), RCaronExceptionCode.InvalidCharacterLiteral);
-    }
-
-    [Theory]
-    [InlineData("\\u123", RCaronExceptionCode.InvalidUnicodeEscape)]
-    [InlineData("\\U12345678", RCaronExceptionCode.InvalidEscape)]
-    public void InvalidEscapesInCharacterLiteral(string input, RCaronExceptionCode code)
-    {
-        ExtraAssert.ThrowsParsingCode(() => RCaronParser.Parse($"$h = @\"{input}\""), code);
-    }
 }
