@@ -58,4 +58,10 @@ public class ParsingException : RCaronException
 
     public static ParsingException InvalidCharacterLiteral(TextSpan location)
         => new("Invalid character literal", RCaronExceptionCode.InvalidCharacterLiteral, location);
+
+    public static ParsingException UnterminatedString(TextSpan location)
+        => new("Unterminated string", RCaronExceptionCode.UnterminatedString, location);
+
+    public static ParsingException UnterminatedCharacterLiteral(TextSpan location)
+        => new("Unterminated character literal", RCaronExceptionCode.UnterminatedCharacterLiteral, location);
 }

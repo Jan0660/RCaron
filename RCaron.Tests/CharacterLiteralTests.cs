@@ -17,18 +17,6 @@ public class CharacterLiteralTests
             _oppositeQuote = oppositeQuote;
         }
 
-        public IEnumerator<object[]> GetLastCh()
-        {
-            if (Quote == '\'')
-            {
-                yield return new object[] { "\"", '"' };
-            }
-            else
-            {
-                yield return new object[] { "'", '\'' };
-            }
-        }
-
         [Theory]
         [InlineData("a", 'a')]
         [InlineData("\\u0159", '\u0159')]
@@ -58,13 +46,20 @@ public class CharacterLiteralTests
         {
             ExtraAssert.ThrowsParsingCode(() => RCaronParser.Parse($"$h = @{Quote}{input}{Quote}"), code);
         }
-        
+
         [Fact]
         public void OppositeQuote()
         {
             var m = TestRunner.Run($@"$h = @{Quote}{_oppositeQuote}{Quote}");
             var type = m.AssertVariableIsType<char>("h");
             Assert.Equal(_oppositeQuote, type);
+        }
+
+        [Fact]
+        public void UnterminatedCharacterLiteral()
+        {
+            ExtraAssert.ThrowsParsingCode(() => RCaronParser.Parse($"$h = @{Quote}aaaa"),
+                RCaronExceptionCode.UnterminatedCharacterLiteral);
         }
     }
 

@@ -259,16 +259,26 @@ public class TokenReader
             {
                 ErrorHandler.Handle(
                     ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
-                        _position - initialPosition)));
+                        _position - initialPosition + 1)));
                 ch = '\0';
             }
             else
                 ch = txt[_position++];
 
-            if (txt[_position] != endQuote)
-                ErrorHandler.Handle(
-                    ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
-                        _position - initialPosition)));
+            if (txt.Length < _position || txt[_position] != endQuote)
+            {
+                // try to find the end quote
+                while (_position < txt.Length && txt[_position] != endQuote)
+                    _position++;
+                if (_position >= txt.Length)
+                    ErrorHandler.Handle(
+                        ParsingException.UnterminatedCharacterLiteral(GetLocation(initialPosition,
+                            _position - initialPosition)));
+                else
+                    ErrorHandler.Handle(
+                        ParsingException.InvalidCharacterLiteral(GetLocation(initialPosition,
+                            _position - initialPosition + 1)));
+            }
             _position++;
 
             return new ConstToken(TokenType.CharLiteral, (initialPosition, _position), ch);
@@ -420,11 +430,17 @@ public class TokenReader
     {
         // get index of unescaped ending '
         var index = 0;
-        while (span[index] != '\'')
+        while (index < span.Length && span[index] != '\'')
         {
             if (span[index] == '\\')
                 index++;
             index++;
+        }
+
+        if (index == span.Length)
+        {
+            ErrorHandler.Handle(ParsingException.UnterminatedString(GetLocation(span, 0, span.Length)));
+            return (index, string.Empty);
         }
 
         index++;

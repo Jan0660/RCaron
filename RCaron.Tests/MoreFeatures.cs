@@ -595,4 +595,10 @@ $h = $null;");
         var type = m.AssertVariableIsType<DisposeDisposableEnumeratorOnForeachEnumerable>("h");
         Assert.True(type.DisposeCalled);
     }
+
+    [Fact]
+    public void UnterminatedString()
+    {
+        ExtraAssert.ThrowsParsingCode(() => TestRunner.Run("$h = 'abc"), RCaronExceptionCode.UnterminatedString);
+    }
 }
