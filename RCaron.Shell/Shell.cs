@@ -27,7 +27,9 @@ public class Shell
             {
                 Motor.MainFileScope.Functions ??= new();
                 foreach (var f in ctx.FileScope.Functions)
-                    Motor.MainFileScope.Functions[f.Key] = f.Value;
+                {
+                    Motor.MainFileScope.Functions[f.Key] = f.Value with { FileScope = Motor.MainFileScope };
+                }
             }
 
             if (ctx.FileScope.ClassDefinitions is not null)
@@ -37,6 +39,16 @@ public class Shell
                 {
                     var index = Motor.MainFileScope.ClassDefinitions.FindIndex(@class =>
                         @class.Name.Equals(c.Name, StringComparison.InvariantCultureIgnoreCase));
+                    if(c.Functions != null)
+                        foreach (var f in c.Functions)
+                        {
+                            c.Functions[f.Key] = f.Value with { FileScope = Motor.MainFileScope };
+                        }
+                    if (c.StaticFunctions != null)
+                        foreach (var f in c.StaticFunctions)
+                        {
+                            c.StaticFunctions[f.Key] = f.Value with { FileScope = Motor.MainFileScope };
+                        }
                     if (index == -1)
                         Motor.MainFileScope.ClassDefinitions.Add(c);
                     else
@@ -46,7 +58,7 @@ public class Shell
         }
 
         var isFirstRun = Motor.MainFileScope == null!;
-        Motor.UseContext(ctx, Motor.MainFileScope == null!);
+        Motor.UseContext(ctx, isFirstRun);
         if (isFirstRun)
             Motor.MainFileScope!.Modules!.Add(new ShellStuffModule(this));
         if (import && Motor.MainFileScope != null!)

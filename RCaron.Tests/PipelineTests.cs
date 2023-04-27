@@ -1,4 +1,6 @@
-﻿namespace RCaron.Tests;
+﻿using System.Collections;
+
+namespace RCaron.Tests;
 
 public class PipelineTests
 {
@@ -110,6 +112,35 @@ public class PipelineTests
         {
             var m = TestRunner.Run(@"1i | Increment | MeasureEnumeratorCount | SetVarFromPipelineObject 'h';");
             m.AssertVariableEquals("h", 1L);
+        }
+    }
+
+    public class FunctionPipelineTests
+    {
+        [Fact
+#if RCARONJIT
+                (Skip = "JIT does not support pipelines")
+#endif
+        ]
+        public void Hell()
+        {
+            var arrayList = new ArrayList();
+            var m = TestRunner.Run("""
+func Hell($pipeline = $fromPipeline, $arr = $null) {
+    foreach($item in @Enumerate $pipeline) {
+        $arr.Add($item);
+    }
+}
+
+@(1, 2, 3) | Hell -arr $arr;
+""", variables: new()
+            {
+                ["arr"] = arrayList,
+            });
+            Assert.Equal(3, arrayList.Count);
+            Assert.Equal(1L, arrayList[0]);
+            Assert.Equal(2L, arrayList[1]);
+            Assert.Equal(3L, arrayList[2]);
         }
     }
 }

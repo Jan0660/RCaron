@@ -703,7 +703,7 @@ public class Motor
         }
 
         if (TryCallFunction(nameArg, (fileScope ??= GetFileScope()), callToken, argumentTokens, null, out var result,
-                instance is ClassDefinition classDefinition ? classDefinition : null))
+                instance is ClassDefinition classDefinition ? classDefinition : null, pipeline))
             return result;
 
         if (name[0] == '#' || instance != null)
@@ -910,7 +910,7 @@ public class Motor
         return path.ToString();
     }
 
-    public object? EvaluateDotThings(Span<PosToken> instanceTokens)
+    public object? EvaluateDotThings(Span<PosToken> instanceTokens, IPipeline? pipeline = null)
     {
         if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
             instanceTokens = dotGroupPosToken.Tokens;
@@ -973,7 +973,7 @@ public class Motor
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)
                         throw RCaronException.ClassFunctionNotFound(callLikePosToken.Name);
-                    val = FunctionCall(func, callLikePosToken, classInstance: classInstance);
+                    val = FunctionCall(func, callLikePosToken, classInstance: classInstance, pipeline: pipeline);
                     type = val?.GetType();
                     continue;
                 }
@@ -1094,7 +1094,7 @@ public class Motor
         return val;
     }
 
-    public object? EvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false)
+    public object? EvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false, IPipeline? pipeline = null)
     {
         if (token is ConstToken constToken)
             return constToken.Value;
@@ -1106,14 +1106,14 @@ public class Motor
             return "/";
         if (token is ValueOperationValuePosToken { Operation: OperationEnum.Multiply })
             return "*";
-        if (token is NativePipelineValuePosToken pipeline)
+        if (token is NativePipelineValuePosToken pipelineV)
         {
-            if (pipeline.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
+            if (pipelineV.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
                 keywordToken.IsExecutable = true;
-            var left = RunLeftPipeline(pipeline.Left);
-            if (pipeline.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
+            var left = RunLeftPipeline(pipelineV.Left);
+            if (pipelineV.Right[0] is KeywordToken { IsExecutable: false } keywordToken2)
                 keywordToken2.IsExecutable = true;
-            var right = EvaluateExpressionHigh(pipeline.Right, pipeline: left, isLeftOfPipeline: isLeftOfPipeline);
+            var right = EvaluateExpressionHigh(pipelineV.Right, pipeline: left, isLeftOfPipeline: isLeftOfPipeline);
             return right;
         }
 
@@ -1129,7 +1129,7 @@ public class Motor
             case TokenType.Keyword when token is KeywordToken keywordToken:
                 return keywordToken.String;
             case TokenType.DotGroup:
-                return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1));
+                return EvaluateDotThings(MemoryMarshal.CreateSpan(ref token, 1), pipeline);
             case TokenType.ExternThing when token is ExternThingToken externThingToken:
             {
                 var name = externThingToken.String;
@@ -1192,14 +1192,14 @@ public class Motor
         {
             > 0 when tokens[0] is KeywordToken { IsExecutable: true } keywordToken => MethodCall(keywordToken.String,
                 argumentTokens: tokens.Segment(1..), pipeline: pipeline, isLeftOfPipeline: isLeftOfPipeline),
-            1 => EvaluateExpressionSingle(tokens[0], isLeftOfPipeline),
+            1 => EvaluateExpressionSingle(tokens[0], isLeftOfPipeline, pipeline),
             > 2 => EvaluateExpressionValue(tokens),
             _ => throw new Exception("something has gone very wrong with the parsing most probably")
         };
 
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
         ArraySegment<PosToken> argumentTokens = default, ClassInstance? classInstance = null,
-        ClassDefinition? staticClassDefinition = null)
+        ClassDefinition? staticClassDefinition = null, IPipeline? pipeline = null)
     {
         var scope = classInstance == null
             ? (staticClassDefinition == null ? new LocalScope() : new ClassStaticFunctionScope(staticClassDefinition))
@@ -1261,6 +1261,12 @@ public class Motor
             // check if all arguments are assigned
             for (var i = 0; i < function.Arguments.Length; i++)
             {
+                if (function.Arguments[i].DefaultValue == RCaronParser.FromPipelineObject)
+                {
+                    var variables = scope.GetVariables();
+                    variables[function.Arguments[i].Name] = pipeline;
+                }
+
                 if (function.Arguments[i].DefaultValue?.Equals(RCaronInsideEnum.NoDefaultValue) ?? false)
                 {
                     if (!assignedArguments[i])
@@ -1445,11 +1451,11 @@ public class Motor
 
     public bool TryCallFunction(string name, FileScope fileScope, CallLikePosToken? callToken,
         ArraySegment<PosToken> argumentTokens, ClassInstance? classInstance, out object? result,
-        ClassDefinition? classDefinition = null)
+        ClassDefinition? classDefinition = null, IPipeline? pipeline = null)
     {
         if (TryGetFunction(name, fileScope, out var func))
         {
-            result = FunctionCall(func, callToken, argumentTokens, classInstance);
+            result = FunctionCall(func, callToken, argumentTokens, classInstance, pipeline: pipeline);
             return true;
         }
 
@@ -1479,7 +1485,7 @@ public class Motor
             var definition = scope.ClassInstance.Definition;
             if (definition.Functions?.TryGetValue(name, out var func2) ?? false)
             {
-                result = FunctionCall(func2, callToken, argumentTokens, classInstance);
+                result = FunctionCall(func2, callToken, argumentTokens, classInstance, pipeline: pipeline);
                 return true;
             }
         }
@@ -1489,7 +1495,8 @@ public class Motor
         {
             if (classDefinition.StaticFunctions?.TryGetValue(name, out var func3) ?? false)
             {
-                result = FunctionCall(func3, callToken, argumentTokens, staticClassDefinition: classDefinition);
+                result = FunctionCall(func3, callToken, argumentTokens, staticClassDefinition: classDefinition,
+                    pipeline: pipeline);
                 return true;
             }
         }

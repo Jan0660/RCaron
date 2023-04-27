@@ -16,6 +16,7 @@ public record RCaronParserContext(FileScope FileScope, bool AllowsExecution)
 public static class RCaronParser
 {
     public static ParsingErrorThrowHandler DefaultThrowHandler { get; } = new();
+    public static object FromPipelineObject { get; } = new();
 
     public static RCaronParserContext Parse(string text, bool returnIgnored = false, bool returnDescriptive = false,
         IParsingErrorHandler? errorHandler = null)
@@ -250,15 +251,19 @@ public static class RCaronParser
                     var lastPipelineIndex = tokens.FindLastIndex(t => t.Type == TokenType.PipelineOperator);
                     // collect the tokens before the last pipeline operator
                     var beforeStartIndex = lastPipelineIndex;
-                    for (int i = lastPipelineIndex - 1; i >= 0; i--)
+                    for (var i = lastPipelineIndex - 1; i >= 0; i--)
                     {
-                        if (tokens[i] is not ValuePosToken or
+                        var wasNewline = false;
+                        if ((tokens[i] is not ValuePosToken or
                                 { Type: TokenType.PipelineOperator or TokenType.NativePipeline }
                                 or OperationPosToken
                                 {
                                     Operation: OperationEnum.Assignment,
-                                } && tokens[i].Type is not TokenType.Dot or TokenType.Keyword or TokenType.Path)
+                                } || (wasNewline = _isNewLineBetweenTokens(tokens[i], tokens[lastPipelineIndex], text))) &&
+                            tokens[i].Type is not TokenType.Dot or TokenType.Keyword or TokenType.Path)
                         {
+                            if (wasNewline)
+                                i++;
                             beforeStartIndex = i;
                             break;
                         }
@@ -760,6 +765,7 @@ public static class RCaronParser
             VariableToken { Name: "true" } => true,
             VariableToken { Name: "false" } => false,
             VariableToken { Name: "null" } => null,
+            VariableToken { Name: "fromPipeline" } => FromPipelineObject,
             ConstToken constToken => constToken.Value,
             _ => errorHandler.Handle(ParsingException.ExpectedConstant(TextSpan.FromToken(token))),
         };

@@ -99,4 +99,35 @@ public partial class LoggingModule : IRCaronModule
     {
         return value + 1;
     }
+
+    [Method("Enumerate")]
+    public static IEnumerator Enumerate(Motor _, [FromPipeline] object obj)
+        => obj switch
+        {
+            IEnumerable enumerable => enumerable.GetEnumerator(),
+            IEnumerator enumerator => enumerator,
+            IPipeline pipeline => pipeline.GetEnumerator(),
+            _ => new SingleObjectEnumerator(obj),
+        };
+
+    private class SingleObjectEnumerator : IEnumerator
+    {
+        private readonly object _obj;
+        private bool _moved;
+        public SingleObjectEnumerator(object obj) => _obj = obj;
+        public bool MoveNext()
+        {
+            if (_moved)
+                return false;
+            Current = _obj;
+            return _moved = true;
+        }
+
+        public void Reset()
+        {
+            throw new();
+        }
+
+        public object Current { get; private set; }
+    }
 }
