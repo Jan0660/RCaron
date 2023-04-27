@@ -64,7 +64,7 @@ public partial class {classSymbol.Name}{{");
                     """
 [System.CodeDom.Compiler.GeneratedCode("RCaron.LibrarySourceGenerator", null)]
 public object? RCaronModuleRun(ReadOnlySpan<char> name, Motor motor, in ArraySegment<PosToken> arguments, CallLikePosToken? callToken,
-    IPipeline? pipeline, bool isLeftOfPipeline)
+    Pipeline? pipeline, bool isLeftOfPipeline)
 {
 switch(name){
 """);
@@ -114,7 +114,7 @@ switch(name){
                         // todo(error checking): make sure no 2 parameters have the same name except casing differences
                         var parameters = methodSymbol.Parameters.Skip(1).ToArray();
                         IParameterSymbol? pipelineParam = null;
-                        bool pipelineParamIsIPipeline = false;
+                        bool pipelineParamIsPipeline = false;
                         // variable definitions
                         foreach (var param in parameters)
                         {
@@ -123,7 +123,7 @@ switch(name){
                                     "RCaron.LibrarySourceGenerator.FromPipelineAttribute"))
                             {
                                 pipelineParam = param;
-                                pipelineParamIsIPipeline = param.Type.ToDisplayString() == "RCaron.IPipeline";
+                                pipelineParamIsPipeline = param.Type.ToDisplayString() == "RCaron.Pipeline";
                             }
 
                             source.AppendLine($"bool {param.Name}_hasValue = false;");
@@ -138,7 +138,7 @@ if (pipeline != null)
 {
     {{param.Name}}_hasValue = true;
 """);
-                                if (pipelineParamIsIPipeline)
+                                if (pipelineParamIsPipeline)
                                     source.AppendLine($"    {param.Name}_value = pipeline;");
                                 source.AppendLine("}");
                             }
@@ -229,8 +229,8 @@ else
                             source.Append(")");
                         }
 
-                        // method accepts an IPipeline, just pass it
-                        if (pipelineParam == null || pipelineParamIsIPipeline)
+                        // method accepts an Pipeline, just pass it
+                        if (pipelineParam == null || pipelineParamIsPipeline)
                         {
                             if (!methodSymbol.ReturnsVoid)
                                 source.Append("return ");

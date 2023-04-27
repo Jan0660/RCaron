@@ -38,7 +38,7 @@ public partial class LoggingModule : IRCaronModule
     }
 
     [Method("MeasurePipelineCount")]
-    public static long MeasurePipelineCount(Motor motor, [FromPipeline] IPipeline pipeline)
+    public static long MeasurePipelineCount(Motor motor, [FromPipeline] Pipeline pipeline)
     {
         var count = 0;
         var enumerator = pipeline.GetEnumerator();
@@ -49,7 +49,7 @@ public partial class LoggingModule : IRCaronModule
     }
 
     [Method("SetVarFromPipeline")]
-    public static void SetVarFromPipeline(Motor motor, string name, [FromPipeline] IPipeline pipeline)
+    public static void SetVarFromPipeline(Motor motor, string name, [FromPipeline] Pipeline pipeline)
     {
         object? obj;
         if (pipeline is SingleObjectPipeline sop)
@@ -106,7 +106,7 @@ public partial class LoggingModule : IRCaronModule
         {
             IEnumerable enumerable => enumerable.GetEnumerator(),
             IEnumerator enumerator => enumerator,
-            IPipeline pipeline => pipeline.GetEnumerator(),
+            Pipeline pipeline => pipeline.GetEnumerator(),
             _ => new SingleObjectEnumerator(obj),
         };
 

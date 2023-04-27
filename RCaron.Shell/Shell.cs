@@ -12,7 +12,7 @@ public class Shell
     }
 
     private object? InvokeRunExecutable(Motor motor, string name, ArraySegment<PosToken> args, FileScope fileScope,
-        IPipeline? pipeline, bool isLeftOfPipeline)
+        Pipeline? pipeline, bool isLeftOfPipeline)
     {
         return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline);
     }

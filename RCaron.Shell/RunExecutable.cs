@@ -5,7 +5,7 @@ namespace RCaron.Shell;
 
 public static class RunExecutable
 {
-    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, IPipeline? pipeline, bool isLeftOfPipeline)
+    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, Pipeline? pipeline, bool isLeftOfPipeline)
     {
         var startInfo = ParseArgs(motor, name, tokens, code);
         if (pipeline is StreamPipeline)

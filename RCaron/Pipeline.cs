@@ -3,12 +3,24 @@ using System.Threading.Channels;
 
 namespace RCaron;
 
-public interface IPipeline
+public abstract class Pipeline
 {
-    public IEnumerator GetEnumerator();
+    public bool EnumeratorGotten { get; private set; }
+    protected abstract IEnumerator _getEnumerator();
+
+    public IEnumerator GetEnumerator()
+    {
+        if (EnumeratorGotten)
+        {
+            throw new InvalidOperationException("Cannot get enumerator twice");
+        }
+
+        EnumeratorGotten = true;
+        return _getEnumerator();
+    }
 }
 
-public class SingleObjectPipeline : IPipeline
+public class SingleObjectPipeline : Pipeline
 {
     public object? Object { get; }
 
@@ -17,13 +29,13 @@ public class SingleObjectPipeline : IPipeline
         Object = obj;
     }
 
-    public IEnumerator GetEnumerator()
+    protected override IEnumerator _getEnumerator()
     {
         yield return Object;
     }
 }
 
-public class EnumeratorPipeline : IPipeline
+public class EnumeratorPipeline : Pipeline
 {
     public IEnumerator Enumerator { get; }
 
@@ -32,11 +44,11 @@ public class EnumeratorPipeline : IPipeline
         Enumerator = enumerator;
     }
 
-    public IEnumerator GetEnumerator()
+    protected override IEnumerator _getEnumerator()
         => Enumerator;
 }
 
-public class ChannelPipeline : IPipeline
+public class ChannelPipeline : Pipeline
 {
     public Channel<object?> Channel { get; }
 
@@ -48,7 +60,7 @@ public class ChannelPipeline : IPipeline
         });
     }
 
-    public IEnumerator GetEnumerator()
+    protected override IEnumerator _getEnumerator()
     {
         while (Channel.Reader.TryRead(out var obj))
         {
@@ -80,7 +92,7 @@ public class ChannelPipeline : IPipeline
     }
 }
 
-public class StreamPipeline : IPipeline
+public class StreamPipeline : Pipeline
 {
     public StreamReader StreamReader { get; init; }
 
@@ -89,7 +101,7 @@ public class StreamPipeline : IPipeline
         StreamReader = streamReader;
     }
 
-    public IEnumerator GetEnumerator()
+    protected override IEnumerator _getEnumerator()
     {
         while (!StreamReader.EndOfStream)
         {
@@ -111,7 +123,7 @@ public class FuncEnumerator : IEnumerator
 
     public bool MoveNext()
     {
-        if(!_enumerator.MoveNext())
+        if (!_enumerator.MoveNext())
             return false;
         Current = _func(_enumerator.Current);
         return true;

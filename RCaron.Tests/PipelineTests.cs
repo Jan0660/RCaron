@@ -143,4 +143,16 @@ func Hell($pipeline = $fromPipeline, $arr = $null) {
             Assert.Equal(3L, arrayList[2]);
         }
     }
+
+    [Fact
+#if RCARONJIT
+                (Skip = "JIT does not support pipelines")
+#endif
+    ]
+    public void CannotGetEnumeratorTwice()
+    {
+        var p = new SingleObjectPipeline(null);
+        p.GetEnumerator();
+        Assert.Throws<InvalidOperationException>(() => p.GetEnumerator());
+    }
 }

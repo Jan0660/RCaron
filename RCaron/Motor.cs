@@ -66,7 +66,7 @@ public class Motor
     public MotorOptions Options { get; }
 
     [UsedImplicitly]
-    internal Func<Motor, string, ArraySegment<PosToken>, FileScope, IPipeline?, bool, object?>? InvokeRunExecutable
+    internal Func<Motor, string, ArraySegment<PosToken>, FileScope, Pipeline?, bool, object?>? InvokeRunExecutable
     {
         get;
         set;
@@ -601,7 +601,7 @@ public class Motor
 
     public object? MethodCall(string nameArg, ArraySegment<PosToken> argumentTokens = default,
         CallLikePosToken? callToken = null
-        , object? instance = null, IPipeline? pipeline = null, bool isLeftOfPipeline = false)
+        , object? instance = null, Pipeline? pipeline = null, bool isLeftOfPipeline = false)
     {
         FileScope? fileScope = null;
         Span<char> name = stackalloc char[nameArg.Length];
@@ -910,7 +910,7 @@ public class Motor
         return path.ToString();
     }
 
-    public object? EvaluateDotThings(Span<PosToken> instanceTokens, IPipeline? pipeline = null)
+    public object? EvaluateDotThings(Span<PosToken> instanceTokens, Pipeline? pipeline = null)
     {
         if (instanceTokens.Length == 1 && instanceTokens[0] is DotGroupPosToken dotGroupPosToken)
             instanceTokens = dotGroupPosToken.Tokens;
@@ -1094,7 +1094,7 @@ public class Motor
         return val;
     }
 
-    public object? EvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false, IPipeline? pipeline = null)
+    public object? EvaluateExpressionSingle(PosToken token, bool isLeftOfPipeline = false, Pipeline? pipeline = null)
     {
         if (token is ConstToken constToken)
             return constToken.Value;
@@ -1186,7 +1186,7 @@ public class Motor
         return value;
     }
 
-    public object? EvaluateExpressionHigh(ArraySegment<PosToken> tokens, IPipeline? pipeline = null,
+    public object? EvaluateExpressionHigh(ArraySegment<PosToken> tokens, Pipeline? pipeline = null,
         bool isLeftOfPipeline = false)
         => tokens.Count switch
         {
@@ -1199,7 +1199,7 @@ public class Motor
 
     public object? FunctionCall(Function function, CallLikePosToken? callToken = null,
         ArraySegment<PosToken> argumentTokens = default, ClassInstance? classInstance = null,
-        ClassDefinition? staticClassDefinition = null, IPipeline? pipeline = null)
+        ClassDefinition? staticClassDefinition = null, Pipeline? pipeline = null)
     {
         var scope = classInstance == null
             ? (staticClassDefinition == null ? new LocalScope() : new ClassStaticFunctionScope(staticClassDefinition))
@@ -1315,12 +1315,12 @@ public class Motor
         }
     }
 
-    public IPipeline RunLeftPipeline(PosToken[] tokens, IPipeline? pipelineIn = null)
+    public Pipeline RunLeftPipeline(PosToken[] tokens, Pipeline? pipelineIn = null)
     {
         var val = EvaluateExpressionHigh(tokens, pipelineIn, true);
         return val switch
         {
-            IPipeline pipeline => pipeline,
+            Pipeline pipeline => pipeline,
             IEnumerator enumerator => new EnumeratorPipeline(enumerator),
             IEnumerable enumerable => new EnumeratorPipeline(enumerable.GetEnumerator()),
             _ => new SingleObjectPipeline(val),
@@ -1451,7 +1451,7 @@ public class Motor
 
     public bool TryCallFunction(string name, FileScope fileScope, CallLikePosToken? callToken,
         ArraySegment<PosToken> argumentTokens, ClassInstance? classInstance, out object? result,
-        ClassDefinition? classDefinition = null, IPipeline? pipeline = null)
+        ClassDefinition? classDefinition = null, Pipeline? pipeline = null)
     {
         if (TryGetFunction(name, fileScope, out var func))
         {
