@@ -254,8 +254,8 @@ public static class RCaronParser
                     for (var i = lastPipelineIndex - 1; i >= 0; i--)
                     {
                         var wasNewline = false;
-                        if ((tokens[i] is not ValuePosToken or
-                                { Type: TokenType.PipelineOperator or TokenType.NativePipeline }
+                        if ((tokens[i] is
+                                { Type: TokenType.PipelineOperator or TokenType.Pipeline }
                                 or OperationPosToken
                                 {
                                     Operation: OperationEnum.Assignment,
@@ -273,7 +273,7 @@ public static class RCaronParser
 
                     var before = tokens.Take(beforeStartIndex..lastPipelineIndex).ToArray();
                     var after = tokens.Take((lastPipelineIndex + 1)..).ToArray();
-                    var pipeline = new NativePipelineValuePosToken(before, after);
+                    var pipeline = new PipelineValuePosToken(before, after);
                     tokens.RemoveFrom(beforeStartIndex);
                     tokens.Add(pipeline);
                     unclosedPipeline = false;
@@ -707,7 +707,7 @@ public static class RCaronParser
             res = new TokenLine(new[] { tokens[i] }, LineType.DotGroupCall);
         }
         // pipeline run
-        else if (tokens[i] is { Type: TokenType.NativePipeline })
+        else if (tokens[i] is { Type: TokenType.Pipeline })
         {
             res = new SingleTokenLine(tokens[i], LineType.PipelineRun);
         }

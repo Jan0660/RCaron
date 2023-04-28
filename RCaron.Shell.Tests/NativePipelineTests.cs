@@ -9,11 +9,12 @@ public class NativePipelineTests
     [InlineData("ls | grep 'h';", 1, 2)]
     [InlineData("1 | 2", 1, 1)]
     [InlineData("ls | grep 'h'", 1, 2)]
+    [InlineData("ls -a | grep 'a';", 3, 2)]
     public void Simple(string code, int leftCount, int rightCount)
     {
         var parsed = RCaronParser.Parse(code);
         var line = Assert.IsType<SingleTokenLine>(parsed.FileScope.Lines[0]);
-        var pipeline = Assert.IsType<NativePipelineValuePosToken>(line.Token);
+        var pipeline = Assert.IsType<PipelineValuePosToken>(line.Token);
         Assert.Equal(leftCount, pipeline.Left.Length);
         Assert.Equal(rightCount, pipeline.Right.Length);
     }

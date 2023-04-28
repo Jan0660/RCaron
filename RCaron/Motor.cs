@@ -211,7 +211,7 @@ public class Motor
                 }
                 case LineType.PipelineRun when baseLine is SingleTokenLine
                 {
-                    Token: NativePipelineValuePosToken pipeline
+                    Token: PipelineValuePosToken pipeline
                 }:
                 {
                     var val = EvaluateExpressionSingle(pipeline);
@@ -1106,7 +1106,7 @@ public class Motor
             return "/";
         if (token is ValueOperationValuePosToken { Operation: OperationEnum.Multiply })
             return "*";
-        if (token is NativePipelineValuePosToken pipelineV)
+        if (token is PipelineValuePosToken pipelineV)
         {
             if (pipelineV.Left[0] is KeywordToken { IsExecutable: false } keywordToken)
                 keywordToken.IsExecutable = true;

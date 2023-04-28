@@ -44,7 +44,7 @@ public enum TokenType : byte
     TokenGroup,
     HexNumber,
     PipelineOperator,
-    NativePipeline,
+    Pipeline,
     CharLiteral,
 }
 
@@ -316,13 +316,13 @@ public class OperationPosToken : PosToken
     }
 }
 
-public class NativePipelineValuePosToken : ValuePosToken
+public class PipelineValuePosToken : ValuePosToken
 {
     public PosToken[] Left { get; }
     public PosToken[] Right { get; }
 
-    public NativePipelineValuePosToken(PosToken[] left, PosToken[] right) : base(
-        TokenType.NativePipeline, (left[0].Position.Start, right[^1].Position.End))
+    public PipelineValuePosToken(PosToken[] left, PosToken[] right) : base(
+        TokenType.Pipeline, (left[0].Position.Start, right[^1].Position.End))
     {
         Left = left;
         Right = right;
