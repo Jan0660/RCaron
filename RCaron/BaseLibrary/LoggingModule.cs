@@ -1,4 +1,5 @@
 ﻿using System.Collections;
+using Dynamitey;
 using RCaron.LibrarySourceGenerator;
 
 namespace RCaron.BaseLibrary;
@@ -115,6 +116,7 @@ public partial class LoggingModule : IRCaronModule
         private readonly object _obj;
         private bool _moved;
         public SingleObjectEnumerator(object obj) => _obj = obj;
+
         public bool MoveNext()
         {
             if (_moved)
@@ -129,5 +131,13 @@ public partial class LoggingModule : IRCaronModule
         }
 
         public object Current { get; private set; }
+    }
+
+    [Method("ConvertTo")]
+    public object ConvertTo(Motor _, [FromPipeline] object obj, Type type)
+    {
+        if (type.IsInstanceOfType(obj))
+            return obj;
+        return Dynamic.InvokeConvert(obj, type, true);
     }
 }
