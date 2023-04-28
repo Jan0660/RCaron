@@ -14,7 +14,6 @@
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="DotNext.Metaprogramming" Version="4.11.0" />
         <PackageReference Include="ExpressionTreeToString" Version="3.4.71" />
         <PackageReference Include="Microsoft.CSharp" Version="4.7.0" />
         <PackageReference Include="System.Dynamic.Runtime" Version="4.3.0" />
