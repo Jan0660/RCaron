@@ -108,6 +108,7 @@ public class PosToken
             "else" => true,
             "for" => true,
             "qfor" => true,
+            "foreach" => true,
             "while" => true,
             "dowhile" => true,
             "switch" => true,
