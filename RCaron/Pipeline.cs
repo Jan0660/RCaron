@@ -8,6 +8,11 @@ public abstract class Pipeline
     public bool EnumeratorGotten { get; private set; }
     protected abstract IEnumerator _getEnumerator();
 
+    /// <summary>
+    /// Returns an enumerator that iterates through the pipeline. Must only be called once.
+    /// </summary>
+    /// <returns>The enumerator.</returns>
+    /// <exception cref="InvalidOperationException">Thrown when called more than once.</exception>
     public IEnumerator GetEnumerator()
     {
         if (EnumeratorGotten)
