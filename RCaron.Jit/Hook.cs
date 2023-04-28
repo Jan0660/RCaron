@@ -1,7 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Linq.Expressions;
 using ExpressionTreeToString;
-using Microsoft.Scripting.Generation;
 using RCaron.Parsing;
 
 namespace RCaron.Jit;
@@ -12,7 +11,7 @@ public static class Hook
     {
         var block = Compiler.CompileToBlock(RCaronRunner.Parse(code));
         var lambda = Expression.Lambda(block);
-        return lambda.LightCompile(compilationThreshold);
+        return lambda.Compile(true);
     }
     public static Delegate CompileWithNoMotor(string code)
     {
