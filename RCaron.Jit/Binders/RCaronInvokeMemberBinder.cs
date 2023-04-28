@@ -86,13 +86,13 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
             if (classInstance.Definition.ToStringOverride == null &&
                 Name.Equals("toString", StringComparison.InvariantCultureIgnoreCase))
                 return new DynamicMetaObject(Expression.Call(target.Expression, "ToString", Array.Empty<Type>()),
-                    GetClassInstanceDefinitionRestriction(target, classInstance));
+                    GetClassInstanceDefinitionRestrictions(target, classInstance));
             var compiledClass = Context.GetClass(classInstance.Definition);
             var compiledFunction = compiledClass?.Functions?[Name];
             if (compiledFunction == null)
                 throw RCaronException.ClassFunctionNotFound(Name);
             return Shared.DoFunction(compiledFunction, target, args, Name, CallInfo, typeof(object),
-                GetClassInstanceDefinitionRestriction(target, classInstance));
+                GetClassInstanceDefinitionRestrictions(target, classInstance));
         }
 
         if (target.Expression.Type == typeof(IDynamicMetaObjectProvider) && target.LimitType != typeof(RCaronType))
@@ -103,6 +103,15 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
         }
 
         {
+            if (target.Value is RCaronType rCaronType)
+            {
+                if (Name.Equals("gettype", StringComparison.InvariantCultureIgnoreCase))
+                    return new DynamicMetaObject(Expression.Constant(typeof(RCaronType)),
+                        BinderUtil.SameTypeRCaronTypeRestrictions(target, rCaronType));
+                if (Name.Equals("toString", StringComparison.InvariantCultureIgnoreCase))
+                    return new DynamicMetaObject(Expression.Constant(rCaronType.ToString()),
+                        BinderUtil.SameTypeRCaronTypeRestrictions(target, rCaronType));
+            }
             var type = target.LimitType == typeof(RCaronType) ? ((RCaronType)target.Value!).Type : target.LimitType;
             var (method, needsNumericConversion, isExtensionMethod) = MethodResolver.Resolve(Name, type,
                 Context.FileScope, target.Value, args.Select(x => x.Value).ToArray());
@@ -159,7 +168,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
         }
     }
 
-    public BindingRestrictions GetClassInstanceDefinitionRestriction(DynamicMetaObject target,
+    public static BindingRestrictions GetClassInstanceDefinitionRestrictions(DynamicMetaObject target,
         ClassInstance classInstance)
         => BindingRestrictions.GetExpressionRestriction(Expression.Equal(
             Expression.Property(target.Expression.EnsureIsType(typeof(ClassInstance)), "Definition"),

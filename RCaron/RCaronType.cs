@@ -6,6 +6,9 @@ namespace RCaron;
 
 public record RCaronType(Type Type) : IDynamicMetaObjectProvider
 {
+    public override string ToString()
+        => $"RCaronType: {Type}";
+
     public static implicit operator Type (RCaronType rCaronType) => rCaronType.Type;
     public DynamicMetaObject GetMetaObject(Expression parameter)
     {

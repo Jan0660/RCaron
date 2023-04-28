@@ -917,13 +917,12 @@ public class Motor
         var val = EvaluateExpressionSingle(instanceTokens[0]);
         if (val == null)
             throw RCaronException.NullInTokens(instanceTokens, GetFileScope().Raw, 0);
-        Type? type;
-        if (val is RCaronType rCaronType)
-            type = rCaronType.Type;
-        else if (val is ClassDefinition)
-            type = null;
-        else
-            type = val.GetType();
+        var type = val switch
+        {
+            RCaronType rCaronType => rCaronType.Type,
+            ClassDefinition => null,
+            _ => val.GetType()
+        };
 
         for (int i = 1; i < instanceTokens.Length; i++)
         {
@@ -983,6 +982,21 @@ public class Motor
                     val = FunctionCall(func, callLikePosToken, classInstance: classInstance, pipeline: pipeline);
                     type = val?.GetType();
                     continue;
+                }
+                else if (val is RCaronType rCaronType)
+                {
+                    if (callLikePosToken.Name.Equals("gettype", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = typeof(RCaronType);
+                        type = typeof(Type);
+                        continue;
+                    }
+                    else if (callLikePosToken.Name.Equals("tostring", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = rCaronType.ToString();
+                        type = typeof(string);
+                        continue;
+                    }
                 }
 
                 var d = MethodCall(callLikePosToken.Name, callToken: callLikePosToken, instance: val);

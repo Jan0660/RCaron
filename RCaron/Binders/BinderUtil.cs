@@ -32,6 +32,11 @@ public static class BinderUtil
         public bool Valid { get; set; } = true;
     }
 
+    public static BindingRestrictions SameTypeRCaronTypeRestrictions(DynamicMetaObject target, RCaronType rCaronType)
+        => BindingRestrictions.GetExpressionRestriction(Expression.Equal(
+            Expression.Property(target.Expression.EnsureIsType(typeof(RCaronType)), nameof(RCaronType.Type)),
+            Expression.Constant(rCaronType.Type)));
+
     public static CallSiteBinder GetBinaryOperationBinder(OperationEnum operation)
     {
         return Binder.BinaryOperation(CSharpBinderFlags.None, operation switch
@@ -74,7 +79,8 @@ public static class BinderUtil
         });
     }
 
-    public static CallSite<Func<CallSite, object?, object?, object>> GetComparisonOperationCallSite(OperationEnum operation)
+    public static CallSite<Func<CallSite, object?, object?, object>> GetComparisonOperationCallSite(
+        OperationEnum operation)
     {
         var b = GetComparisonOperationBinder(operation);
         var callsite = CallSite<Func<CallSite, object?, object?, object>>.Create(b);

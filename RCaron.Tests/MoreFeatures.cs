@@ -643,4 +643,19 @@ $h = #A:new().ToString();
             m.AssertVariableEquals("h", "a");
         }
     }
+
+    [Fact]
+    public void ToStringOnRCaronType()
+    {
+        var m= TestRunner.Run("$h = #int:ToString();");
+        m.AssertVariableEquals("h", new RCaronType(typeof(int)).ToString());
+    }
+
+    [Fact]
+    public void GetTypeOnRCaronType()
+    {
+        var m = TestRunner.Run("$h = #int:GetType();");
+        var type = m.GlobalScope.GetVariable("h");
+        Assert.Equal(typeof(RCaronType), type);
+    }
 }
