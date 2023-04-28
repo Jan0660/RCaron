@@ -1,7 +1,7 @@
 <Project xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
     <PropertyGroup>
         <VersionPrefix>0.1.0</VersionPrefix>
-        <VersionSuffix>preview1</VersionSuffix>
+        <VersionSuffix></VersionSuffix>
         <Authors>Jan0660</Authors>
         <PackageLicenseExpression>LGPL-3.0-or-later</PackageLicenseExpression>
         <RepositoryUrl>https://github.com/Jan0660/RCaron.git</RepositoryUrl>
