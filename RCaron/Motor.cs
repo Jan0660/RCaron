@@ -969,6 +969,13 @@ public class Motor
                         type = typeof(Type);
                         continue;
                     }
+                    else if (classInstance.Definition.ToStringOverride == null &&
+                             callLikePosToken.Name.Equals("tostring", StringComparison.InvariantCultureIgnoreCase))
+                    {
+                        val = classInstance.ToString();
+                        type = typeof(string);
+                        continue;
+                    }
 
                     var func = classInstance.Definition.Functions?[callLikePosToken.Name];
                     if (func == null)

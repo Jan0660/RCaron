@@ -12,6 +12,7 @@ public sealed class ClassDefinition
     public Dictionary<string, Function>? StaticFunctions { get; init; }
     public string[]? StaticPropertyNames { get; init; }
     public object?[]? StaticPropertyValues { get; init; }
+    public Function? ToStringOverride { get; init; }
 
     public ClassDefinition(string name, string[]? propertyNames, PosToken[]?[]? propertyInitializers)
     {

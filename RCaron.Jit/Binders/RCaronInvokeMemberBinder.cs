@@ -64,6 +64,7 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                 BindingRestrictions.GetExpressionRestriction(Expression.Equal(target.Expression,
                     Expression.Constant(classDefinition))));
         }
+
         if (target.RuntimeType == typeof(ClassDefinition))
         {
             var classDefinition = (ClassDefinition)target.Value!;
@@ -82,14 +83,16 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                 return new DynamicMetaObject(Expression.Constant(typeof(ClassInstance)),
                     BindingRestrictions.GetTypeRestriction(target.Expression, typeof(ClassInstance)));
             var classInstance = (ClassInstance)target.Value!;
+            if (classInstance.Definition.ToStringOverride == null &&
+                Name.Equals("toString", StringComparison.InvariantCultureIgnoreCase))
+                return new DynamicMetaObject(Expression.Call(target.Expression, "ToString", Array.Empty<Type>()),
+                    GetClassInstanceDefinitionRestriction(target, classInstance));
             var compiledClass = Context.GetClass(classInstance.Definition);
             var compiledFunction = compiledClass?.Functions?[Name];
             if (compiledFunction == null)
                 throw RCaronException.ClassFunctionNotFound(Name);
             return Shared.DoFunction(compiledFunction, target, args, Name, CallInfo, typeof(object),
-                BindingRestrictions.GetExpressionRestriction(Expression.Equal(
-                    Expression.Property(target.Expression.EnsureIsType(typeof(ClassInstance)), "Definition"),
-                    Expression.Constant(classInstance.Definition))));
+                GetClassInstanceDefinitionRestriction(target, classInstance));
         }
 
         if (target.Expression.Type == typeof(IDynamicMetaObjectProvider) && target.LimitType != typeof(RCaronType))
@@ -155,4 +158,10 @@ public class RCaronInvokeMemberBinder : InvokeMemberBinder
                     BindingRestrictions.GetTypeRestriction(target.Expression, target.LimitType)) : throw new();
         }
     }
+
+    public BindingRestrictions GetClassInstanceDefinitionRestriction(DynamicMetaObject target,
+        ClassInstance classInstance)
+        => BindingRestrictions.GetExpressionRestriction(Expression.Equal(
+            Expression.Property(target.Expression.EnsureIsType(typeof(ClassInstance)), "Definition"),
+            Expression.Constant(classInstance.Definition)));
 }

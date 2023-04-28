@@ -384,6 +384,7 @@ public static class RCaronParser
                 List<PosToken[]?>? propertyInitializers = null;
                 List<string>? staticPropertyNames = null;
                 List<object?>? staticPropertyDefaultValues = null;
+                Function? toStringOverride = null;
                 // get properties and functions
                 var body = (CodeBlockToken)t[i + 2];
                 for (var j = 1; j < body.Lines.Count - 1; j++)
@@ -393,7 +394,10 @@ public static class RCaronParser
                         var tokenLine = (TokenLine)body.Lines[j];
                         var f = DoFunction(tokenLine.Tokens, errorHandler);
                         functions ??= new(StringComparer.InvariantCultureIgnoreCase);
-                        functions[f.name] = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
+                        var func = new Function((CodeBlockToken)tokenLine.Tokens[2], f.arguments, fileScope);
+                        functions[f.name] = func;
+                        if (f.name.Equals("toString", StringComparison.InvariantCultureIgnoreCase))
+                            toStringOverride = func;
                     }
                     else if (body.Lines[j].Type == LineType.StaticFunction)
                     {
@@ -455,6 +459,7 @@ public static class RCaronParser
                         Functions = functions, StaticFunctions = staticFunctions,
                         StaticPropertyValues = staticPropertyDefaultValues?.ToArray(),
                         StaticPropertyNames = staticPropertyNames?.ToArray(),
+                        ToStringOverride = toStringOverride,
                     });
             }
             // function

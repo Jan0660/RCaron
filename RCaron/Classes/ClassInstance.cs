@@ -1,5 +1,6 @@
 ﻿using System.Dynamic;
 using System.Linq.Expressions;
+using System.Text;
 
 namespace RCaron.Classes;
 
@@ -31,6 +32,25 @@ public sealed class ClassInstance : IDynamicMetaObjectProvider
         return true;
     }
 
+    public override string ToString()
+    {
+        var sb = new StringBuilder();
+        sb.Append(Definition.Name);
+        sb.Append(" {");
+        if (PropertyValues != null)
+        {
+            for (var i = 0; i < PropertyValues.Length; i++)
+            {
+                if (i > 0)
+                    sb.Append(", ");
+                sb.Append(Definition.PropertyNames![i]);
+                sb.Append(": ");
+                sb.Append(PropertyValues[i]);
+            }
+        }
+        sb.Append("}");
+        return sb.ToString();
+    }
 
     public DynamicMetaObject GetMetaObject(Expression parameter)
     {

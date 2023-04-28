@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Text;
+using RCaron.Classes;
 using RCaron.LibrarySourceGenerator;
 using RCaron.Parsing;
 
@@ -610,5 +611,36 @@ $h = $null;");
             ["enumerator"] = new object[1].GetEnumerator(),
         });
         m.AssertVariableEquals("h", 1L);
+    }
+
+    public class ClassToStringTests
+    {
+        [Fact]
+        public void DefaultToString()
+        {
+            var m = TestRunner.Run("""
+class A {
+    $prop = 1;
+}
+
+$c = #A:new();
+$h = $c.ToString();
+""");
+            var str = m.AssertVariableIsType<string>("h");
+            Assert.NotNull(str);
+            Assert.Equal(m.AssertVariableIsType<ClassInstance>("c").ToString(), str);
+        }
+
+        [Fact]
+        public void OverridenToString()
+        {
+            var m = TestRunner.Run("""
+class A {
+    func ToString() { return 'a'; }
+}
+$h = #A:new().ToString();
+""");
+            m.AssertVariableEquals("h", "a");
+        }
     }
 }
