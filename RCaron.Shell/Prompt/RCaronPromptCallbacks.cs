@@ -286,6 +286,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
         UseTextMateHighlighting = false;
     }
 
+    [Obsolete("Already using fork of PrettyPrompt with settable MaxCompletionItemsCount")]
     public void SetProportionOfWindowHeightForCompletionPane(PrettyPrompt.Prompt prompt, double value)
     {
         var configuration = (PromptConfiguration)
@@ -296,6 +297,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
             .SetValue(configuration, value);
     }
 
+    [Obsolete("Already using fork of PrettyPrompt with settable MaxCompletionItemsCount")]
     public void SetMaxCompletionItemsCount(PrettyPrompt.Prompt prompt, int value)
     {
         var configuration = (PromptConfiguration)
