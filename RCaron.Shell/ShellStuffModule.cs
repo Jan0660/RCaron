@@ -22,24 +22,25 @@ public partial class ShellStuffModule : IRCaronModule
         }
         catch (Exception e)
         {
-            Console.Error("Could not get full path: " + e.Message);
-            return;
+            throw new RCaronShellException($"Could not get full path: {e.Message}", e);
         }
 
         try
         {
             Environment.CurrentDirectory = path;
         }
-        catch (DirectoryNotFoundException)
+        catch (DirectoryNotFoundException e)
         {
-            Console.Error("Directory not found: " + path);
+            throw new RCaronShellException($"Directory not found: {path}", e);
         }
     }
 
     [Method("Set-Prompt")]
     public void SetPrompt(Motor _, string functionName)
     {
-        Shell.PromptFunction = Shell.Motor.MainFileScope.Functions![functionName];
+        if(!(Shell.Motor.MainFileScope.Functions?.TryGetValue(functionName, out var function) ?? false))
+            throw new RCaronShellException($"Function '{functionName}' not found.");
+        Shell.PromptFunction = function;
     }
 
     [Method("Exit")]

@@ -1,9 +1,13 @@
-﻿namespace RCaron.Shell;
+﻿using System.ComponentModel;
+using Console = Log73.Console;
+
+namespace RCaron.Shell;
 
 public class Shell
 {
     public Motor Motor { get; }
     public Function? PromptFunction { get; set; }
+    public bool PrintShellExceptions { get; set; } = true;
 
     public Shell()
     {
@@ -14,7 +18,14 @@ public class Shell
     private object? InvokeRunExecutable(Motor motor, string name, ArraySegment<PosToken> args, FileScope fileScope,
         Pipeline? pipeline, bool isLeftOfPipeline)
     {
-        return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline);
+        try
+        {
+            return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline);
+        }
+        catch (Win32Exception win32Exception) when (win32Exception.NativeErrorCode == 2)
+        {
+            throw new RCaronShellException($"Command not found: {name}", win32Exception);
+        }
     }
 
     public void RunString(string code, bool import = true, string? fileName = null)
@@ -39,16 +50,18 @@ public class Shell
                 {
                     var index = Motor.MainFileScope.ClassDefinitions.FindIndex(@class =>
                         @class.Name.Equals(c.Name, StringComparison.InvariantCultureIgnoreCase));
-                    if(c.Functions != null)
+                    if (c.Functions != null)
                         foreach (var f in c.Functions)
                         {
                             c.Functions[f.Key] = f.Value with { FileScope = Motor.MainFileScope };
                         }
+
                     if (c.StaticFunctions != null)
                         foreach (var f in c.StaticFunctions)
                         {
                             c.StaticFunctions[f.Key] = f.Value with { FileScope = Motor.MainFileScope };
                         }
+
                     if (index == -1)
                         Motor.MainFileScope.ClassDefinitions.Add(c);
                     else
@@ -63,6 +76,15 @@ public class Shell
             Motor.MainFileScope!.Modules!.Add(new ShellStuffModule(this));
         if (import && Motor.MainFileScope != null!)
             Motor.MainFileScope.FileName = fileName;
-        Motor.Run();
+        try
+        {
+            Motor.Run();
+        }
+        catch (RCaronShellException e)
+        {
+            if (PrintShellExceptions)
+                Console.Error(e.Message);
+            else throw;
+        }
     }
 }

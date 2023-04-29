@@ -5,12 +5,13 @@ namespace RCaron.Shell;
 
 public static class RunExecutable
 {
-    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, Pipeline? pipeline, bool isLeftOfPipeline)
+    public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, Pipeline? pipeline,
+        bool isLeftOfPipeline)
     {
         var startInfo = ParseArgs(motor, name, tokens, code);
         if (pipeline is StreamPipeline)
             startInfo.RedirectStandardInput = true;
-        if(isLeftOfPipeline)
+        if (isLeftOfPipeline)
             startInfo.RedirectStandardOutput = true;
         using var process = Process.Start(startInfo);
         if (process == null)
@@ -21,8 +22,10 @@ public static class RunExecutable
             {
                 process.StandardInput.WriteLine(streamPipeline.StreamReader.ReadLine());
             }
+
             process.StandardInput.Close();
         }
+
         if (isLeftOfPipeline)
             return new StreamPipeline(process.StandardOutput);
         process.WaitForExit();

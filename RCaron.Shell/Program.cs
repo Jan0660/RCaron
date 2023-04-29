@@ -11,13 +11,13 @@ using RCaron.Shell.Prompt;
 using Console = System.Console;
 
 var logger = new Log73Logger();
-logger.LogTypes.Info = new LogType("RCaron.Cli", LogLevel.Info, true)
+logger.LogTypes.Info = new LogType("RCaron.Shell", LogLevel.Info, true)
 {
     LogPres = new()
     {
         new LogTypeLogPre()
         {
-            SpaceOutTo = 12
+            SpaceOutTo = 14,
         },
     },
     LogPreStyle = new()
