@@ -62,13 +62,14 @@ public partial class CompletionProvider
                             if (parsed?.FileScope?.Functions != null)
                             {
                                 if (list.Count >= maxCompletions) return;
+                                StringBuilder detail = new();
                                 foreach (var function in parsed.FileScope.Functions)
                                 {
+                                    detail.Clear();
                                     if (list.Count >= maxCompletions) return;
                                     if (function.Key.StartsWith(keywordToken.String,
                                             StringComparison.InvariantCultureIgnoreCase))
                                     {
-                                        var detail = new StringBuilder();
                                         detail.Append("(function) ");
                                         detail.Append(function.Key);
                                         detail.Append('(');
@@ -104,6 +105,8 @@ public partial class CompletionProvider
                             }
 
                             if (modules != null)
+                            {
+                                var documentation = new StringBuilder();
                                 foreach (var module in modules)
                                 {
                                     if (list.Count >= maxCompletions) return;
@@ -115,6 +118,8 @@ public partial class CompletionProvider
                                                      BindingFlags.Public | BindingFlags.Instance |
                                                      BindingFlags.Static))
                                         {
+                                            documentation.Clear();
+
                                             if (list.Count >= maxCompletions) return;
                                             var methodAttribute = method.GetCustomAttribute<MethodAttribute>();
                                             if (methodAttribute == null) continue;
@@ -131,13 +136,20 @@ public partial class CompletionProvider
                                                     argsString.Append($" = {parameter.DefaultValue}");
                                             }
 
+                                            documentation.AppendLine($"(From {type.FullName}).");
+                                            if (methodAttribute.Description != null)
+                                            {
+                                                documentation.AppendLine();
+                                                documentation.AppendLine(methodAttribute.Description);
+                                            }
+
                                             completionThingsList.Add(new CompletionThing()
                                             {
                                                 Word = methodAttribute.Name,
                                                 Kind = CompletionItemKind.Method,
                                                 Detail =
                                                     $"(module method) {methodAttribute.Name}({argsString?.ToString() ?? string.Empty})",
-                                                Documentation = $"From {type.FullName}.",
+                                                Documentation = documentation.ToString(),
                                             });
                                         }
 
@@ -153,6 +165,7 @@ public partial class CompletionProvider
                                             list.Add(new Completion(completionThing, token.Position));
                                     }
                                 }
+                            }
 
                             break;
                         }

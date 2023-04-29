@@ -7,7 +7,7 @@ namespace RCaron.BaseLibrary;
 [Module("LoggingModule")]
 public partial class LoggingModule : IRCaronModule
 {
-    [Method("SayHello")]
+    [Method("SayHello", Description = "Says hello to ř.")]
     public static object SayHello(Motor motor, in ReadOnlySpan<PosToken> arguments)
     {
         Console.WriteLine("Hello, ř!");

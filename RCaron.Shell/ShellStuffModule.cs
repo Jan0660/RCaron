@@ -13,7 +13,7 @@ public partial class ShellStuffModule : IRCaronModule
         Shell = shell;
     }
 
-    [Method("cd")]
+    [Method("cd", Description = $"Changes current directory to {nameof(path)}.")]
     public void Cd(Motor _, string path)
     {
         try
@@ -35,7 +35,7 @@ public partial class ShellStuffModule : IRCaronModule
         }
     }
 
-    [Method("Set-Prompt")]
+    [Method("Set-Prompt", Description = "Sets the prompt function to the function with the given name.")]
     public void SetPrompt(Motor _, string functionName)
     {
         if(!(Shell.Motor.MainFileScope.Functions?.TryGetValue(functionName, out var function) ?? false))
@@ -43,7 +43,7 @@ public partial class ShellStuffModule : IRCaronModule
         Shell.PromptFunction = function;
     }
 
-    [Method("Exit")]
+    [Method("Exit", Description = "Exits the process with the given exit code.")]
     public void Exit(Motor _, int code = 0)
     {
         Environment.Exit(code);
