@@ -1,4 +1,5 @@
 ﻿using RCaron.LibrarySourceGenerator;
+using Console = Log73.Console;
 
 namespace RCaron.Shell;
 
@@ -15,7 +16,24 @@ public partial class ShellStuffModule : IRCaronModule
     [Method("cd")]
     public void Cd(Motor _, string path)
     {
-        Environment.CurrentDirectory = Path.GetFullPath(path);
+        try
+        {
+            path = Path.GetFullPath(path);
+        }
+        catch (Exception e)
+        {
+            Console.Error("Could not get full path: " + e.Message);
+            return;
+        }
+
+        try
+        {
+            Environment.CurrentDirectory = path;
+        }
+        catch (DirectoryNotFoundException)
+        {
+            Console.Error("Directory not found: " + path);
+        }
     }
 
     [Method("Set-Prompt")]
