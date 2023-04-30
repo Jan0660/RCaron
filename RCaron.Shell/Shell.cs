@@ -9,6 +9,7 @@ public class Shell
     public Motor Motor { get; }
     public Function? PromptFunction { get; set; }
     public bool PrintShellExceptions { get; set; } = true;
+    public int LastExitCode { get; set; }
 
     public ConcurrentDictionary<string, string> ExecutableAliases { get; } =
         new(StringComparer.InvariantCultureIgnoreCase);
@@ -24,11 +25,14 @@ public class Shell
     {
         try
         {
-            return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline, this);
+            var ret = RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline, this);
+            if (ret is int exitCode)
+                LastExitCode = exitCode;
+            return ret;
         }
         catch (Win32Exception win32Exception) when (win32Exception.NativeErrorCode == 2)
         {
-            throw new RCaronShellException($"Command not found: {name}", win32Exception);
+            throw new RCaronShellException($"Command not found: {name}", win32Exception, 127);
         }
     }
 
@@ -86,6 +90,7 @@ public class Shell
         }
         catch (RCaronShellException e)
         {
+            LastExitCode = e.ErrorCode ?? 1;
             if (PrintShellExceptions)
                 Console.Error(e.Message);
             else throw;

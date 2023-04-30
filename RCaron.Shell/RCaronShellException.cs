@@ -2,11 +2,16 @@
 
 public class RCaronShellException : Exception
 {
-    public RCaronShellException(string message) : base(message)
+    public int? ErrorCode { get; }
+
+    public RCaronShellException(string message, int? errorCode = null) : base(message)
     {
+        ErrorCode = errorCode;
     }
 
-    public RCaronShellException(string message, Exception innerException) : base(message, innerException)
+    public RCaronShellException(string message, Exception innerException, int? errorCode = null) : base(message,
+        innerException)
     {
+        ErrorCode = errorCode;
     }
 }
