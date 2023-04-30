@@ -1,4 +1,5 @@
-﻿using System.ComponentModel;
+﻿using System.Collections.Concurrent;
+using System.ComponentModel;
 using Console = Log73.Console;
 
 namespace RCaron.Shell;
@@ -8,6 +9,9 @@ public class Shell
     public Motor Motor { get; }
     public Function? PromptFunction { get; set; }
     public bool PrintShellExceptions { get; set; } = true;
+
+    public ConcurrentDictionary<string, string> ExecutableAliases { get; } =
+        new(StringComparer.InvariantCultureIgnoreCase);
 
     public Shell()
     {
@@ -20,7 +24,7 @@ public class Shell
     {
         try
         {
-            return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline);
+            return RunExecutable.Run(motor, name, args, fileScope.Raw, pipeline, isLeftOfPipeline, this);
         }
         catch (Win32Exception win32Exception) when (win32Exception.NativeErrorCode == 2)
         {

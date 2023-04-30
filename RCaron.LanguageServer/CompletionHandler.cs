@@ -49,7 +49,7 @@ public class CompletionHandler : CompletionHandlerBase
         cancellationToken.ThrowIfCancellationRequested();
         var caretPositionInt = Util.GetPositionInt(code, caretPosition);
         var completions = new CompletionProvider().GetCompletions(
-            code, caretPositionInt, maxCompletions, null, Modules);
+            code, caretPositionInt, maxCompletions, null, Modules, cancellationToken);
         cancellationToken.ThrowIfCancellationRequested();
         foreach (var completion in completions)
         {

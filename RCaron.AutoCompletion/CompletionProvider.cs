@@ -20,13 +20,16 @@ public partial class CompletionProvider
         }
     }
 
-    private ConcurrentDictionary<IRCaronModule, CompletionThing[]> _moduleCompletions = new();
+    private readonly ConcurrentDictionary<IRCaronModule, CompletionThing[]> _moduleCompletions = new();
+    public List<ICompletionExtension>? Extensions { get; set; }
 
     public List<Completion> GetCompletions(string code, int caretPosition, int maxCompletions = 40,
-        LocalScope? localScope = null, IList<IRCaronModule>? modules = null)
+        LocalScope? localScope = null, IList<IRCaronModule>? modules = null,
+        CancellationToken cancellationToken = default)
     {
         var list = new List<Completion>(maxCompletions);
         var parsed = RCaronParser.Parse(code, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
+        cancellationToken.ThrowIfCancellationRequested();
         DoLines(parsed.FileScope.Lines);
 
         static bool IsBetween(int caretPosition, int start, int end) => start <= caretPosition && caretPosition <= end;
@@ -59,7 +62,7 @@ public partial class CompletionProvider
                                     list.Add(new Completion(keyword, token.Position));
                             }
 
-                            if (parsed?.FileScope?.Functions != null)
+                            if (parsed.FileScope?.Functions != null)
                             {
                                 if (list.Count >= maxCompletions) return;
                                 StringBuilder detail = new();
@@ -202,12 +205,18 @@ public partial class CompletionProvider
 
                             break;
                     }
+                    if (list.Count >= maxCompletions) return;
+                    if (Extensions != null)
+                        foreach (var extension in Extensions)
+                            extension.OnToken(list, token, caretPosition, maxCompletions, localScope, modules, parsed,
+                                 cancellationToken);
                 }
             }
         }
 
         void DoLine(Line line)
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (list.Count >= maxCompletions) return;
             switch (line)
             {

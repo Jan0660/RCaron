@@ -40,6 +40,16 @@ public class RCaronPromptCallbacks : PromptCallbacks
     public bool ColorizeCompletions { get; set; } = false;
     public AnsiColor DefaultTextColor { get; set; } = AnsiColor.White;
     public Motor? ForMotor { get; set; }
+    public Shell Shell { get; }
+    public CompletionProvider CompletionProvider { get; set; }
+
+    public RCaronPromptCallbacks(Shell shell)
+    {
+        Shell = shell;
+        CompletionProvider = new CompletionProvider();
+        CompletionProvider.Extensions ??= new();
+        CompletionProvider.Extensions.Add(new ShellCompletionExtension(shell));
+    }
 
     protected override Task<IReadOnlyCollection<FormatSpan>> HighlightCallbackAsync(string text,
         CancellationToken cancellationToken)
@@ -207,8 +217,8 @@ public class RCaronPromptCallbacks : PromptCallbacks
         try
         {
             var items = new List<CompletionItem>();
-            var h = new CompletionProvider().GetCompletions(text, caret, MaxCompletions, ForMotor?.GlobalScope,
-                ForMotor?.MainFileScope.Modules);
+            var h = CompletionProvider.GetCompletions(text, caret, MaxCompletions, ForMotor?.GlobalScope,
+                ForMotor?.MainFileScope.Modules, cancellationToken);
             foreach (var item in h)
             {
                 cancellationToken.ThrowIfCancellationRequested();

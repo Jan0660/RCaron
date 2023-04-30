@@ -6,8 +6,10 @@ namespace RCaron.Shell;
 public static class RunExecutable
 {
     public static object? Run(Motor motor, string name, ReadOnlySpan<PosToken> tokens, string code, Pipeline? pipeline,
-        bool isLeftOfPipeline)
+        bool isLeftOfPipeline, Shell shell)
     {
+        if (shell.ExecutableAliases.TryGetValue(name, out var alias))
+            name = alias;
         var startInfo = ParseArgs(motor, name, tokens, code);
         if (pipeline is StreamPipeline)
             startInfo.RedirectStandardInput = true;
