@@ -18,7 +18,7 @@ public partial class ShellStuffModule : IRCaronModule
     {
         try
         {
-            path = Path.GetFullPath(path);
+            path = Path.GetFullPath(PathResolver.Instance.Resolve(path));
         }
         catch (Exception e)
         {
