@@ -22,11 +22,18 @@ namespace RCaron
         {
             _array = new T[DefaultCapacity];
         }
-
-        public int Count
+        
+        public NiceStack(int capacity)
         {
-            get { return _size; }
+            if (capacity < 0)
+            {
+                throw new("invalid capacity");
+            }
+
+            _array = new T[capacity];
         }
+
+        public int Count => _size;
 
         // Removes all Objects from the Stack.
         public void Clear()
@@ -251,6 +258,6 @@ namespace RCaron
             => At(index.GetOffset(_size));
 
         public T At(int index)
-            => _array[index];
+            => index >= Count ? throw new("Trying to get item at index >= Count") : _array[index];
     }
 }

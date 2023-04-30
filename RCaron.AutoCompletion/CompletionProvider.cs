@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Reflection;
 using System.Text;
+using RCaron.Classes;
 using RCaron.LibrarySourceGenerator;
 using RCaron.Parsing;
 
@@ -23,6 +24,24 @@ public partial class CompletionProvider
     private readonly ConcurrentDictionary<IRCaronModule, CompletionThing[]> _moduleCompletions = new();
     public List<ICompletionExtension>? Extensions { get; set; }
 
+    private class CompletionContext
+    {
+        public List<string>? Variables { get; set; }
+        public bool IsReturnWorthy { get; set; }
+    }
+
+    private class FunctionCompletionContext : CompletionContext
+    {
+        public ClassDefinition? ClassDefinition { get; set; }
+        public Function Function { get; set; }
+        public bool IsStaticFunction { get; set; }
+    }
+
+    private class ClassDefinitionCompletionContext : CompletionContext
+    {
+        public required ClassDefinition ClassDefinition { get; init; }
+    }
+
     public List<Completion> GetCompletions(string code, int caretPosition, int maxCompletions = 40,
         LocalScope? localScope = null, IList<IRCaronModule>? modules = null,
         CancellationToken cancellationToken = default)
@@ -30,12 +49,14 @@ public partial class CompletionProvider
         var list = new List<Completion>(maxCompletions);
         var parsed = RCaronParser.Parse(code, returnDescriptive: true, errorHandler: new ParsingErrorDontCareHandler());
         cancellationToken.ThrowIfCancellationRequested();
+        var contextStack = new NiceStack<CompletionContext>(10);
         DoLines(parsed.FileScope.Lines);
 
         static bool IsBetween(int caretPosition, int start, int end) => start <= caretPosition && caretPosition <= end;
 
         void DoTokens(IList<PosToken> tokens)
         {
+            if (!IsBetween(caretPosition, tokens[0].Position.Start, tokens[^1].Position.End)) return;
             foreach (var token in tokens)
             {
                 if (list.Count >= maxCompletions) return;
@@ -62,7 +83,7 @@ public partial class CompletionProvider
                                     list.Add(new Completion(keyword, token.Position));
                             }
 
-                            if (parsed.FileScope?.Functions != null)
+                            if (parsed.FileScope.Functions != null)
                             {
                                 if (list.Count >= maxCompletions) return;
                                 StringBuilder detail = new();
@@ -203,13 +224,86 @@ public partial class CompletionProvider
                                 }
                             }
 
+                            for (var i = contextStack.Count - 1; i >= 0; i--)
+                            {
+                                var context = contextStack.At(i);
+
+                                // function arguments
+                                if (context is FunctionCompletionContext functionCompletionContext)
+                                {
+                                    var function = functionCompletionContext.Function;
+
+                                    if (function.Arguments != null)
+                                        foreach (var arg in function.Arguments)
+                                        {
+                                            if (list.Count >= maxCompletions) return;
+                                            if (arg.Name.AsSpan().StartsWith(variableToken.Name,
+                                                    StringComparison.InvariantCultureIgnoreCase))
+                                                list.Add(new Completion(new CompletionThing
+                                                {
+                                                    Word = '$' + arg.Name,
+                                                    Kind = CompletionItemKind.Variable,
+                                                    Detail = $"(function argument) {arg.Name}",
+                                                }, token.Position));
+                                        }
+
+                                    if (functionCompletionContext.ClassDefinition != null)
+                                    {
+                                        void DoVarList(IList<string> variables, string detailInsidePrefix)
+                                        {
+                                            foreach (var arg in variables)
+                                            {
+                                                if (list.Count >= maxCompletions) return;
+                                                if (arg.AsSpan().StartsWith(variableToken.Name,
+                                                        StringComparison.InvariantCultureIgnoreCase))
+                                                    list.Add(new Completion(new CompletionThing
+                                                    {
+                                                        Word = '$' + arg,
+                                                        Kind = CompletionItemKind.Variable,
+                                                        Detail = $"({detailInsidePrefix}) {arg}",
+                                                    }, token.Position));
+                                            }
+                                        }
+
+                                        if (functionCompletionContext.ClassDefinition.StaticPropertyNames != null)
+                                            DoVarList(functionCompletionContext.ClassDefinition.StaticPropertyNames,
+                                                "static property");
+                                        if (!functionCompletionContext.IsStaticFunction &&
+                                            functionCompletionContext.ClassDefinition.PropertyNames != null)
+                                            DoVarList(functionCompletionContext.ClassDefinition.PropertyNames,
+                                                "property");
+                                    }
+                                }
+
+                                // local variables
+                                {
+                                    if (context.Variables != null)
+                                        foreach (var variable in context.Variables)
+                                        {
+                                            if (list.Count >= maxCompletions) return;
+                                            if (variable.AsSpan().StartsWith(variableToken.Name,
+                                                    StringComparison.InvariantCultureIgnoreCase))
+                                                list.Add(new Completion(new CompletionThing
+                                                {
+                                                    Word = '$' + variable,
+                                                    Kind = CompletionItemKind.Variable,
+                                                    Detail = $"(local variable) {variable}",
+                                                }, token.Position));
+                                        }
+                                }
+
+                                if (context.IsReturnWorthy)
+                                    break;
+                            }
+
                             break;
                     }
+
                     if (list.Count >= maxCompletions) return;
                     if (Extensions != null)
                         foreach (var extension in Extensions)
                             extension.OnToken(list, token, caretPosition, maxCompletions, localScope, modules, parsed,
-                                 cancellationToken);
+                                cancellationToken);
                 }
             }
         }
@@ -221,15 +315,65 @@ public partial class CompletionProvider
             switch (line)
             {
                 case TokenLine tokenLine:
-                    if (!IsBetween(caretPosition, tokenLine.Tokens[0].Position.Start,
-                            tokenLine.Tokens[^1].Position.End))
-                        return;
-                    DoTokens(tokenLine.Tokens);
+                    if (tokenLine.Type is LineType.Function or LineType.StaticFunction)
+                    {
+                        var context = new FunctionCompletionContext
+                        {
+                            IsReturnWorthy = true,
+                            IsStaticFunction = line.Type == LineType.StaticFunction,
+                        };
+                        var name = ((CallLikePosToken)tokenLine.Tokens[context.IsStaticFunction ? 2 : 1]).Name;
+                        // try to find encapsulating class definition above
+                        if (contextStack.TryPeek(out var contextAbove))
+                            if (contextAbove is ClassDefinitionCompletionContext classDefinitionContext)
+                            {
+                                context.ClassDefinition = classDefinitionContext.ClassDefinition;
+                                context.Function = classDefinitionContext.ClassDefinition.Functions![name];
+                            }
+
+                        // ReSharper disable once NullCoalescingConditionIsAlwaysNotNullAccordingToAPIContract
+                        context.Function ??= parsed.FileScope.Functions![name];
+                        contextStack.Push(context);
+                        DoLines(((CodeBlockToken)tokenLine.Tokens[context.IsStaticFunction ? 3 : 2]).Lines,
+                            false);
+                        var popped = contextStack.Pop();
+                        Debug.Assert(popped == context);
+                    }
+                    else if (tokenLine.Type == LineType.ClassDefinition)
+                    {
+                        var name = ((KeywordToken)tokenLine.Tokens[1]).String;
+                        if (!Motor.TryGetClassDefinition(name, parsed.FileScope, out var classDefinition))
+                            return;
+                        var context = new ClassDefinitionCompletionContext()
+                        {
+                            IsReturnWorthy = true,
+                            ClassDefinition = classDefinition,
+                        };
+                        contextStack.Push(context);
+                        DoLines(((CodeBlockToken)tokenLine.Tokens[2]).Lines, false);
+                        var popped = contextStack.Pop();
+                        Debug.Assert(popped == context);
+                    }
+                    else if (tokenLine.Type == LineType.VariableAssignment)
+                    {
+                        var variableToken = (VariableToken)tokenLine.Tokens[0];
+                        var ls = contextStack.Peek().Variables ??= new();
+                        if (!ls.Contains(variableToken.Name))
+                            ls.Add(variableToken.Name);
+                        DoTokens(tokenLine.Tokens);
+                    }
+                    else
+                    {
+                        DoTokens(tokenLine.Tokens);
+                    }
+
                     break;
                 case ForLoopLine forLoopLine:
-                    DoLine(forLoopLine.Initializer);
+                    if (forLoopLine.Initializer != null)
+                        DoLine(forLoopLine.Initializer);
                     DoTokens(forLoopLine.CallToken.Arguments[1]);
-                    DoLine(forLoopLine.Iterator);
+                    if (forLoopLine.Iterator != null)
+                        DoLine(forLoopLine.Iterator);
                     DoLines(forLoopLine.Body.Lines);
                     break;
                 case SingleTokenLine singleTokenLine:
@@ -244,10 +388,18 @@ public partial class CompletionProvider
             }
         }
 
-        void DoLines(IList<Line> lines)
+        void DoLines(IList<Line> lines, bool createContext = true, bool isReturnWorthy = false)
         {
+            CompletionContext? context = null;
+            if (createContext)
+                contextStack.Push(context = new CompletionContext { IsReturnWorthy = isReturnWorthy });
             foreach (var line in lines)
                 DoLine(line);
+            if (context != null)
+            {
+                var popped = contextStack.Pop();
+                Debug.Assert(popped == context);
+            }
         }
 
         return list;
