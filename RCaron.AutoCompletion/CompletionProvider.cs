@@ -354,6 +354,17 @@ public partial class CompletionProvider
                         var popped = contextStack.Pop();
                         Debug.Assert(popped == context);
                     }
+                    else if (tokenLine.Type == LineType.CatchBlock)
+                    {
+                        var context = new CompletionContext()
+                        {
+                            Variables = new() { "$exception" },
+                        };
+                        contextStack.Push(context);
+                        DoLines(((CodeBlockToken)tokenLine.Tokens[1]).Lines, false);
+                        var popped = contextStack.Pop();
+                        Debug.Assert(popped == context);
+                    }
                     else if (tokenLine.Type == LineType.VariableAssignment)
                     {
                         var variableToken = (VariableToken)tokenLine.Tokens[0];
