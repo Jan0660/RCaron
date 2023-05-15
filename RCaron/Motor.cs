@@ -96,7 +96,8 @@ public class Motor
         if (withFileScope && parserContext.FileScope != null!)
         {
             MainFileScope = parserContext.FileScope;
-            MainFileScope.Modules ??= new List<IRCaronModule>(1) { new LoggingModule(), new ExperimentalModule() };
+            MainFileScope.Modules ??= new List<IRCaronModule>(4)
+                { new LoggingModule(), new ExperimentalModule(), new ReflectionModule() };
         }
     }
 

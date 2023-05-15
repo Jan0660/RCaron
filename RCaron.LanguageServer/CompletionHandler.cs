@@ -21,6 +21,7 @@ public class CompletionHandler : CompletionHandlerBase
         new ShellStuffModule(new()),
         new ExperimentalModule(),
         new LoggingModule(),
+        new ReflectionModule(),
     };
 
     public CompletionHandler(ILogger<CompletionHandler> logger)
