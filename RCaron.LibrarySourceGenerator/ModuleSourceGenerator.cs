@@ -57,6 +57,7 @@ namespace {classSymbol.ContainingNamespace.ToDisplayString()};
 public partial class {classSymbol.Name}{{");
                 var moduleAttribute = classSymbol.GetAttributes().First(att =>
                     att.AttributeClass?.ToDisplayString() == "RCaron.LibrarySourceGenerator.ModuleAttribute");
+                source.AppendLine($"public string Name => \"{moduleAttribute.ConstructorArguments[0].Value}\";");
                 if (moduleAttribute.NamedArguments
                     .Any(pair => pair is { Key: "ImplementModuleRun", Value.Value: false }))
                     goto afterImplementModuleRun;

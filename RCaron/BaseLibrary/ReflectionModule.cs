@@ -50,4 +50,17 @@ public partial class ReflectionModule : IRCaronModule
         if (index == -1) return NotFound;
         return definition.StaticPropertyValues![index];
     }
+
+    [Method("Get-ModuleType", Description = "Returns the type of the given module")]
+    public static Type GetModuleType(Motor motor, [FromPipeline] string moduleName)
+    {
+        var fileScope = motor.GetFileScope();
+        if (fileScope.Modules is not { Count: > 0 })
+            throw new Exception("No modules in the current file scope");
+        foreach (var module in fileScope.Modules)
+            if (module.Name.Equals(moduleName, StringComparison.InvariantCultureIgnoreCase))
+                return module.GetType();
+
+        throw new Exception("Module not found");
+    }
 }
