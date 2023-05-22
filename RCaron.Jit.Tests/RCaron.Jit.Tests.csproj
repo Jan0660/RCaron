@@ -18,7 +18,7 @@
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
-        <PackageReference Include="coverlet.collector" Version="3.2.0">
+        <PackageReference Include="coverlet.collector" Version="6.0.0">
             <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
             <PrivateAssets>all</PrivateAssets>
         </PackageReference>
@@ -27,7 +27,7 @@
     <ItemGroup>
         <Compile Include="..\RCaron.Tests\*.cs" />
         <ProjectReference Include="..\RCaron.Jit\RCaron.Jit.csproj" />
-        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all"/>
+        <ProjectReference Include="..\RCaron.LibrarySourceGenerator\RCaron.LibrarySourceGenerator.csproj" OutputItemType="Analyzer" PrivateAssets="all" />
         <ProjectReference Include="..\RCaron\RCaron.csproj" />
     </ItemGroup>
 
