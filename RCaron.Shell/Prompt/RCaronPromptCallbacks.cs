@@ -39,7 +39,7 @@ public class RCaronPromptCallbacks : PromptCallbacks
     public bool EnableAutoCompletions { get; set; } = true;
     public bool ColorizeCompletions { get; set; } = false;
     public AnsiColor DefaultTextColor { get; set; } = AnsiColor.White;
-    public Motor? ForMotor { get; set; }
+    public required Motor ForMotor { get; set; }
     public Shell Shell { get; }
     public CompletionProvider CompletionProvider { get; set; }
 
@@ -217,8 +217,8 @@ public class RCaronPromptCallbacks : PromptCallbacks
         try
         {
             var items = new List<CompletionItem>();
-            var h = CompletionProvider.GetCompletions(text, caret, MaxCompletions, ForMotor?.GlobalScope,
-                ForMotor?.MainFileScope.Modules, cancellationToken);
+            var h = CompletionProvider.GetCompletions(text, caret, MaxCompletions, ForMotor.GlobalScope,
+                ForMotor.MainFileScope.Modules, cancellationToken);
             foreach (var item in h)
             {
                 cancellationToken.ThrowIfCancellationRequested();

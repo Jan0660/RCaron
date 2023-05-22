@@ -67,7 +67,10 @@ rootCommand.SetHandler(async context =>
     {
         Prompt = new(),
     };
-    var promptCallbacks = new RCaronPromptCallbacks(shell);
+    var promptCallbacks = new RCaronPromptCallbacks(shell)
+    {
+        ForMotor = shell.Motor,
+    };
     var prompt = new Prompt(configuration: promptConfig, callbacks: promptCallbacks,
         persistentHistoryFilepath: profileHistoryPath);
     shell.Motor.SetVar("args", arguments);
