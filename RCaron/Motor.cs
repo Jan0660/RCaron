@@ -1507,7 +1507,7 @@ public class Motor
             var definition = scope.ClassInstance.Definition;
             if (definition.Functions?.TryGetValue(name, out var func2) ?? false)
             {
-                result = FunctionCall(func2, callToken, argumentTokens, classInstance, pipeline: pipeline);
+                result = FunctionCall(func2, callToken, argumentTokens, scope.ClassInstance, pipeline: pipeline);
                 return true;
             }
         }
